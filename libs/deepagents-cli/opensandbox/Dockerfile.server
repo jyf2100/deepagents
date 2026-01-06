@@ -2,18 +2,24 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+# Install system dependencies (including curl for uv installation)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install uv
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.local/bin:${PATH}"
 
-# Clone and install OpenSandbox server
-RUN git clone https://github.com/alibaba/OpenSandbox.git /tmp/opensandbox && \
-    cd /tmp/opensandbox/server && \
+# Copy local OpenSandbox server code and install
+COPY opensandbox/opensandbox-server/server /tmp/opensandbox-server
+RUN cd /tmp/opensandbox-server && \
     uv pip install --system . && \
-    cd / && rm -rf /tmp/opensandbox
+    cd / && rm -rf /tmp/opensandbox-server
 
 # Copy configuration file
-COPY config.toml /app/.sandbox.toml.example
+COPY opensandbox/config.toml /app/.sandbox.toml.example
 
 EXPOSE 8080
 
