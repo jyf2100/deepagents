@@ -8,9 +8,9 @@ services:
         PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple}
         NPM_REGISTRY_URL: ${NPM_REGISTRY_URL:-https://registry.npmjs.org}
     image: deepagents-web:latest
-    container_name: deepagents-web
+    container_name: deepagents-web-phase1
     ports:
-      - "7777:7777"
+      - "7778:7777"
     volumes:
       - /mnt/disk01/workspaces/worksummary/deepagents/.worktrees/phase-1-event-architecture/.deepagents/skills:/root/.deepagents/agent/skills:cached
       - /mnt/disk01/workspaces/worksummary/deepagents/.worktrees/phase-1-event-architecture/libs/deepagents-cli/.env:/app/.env:ro
@@ -62,7 +62,7 @@ services:
     image: opensandbox-server:latest
     container_name: deepagents-opensandbox
     ports:
-      - "8081:8080"
+      - "8082:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./opensandbox/config.toml:/app/.sandbox.toml:ro
