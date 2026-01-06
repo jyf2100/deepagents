@@ -6,7 +6,7 @@ event-driven architecture that separates execution logic from UI rendering.
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 
 class EventType(Enum):
@@ -260,7 +260,7 @@ class Decision:
     """
 
     action: Literal["approve", "reject", "edit"]
-    edited_args: Optional[dict[str, Any]] = None
+    edited_args: dict[str, Any] | None = None
 
     def __post_init__(self) -> None:
         """Validate decision action."""

@@ -1,0 +1,89 @@
+services:
+  # DeepAgents Web UI
+  deepagents-web:
+    build:
+      context: ../..
+      dockerfile: libs/deepagents-cli/Dockerfile
+      args:
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple}
+        NPM_REGISTRY_URL: ${NPM_REGISTRY_URL:-https://registry.npmjs.org}
+    image: deepagents-web:latest
+    container_name: deepagents-web
+    ports:
+      - "7777:7777"
+    volumes:
+      - /mnt/disk01/workspaces/worksummary/deepagents/.worktrees/phase-1-event-architecture/.deepagents/skills:/root/.deepagents/agent/skills:cached
+      - /mnt/disk01/workspaces/worksummary/deepagents/.worktrees/phase-1-event-architecture/libs/deepagents-cli/.env:/app/.env:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PIP_INDEX_URL=${PIP_INDEX_URL:-https://pypi.org/simple}
+      - NPM_REGISTRY_URL=${NPM_REGISTRY_URL:-https://registry.npmjs.org}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "L", "http://localhost:7777/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - deepagents-net
+
+  # VS Code Web (code-server) - 保持原有配置
+  vscode:
+    image: codercom/code-server:4.19.1
+    container_name: deepagents-vscode
+    ports:
+      - "0.0.0.0:8084:8080"
+    volumes:
+      - /mnt/disk01/workspaces/worksummary/deepagents/.worktrees/phase-1-event-architecture/libs/deepagents-cli/.workspace/deepagents:/workspace:cached
+      - vscode-data:/home/coder
+      - /mnt/disk01/workspaces/worksummary/deepagents/.worktrees/phase-1-event-architecture/.deepagents/skills:/workspace/.deepagents/agent/skills:cached
+    environment:
+      - PASSWORD
+      - VSCODE_PROXY_URL=
+    command: >
+      --auth password
+      --disable-telemetry
+      --disable-update-check
+      --disable-file-downloads
+      --disable-workspace-trust
+    mem_limit: 2g
+    cpus: '2.0'
+    pids_limit: 1024
+    restart: unless-stopped
+    networks:
+      - deepagents-net
+
+  # OpenSandbox Server - New for phase-1
+  opensandbox-server:
+    build:
+      context: .
+      dockerfile: opensandbox/Dockerfile.server
+    image: opensandbox-server:latest
+    container_name: deepagents-opensandbox
+    ports:
+      - "8081:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./opensandbox/config.toml:/app/.sandbox.toml:ro
+    environment:
+      - SANDBOX_CONFIG_PATH=/app/.sandbox.toml
+      - SANDBOX_API_KEY=${SANDBOX_API_KEY:-}
+    restart: unless-stopped
+    privileged: false
+    networks:
+      - deepagents-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  deepagents-net:
+    driver: bridge
+
+volumes:
+  vscode-data:
+    driver: local

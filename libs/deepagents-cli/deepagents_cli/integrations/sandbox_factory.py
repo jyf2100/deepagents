@@ -4,8 +4,10 @@ import os
 import shlex
 import string
 import time
+import uuid
 from collections.abc import Generator
 from contextlib import contextmanager
+from datetime import timedelta
 from pathlib import Path
 
 from deepagents.backends.protocol import SandboxBackendProtocol
@@ -266,10 +268,97 @@ def create_daytona_sandbox(
             console.print(f"[yellow]⚠ Cleanup failed: {e}[/yellow]")
 
 
+@contextmanager
+def create_opensandbox_sandbox(
+    *, sandbox_id: str | None = None, setup_script_path: str | None = None
+) -> Generator[SandboxBackendProtocol, None, None]:
+    """Create OpenSandbox VSCode environment.
+
+    This creates an ephemeral VS Code sandbox managed by OpenSandbox.
+    The sandbox is automatically cleaned up when the context exits.
+
+    Args:
+        sandbox_id: Optional identifier for the sandbox
+        setup_script_path: Optional setup script to run
+
+    Yields:
+        OpenSandboxBackend: The sandbox backend instance
+
+    Raises:
+        ValueError: SANDBOX_API_KEY not set
+        RuntimeError: Sandbox creation or startup fails
+        FileNotFoundError: Setup script not found
+        RuntimeError: Setup script fails
+    """
+    from opensandbox import Sandbox
+    from opensandbox.config import ConnectionConfig
+    from opensandbox.models.execd import RunCommandOpts
+    from opensandbox.errors import SandboxError
+
+    from deepagents_cli.integrations.opensandbox import OpenSandboxBackend
+
+    server_domain = os.getenv("SANDBOX_SERVER", "localhost:8081")
+    api_key = os.getenv("SANDBOX_API_KEY")
+    vscode_image = os.getenv("SANDBOX_VSCODE_IMAGE", "opensandbox/vscode:latest")
+
+    if not api_key:
+        msg = "SANDBOX_API_KEY environment variable not set"
+        raise ValueError(msg)
+
+    console.print("[yellow]Starting OpenSandbox...[/yellow]")
+
+    config = ConnectionConfig(
+        domain=server_domain,
+        api_key=api_key,
+        request_timeout=timedelta(seconds=60),
+    )
+
+    # Create sandbox with UUID
+    sandbox = Sandbox.create(
+        vscode_image,
+        connection_config=config,
+        env={
+            "SANDBOX_ID": sandbox_id or str(uuid.uuid4()),
+        },
+        timeout=timedelta(minutes=240),
+    )
+
+    try:
+        # Start code-server
+        sandbox.commands.run(
+            "code-server --bind-addr 0.0.0.0:8443 --auth none /workspace",
+            opts=RunCommandOpts(background=True),
+        )
+
+        # Get endpoint
+        endpoint_info = sandbox.get_endpoint(8443)
+        url = f"http://{endpoint_info.endpoint}/"
+
+        console.print(f"[green]✓ OpenSandbox ready: {sandbox.id}[/green]")
+
+        # Run setup script if provided
+        backend = OpenSandboxBackend(sandbox, url)
+        if setup_script_path:
+            _run_sandbox_setup(backend, setup_script_path)
+
+        yield backend
+    except SandboxError as e:
+        msg = f"Failed to create OpenSandbox: {e}"
+        raise RuntimeError(msg) from e
+    finally:
+        try:
+            console.print(f"[dim]Cleaning up OpenSandbox {sandbox_id}...[/dim]")
+            sandbox.cleanup()
+            console.print(f"[dim]✓ OpenSandbox {sandbox_id} terminated[/dim]")
+        except Exception as e:
+            console.print(f"[yellow]⚠ Cleanup failed: {e}[/yellow]")
+
+
 _PROVIDER_TO_WORKING_DIR = {
     "modal": "/workspace",
     "runloop": "/home/user",
     "daytona": "/home/daytona",
+    "opensandbox": "/workspace",
 }
 
 
@@ -278,6 +367,7 @@ _SANDBOX_PROVIDERS = {
     "modal": create_modal_sandbox,
     "runloop": create_runloop_sandbox,
     "daytona": create_daytona_sandbox,
+    "opensandbox": create_opensandbox_sandbox,
 }
 
 
