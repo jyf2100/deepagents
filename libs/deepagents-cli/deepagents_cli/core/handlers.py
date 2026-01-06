@@ -7,7 +7,7 @@ must implement, enabling separation of execution logic from UI rendering.
 from abc import ABC, abstractmethod
 from typing import Any
 
-from deepagents_cli.core.events import Decision, ErrorEvent, EventType, HITLPromptEvent
+from deepagents_cli.core.events import Decision, ErrorEvent, HITLPromptEvent
 
 
 class ExecutionHandler(ABC):
