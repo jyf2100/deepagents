@@ -99,6 +99,19 @@ def parse_args():
     # Skills command - setup delegated to skills module
     setup_skills_parser(subparsers)
 
+    # Desktop command
+    desktop_parser = subparsers.add_parser("desktop", help="Start desktop mode (Unix Socket IPC)")
+    desktop_parser.add_argument(
+        "--socket",
+        default="/tmp/deepagents-desktop.sock",
+        help="Unix socket path for IPC (default: /tmp/deepagents-desktop.sock)",
+    )
+    desktop_parser.add_argument(
+        "--agent",
+        default="desktop",
+        help="Agent identifier for desktop mode (default: desktop)",
+    )
+
     # Default interactive mode
     parser.add_argument(
         "--agent",
@@ -449,6 +462,10 @@ def cli_main() -> None:
             reset_agent(args.agent, args.source_agent)
         elif args.command == "skills":
             execute_skills_command(args)
+        elif args.command == "desktop":
+            # Desktop mode: Unix Socket IPC
+            from deepagents_cli.desktop import main as desktop_main
+            asyncio.run(desktop_main(args.socket, args.agent))
         else:
             # Create session state from args
             session_state = SessionState(auto_approve=args.auto_approve, no_splash=args.no_splash)
