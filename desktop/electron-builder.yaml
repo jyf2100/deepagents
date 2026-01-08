@@ -1,0 +1,25 @@
+appId: com.deepagents.desktop
+productName: DeepAgents
+directories:
+  output: release
+  buildResources: build
+files:
+  - src/**/*
+extraResources:
+  - from: ../../libs/deepagents
+    to: deepagents
+  - from: ../../libs/deepagents-cli
+    to: deepagents-cli
+
+mac:
+  category: public.app-category.developer-tools
+  icon: src/resources/icons/icon.icns
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+
+win:
+  icon: src/resources/icons/icon.ico
+  target:
+    - target: nsis
+      arch: [x64]

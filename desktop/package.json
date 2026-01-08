@@ -1,0 +1,28 @@
+{
+  "name": "deepagents-desktop",
+  "version": "0.0.1",
+  "description": "DeepAgents Desktop Client",
+  "main": "src/main/index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "start": "electron .",
+    "dev": "NODE_ENV=development electron .",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "build": "electron-builder",
+    "build:mac": "electron-builder --mac",
+    "build:win": "electron-builder --win"
+  },
+  "keywords": ["deepagents", "desktop", "electron"],
+  "author": "DeepAgents Team",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^34.0.0",
+    "electron-builder": "^25.0.0",
+    "jest": "^29.7.0",
+    "msgpackr": "^1.10.1"
+  }
+}
