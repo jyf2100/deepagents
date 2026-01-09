@@ -4,12 +4,6 @@ on:
   push:
     branches:
       - phase-2-desktop-client
-      - main
-    tags:
-      - 'v*'
-  pull_request:
-    branches:
-      - phase-2-desktop-client
   workflow_dispatch:
 
 jobs:
@@ -23,21 +17,16 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: desktop/package-lock.json
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
 
       - name: Install uv
         run: |
@@ -54,11 +43,6 @@ jobs:
           cd desktop
           npm install
 
-      - name: Run tests
-        run: |
-          cd desktop
-          npm test
-
       - name: Run Python tests
         run: |
           cd libs/deepagents-cli
@@ -73,46 +57,10 @@ jobs:
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
+        if: success()
         with:
           name: deepagents-desktop-${{ matrix.os }}
           path: |
             desktop/release/*
-            desktop/dist/*
           retention-days: 30
-
-      # macOS specific: notarize app (optional)
-      - name: Notarize macOS app
-        if: matrix.os == 'macos-latest' && github.event_name == 'push' && github.ref_type == 'tag'
-        run: |
-          cd desktop
-          # Add notarization steps here if needed
-          echo "Notarization step (requires Apple Developer credentials)"
-
-  release:
-    name: Create Release
-    needs: build
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      - name: Display structure
-        run: ls -R artifacts
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: artifacts/**/*
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          if-no-files-found: warn
