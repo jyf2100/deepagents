@@ -335,6 +335,7 @@ def create_cli_agent(
     enable_memory: bool = True,
     enable_skills: bool = True,
     enable_shell: bool = True,
+    workspace_id: str | None = None,  # Optional: workspace for isolation
 ) -> tuple[Pregel, CompositeBackend]:
     """Create a CLI-configured agent with flexible options.
 
@@ -356,6 +357,8 @@ def create_cli_agent(
         enable_memory: Enable AgentMemoryMiddleware for persistent memory
         enable_skills: Enable SkillsMiddleware for custom agent skills
         enable_shell: Enable ShellMiddleware for local shell execution (only in local mode)
+        workspace_id: Optional workspace identifier for workspace-specific file operations
+                     and skill filtering. If None, uses default behavior.
 
     Returns:
         2-tuple of (agent_graph, composite_backend)
@@ -364,6 +367,19 @@ def create_cli_agent(
     """
     if tools is None:
         tools = []
+
+    # Workspace configuration (if specified)
+    workspace_root = None
+    workspace_enabled_skills = None
+    if workspace_id is not None:
+        from deepagents_cli.desktop.workspace import get_workspace_manager
+        workspace_manager = get_workspace_manager()
+        workspace = workspace_manager.get_workspace(workspace_id)
+        if workspace is not None:
+            # Use workspace directory as root for file operations
+            workspace_root = Path(workspace.root_dir).expanduser()
+            workspace_root.mkdir(parents=True, exist_ok=True)
+            workspace_enabled_skills = workspace.enabled_skills
 
     # Setup agent directory for persistent memory (if enabled)
     if enable_memory or enable_skills:
@@ -386,15 +402,18 @@ def create_cli_agent(
     # CONDITIONAL SETUP: Local vs Remote Sandbox
     if sandbox is None:
         # ========== LOCAL MODE ==========
+        # Use workspace root if provided, otherwise use current directory
+        root_dir = workspace_root if workspace_root is not None else Path.cwd()
+
         composite_backend = CompositeBackend(
-            default=FilesystemBackend(),  # Current working directory
+            default=FilesystemBackend(root_dir=root_dir),
             routes={},  # No virtualization - use real paths
         )
 
         # Add memory middleware
         if enable_memory:
             agent_middleware.append(
-                AgentMemoryMiddleware(settings=settings, assistant_id=assistant_id)
+                AgentMemoryMiddleware(settings=settings, assistant_id=assistant_id, workspace_id=workspace_id)
             )
 
         # Add skills middleware
@@ -404,6 +423,7 @@ def create_cli_agent(
                     skills_dir=skills_dir,
                     assistant_id=assistant_id,
                     project_skills_dir=project_skills_dir,
+                    enabled_skills=workspace_enabled_skills,  # Pass workspace skills
                 )
             )
 
@@ -417,7 +437,7 @@ def create_cli_agent(
 
             agent_middleware.append(
                 ShellMiddleware(
-                    workspace_root=str(Path.cwd()),
+                    workspace_root=str(workspace_root if workspace_root else Path.cwd()),
                     env=shell_env,
                 )
             )
@@ -431,7 +451,7 @@ def create_cli_agent(
         # Add memory middleware
         if enable_memory:
             agent_middleware.append(
-                AgentMemoryMiddleware(settings=settings, assistant_id=assistant_id)
+                AgentMemoryMiddleware(settings=settings, assistant_id=assistant_id, workspace_id=workspace_id)
             )
 
         # Add skills middleware
@@ -441,6 +461,7 @@ def create_cli_agent(
                     skills_dir=skills_dir,
                     assistant_id=assistant_id,
                     project_skills_dir=project_skills_dir,
+                    enabled_skills=workspace_enabled_skills,  # Pass workspace skills
                 )
             )
 

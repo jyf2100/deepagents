@@ -1,15 +1,623 @@
-const messagesDiv = document.getElementById('messages');
-const input = document.getElementById('message-input');
-const sendBtn = document.getElementById('send-btn');
+// DOM 元素引用 - 在 initializeApp 中初始化
+let messagesDiv, input, sendBtn, historyList, skillsList;
 
 let isProcessing = false;
+let conversations = [];
+let currentConversationId = null;
+let skills = [];
+
+// === 全局函数：添加技能对话框 ===
+// 在页面加载时就定义，确保 onclick 可以使用
+window.showAddSkillDialogGlobal = function() {
+  console.log('[showAddSkillDialogGlobal] Called');
+  const dialog = document.getElementById('add-skill-dialog');
+  if (dialog) {
+    dialog.style.display = 'flex';
+    const skillPathInput = document.getElementById('skill-path-input');
+    const skillPreview = document.getElementById('skill-preview');
+    const uploadBtn = document.getElementById('upload-skill-btn');
+    if (skillPathInput) skillPathInput.value = '';
+    if (skillPreview) skillPreview.style.display = 'none';
+    if (uploadBtn) uploadBtn.disabled = true;
+  } else {
+    console.error('[showAddSkillDialogGlobal] Dialog not found');
+  }
+};
+
+// === 标签页切换 ===
+function setupTabs() {
+  const tabs = document.querySelectorAll('.tab');
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const tabName = tab.dataset.tab;
+
+      // 更新标签状态
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+
+      // 获取面板元素
+      const historyView = document.getElementById('history-view');
+      const skillsPanelContent = document.getElementById('skills-panel-content');
+      const skillsListPanel = document.getElementById('skills-list-panel');
+      const webviewPanel = document.getElementById('skillslm-webview-panel');
+
+      console.log('[Tabs] Clicked tab:', tabName);
+      console.log('[Tabs] skillsPanelContent:', skillsPanelContent);
+      console.log('[Tabs] skillsListPanel:', skillsListPanel);
+      console.log('[Tabs] webviewPanel:', webviewPanel);
+
+      if (tabName === 'history') {
+        // 显示历史视图，隐藏技能面板 - 通过 CSS 类控制
+        document.getElementById('side-panel').classList.remove('skills-active');
+      } else if (tabName === 'skills') {
+        // 显示技能面板（包含 webview）- 通过 CSS 类控制
+        document.getElementById('side-panel').classList.add('skills-active');
+
+        // webview 加载监听
+        const webview = document.getElementById('skillslm-webview');
+        if (webview) {
+          console.log('[Tabs] webview element found');
+          webview.addEventListener('dom-ready', () => {
+            console.log('[Webview] DOM ready');
+          });
+          webview.addEventListener('did-start-loading', () => {
+            console.log('[Webview] Started loading');
+          });
+          webview.addEventListener('did-finish-load', () => {
+            console.log('[Webview] Finished loading');
+          });
+          webview.addEventListener('did-fail-load', (event) => {
+            console.error('[Webview] Failed to load:', event);
+          });
+        } else {
+          console.error('[Tabs] webview element NOT found!');
+        }
+
+        // 加载技能列表
+        loadSkills();
+      }
+    });
+  });
+
+  // 初始化：确保历史视图默认显示（移除直接 style 设置，让 CSS 控制）
+  const historyView = document.getElementById('history-view');
+  const skillsPanelContent = document.getElementById('skills-panel-content');
+  const webviewPanel = document.getElementById('skillslm-webview-panel');
+
+  console.log('[Tabs Init] Elements:', {
+    historyView: !!historyView,
+    skillsPanelContent: !!skillsPanelContent,
+    webviewPanel: !!webviewPanel
+  });
+
+  // 不需要手动设置 display，CSS 已经通过 #side-panel 的类来控制
+  // 默认情况下没有 skills-active 类，所以显示历史视图
+}
+
+// === 技能管理 ===
+async function loadSkills() {
+  skillsList.innerHTML = '<div class="loading">加载技能中...</div>';
+
+  try {
+    // 获取技能列表
+    const result = await window.deepagents.listSkills();
+    // Python 返回: {status: 'success', data: {skills: [...]}}
+    // handleSocketMessage 返回 data 部分，即 {skills: [...]}
+    skills = result.data?.skills || result.skills || [];
+
+    if (skills.length === 0) {
+      skillsList.innerHTML = `
+        <div class="empty-state">
+          <div>暂无可用技能</div>
+          <div style="margin-top: 12px; font-size: 11px; color: #6b7280;">
+            将技能文件放在 ~/.deepagents/skills/ 或 .deepagents/skills/ 目录
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    renderSkills();
+  } catch (error) {
+    console.error('Failed to load skills:', error);
+    skillsList.innerHTML = `<div class="empty-state">加载失败: ${error.message}</div>`;
+  }
+}
+
+function renderSkills() {
+  skillsList.innerHTML = '';
+
+  if (skills.length === 0) {
+    skillsList.innerHTML = '<div class="empty-state">暂无可用技能</div>';
+    return;
+  }
+
+  skills.forEach(skill => {
+    const item = document.createElement('div');
+    item.className = 'skill-item';
+
+    const sourceLabel = skill.source === 'user' ? '用户' : '项目';
+    const sourceClass = skill.source;
+
+    item.innerHTML = `
+      <div class="skill-header">
+        <span class="skill-name">${escapeHtml(skill.name)}</span>
+        <span class="skill-source ${sourceClass}">${sourceLabel}</span>
+      </div>
+      <div class="skill-description">${escapeHtml(skill.description)}</div>
+      <div class="skill-footer">
+        <button class="delete-skill-btn" data-skill="${skill.name}" data-dir-name="${skill.dir_name}" data-source="${skill.source}">
+          🗑️ 删除
+        </button>
+      </div>
+    `;
+
+    // 绑定删除按钮事件
+    const deleteBtn = item.querySelector('.delete-skill-btn');
+    deleteBtn.addEventListener('click', () => {
+      deleteSkill(skill.dir_name, skill.source);
+    });
+
+    skillsList.appendChild(item);
+  });
+}
+
+async function deleteSkill(skillName, source = 'auto') {
+  // 确认对话框
+  const confirmed = confirm(`确定要删除技能 "${skillName}" 吗？\n\n此操作无法撤销。`);
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    // 禁用按钮，显示加载状态
+    const btn = document.querySelector(`.delete-skill-btn[data-skill="${skillName}"]`);
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = '删除中...';
+    }
+
+    // 调用删除 API
+    await window.deepagents.deleteSkill(skillName, source);
+
+    // 刷新技能列表
+    await loadSkills();
+
+  } catch (error) {
+    console.error('Failed to delete skill:', error);
+    alert(`删除失败: ${error.message}`);
+
+    // 恢复按钮状态
+    const btn = document.querySelector(`.delete-skill-btn[data-skill="${skillName}"]`);
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = '🗑️ 删除';
+    }
+  }
+}
+
+// === 对话历史 ===
+function loadConversations() {
+  const saved = localStorage.getItem('deepagents-conversations');
+  if (saved) {
+    try {
+      conversations = JSON.parse(saved);
+    } catch (e) {
+      conversations = [];
+    }
+  }
+  renderHistory();
+}
+
+function saveConversations() {
+  localStorage.setItem('deepagents-conversations', JSON.stringify(conversations));
+}
+
+function createConversation() {
+  const id = Date.now().toString();
+  const conversation = {
+    id,
+    title: '新对话',
+    messages: [],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  conversations.unshift(conversation);
+  currentConversationId = id;
+  saveConversations();
+  renderHistory();
+  return conversation;
+}
+
+function getCurrentConversation() {
+  return conversations.find(c => c.id === currentConversationId);
+}
+
+function updateConversationTitle(conversation, firstMessage) {
+  const title = firstMessage.slice(0, 30) + (firstMessage.length > 30 ? '...' : '');
+  conversation.title = title;
+  saveConversations();
+  renderHistory();
+}
+
+function addMessageToHistory(role, content) {
+  let conversation = getCurrentConversation();
+  if (!conversation) {
+    conversation = createConversation();
+  }
+
+  conversation.messages.push({ role, content, timestamp: new Date().toISOString() });
+  conversation.updatedAt = new Date().toISOString();
+
+  if (role === 'user' && conversation.messages.filter(m => m.role === 'user').length === 1) {
+    updateConversationTitle(conversation, content);
+  }
+
+  saveConversations();
+}
+
+function renderHistory() {
+  historyList.innerHTML = '';
+
+  const newChatBtn = document.createElement('div');
+  newChatBtn.className = 'history-item';
+  newChatBtn.innerHTML = '<div class="history-title">+ 新对话</div>';
+  newChatBtn.onclick = () => {
+    currentConversationId = null;
+    messagesDiv.innerHTML = '';
+    renderHistory();
+  };
+  historyList.appendChild(newChatBtn);
+
+  conversations.forEach(conv => {
+    const item = document.createElement('div');
+    item.className = `history-item ${conv.id === currentConversationId ? 'active' : ''}`;
+
+    const time = new Date(conv.updatedAt).toLocaleString('zh-CN', {
+      month: 'numeric',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    item.innerHTML = `
+      <div class="history-content">
+        <div class="history-title">${escapeHtml(conv.title)}</div>
+        <div class="history-time">${time}</div>
+      </div>
+      <button class="history-delete-btn" data-id="${conv.id}" title="删除对话">×</button>
+    `;
+
+    // 点击加载对话
+    item.addEventListener('click', (e) => {
+      // 如果点击的是删除按钮，不触发加载
+      if (e.target.classList.contains('history-delete-btn')) {
+        return;
+      }
+      loadConversation(conv.id);
+    });
+
+    // 删除按钮事件
+    const deleteBtn = item.querySelector('.history-delete-btn');
+    deleteBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteConversation(conv.id);
+    });
+
+    historyList.appendChild(item);
+  });
+}
+
+// 删除对话
+function deleteConversation(id) {
+  const conversation = conversations.find(c => c.id === id);
+  if (!conversation) return;
+
+  if (confirm(`确定要删除对话"${conversation.title}"吗？`)) {
+    // 从数组中删除
+    conversations = conversations.filter(c => c.id !== id);
+
+    // 如果删除的是当前对话，清空消息区域
+    if (currentConversationId === id) {
+      currentConversationId = null;
+      messagesDiv.innerHTML = '';
+    }
+
+    // 保存并重新渲染
+    saveConversations();
+    renderHistory();
+  }
+}
+
+function loadConversation(id) {
+  const conversation = conversations.find(c => c.id === id);
+  if (!conversation) return;
+
+  currentConversationId = id;
+  messagesDiv.innerHTML = '';
+
+  conversation.messages.forEach(msg => {
+    const div = document.createElement('div');
+    div.className = `message ${msg.role}`;
+    div.textContent = msg.content;
+    messagesDiv.appendChild(div);
+  });
+
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  renderHistory();
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function formatMessageContent(content) {
+  // 处理多行内容和格式
+  if (!content) return '';
+
+  let formatted = content;
+
+  // 使用 Map 存储解析后的 JSON 对象和代码块
+  const jsonMap = new Map();
+  const blockMap = new Map();
+  const JSON_PREFIX = '___JSON_';
+  const BLOCK_PREFIX = '___BLOCK_';
+
+  // 1. 首先检测代码块 (```code```)
+  let blockIndex = 0;
+  formatted = formatted.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
+    // 如果是 JSON，尝试格式化
+    if (lang === 'json') {
+      try {
+        const parsed = JSON.parse(code);
+        code = JSON.stringify(parsed, null, 2);
+      } catch (e) {
+        // 不是有效 JSON，保持原样
+      }
+    }
+    const marker = `${BLOCK_PREFIX}${blockIndex}___`;
+    blockMap.set(blockIndex, code);
+    blockIndex++;
+    return marker;
+  });
+
+  // 2. 检测 JSON 对象（在 HTML 转义之前）
+  let jsonIndex = 0;
+  formatted = formatted.replace(/(\{(?:[^{}]|\{[^{}]*\})*\})/g, (match) => {
+    try {
+      const parsed = JSON.parse(match);
+      const marker = `${JSON_PREFIX}${jsonIndex}___`;
+      jsonMap.set(jsonIndex, parsed);
+      jsonIndex++;
+      return marker;
+    } catch (e) {
+      return match;
+    }
+  });
+
+  // 3. 转义 HTML 防止 XSS
+  formatted = escapeHtml(formatted);
+
+  // 4. 处理标记的代码块 - 必须转义 code 中的 HTML
+  formatted = formatted.replace(/___BLOCK_(\d+)___/g, (match, index) => {
+    const code = blockMap.get(parseInt(index));
+    if (code !== undefined) {
+      return `<pre><code>${escapeHtml(code)}</code></pre>`;
+    }
+    return match;
+  });
+
+  // 5. 处理标记的 JSON 块
+  formatted = formatted.replace(/___JSON_(\d+)___/g, (match, index) => {
+    const parsed = jsonMap.get(parseInt(index));
+    if (parsed) {
+      const highlighted = JSON.stringify(parsed, null, 2)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/("(?:\\u[\dA-Fa-f]{4}|\\[^u]|[^\\"])*"(\s*:)?)/g, (m) => {
+          let cls = 'json-string';
+          if (/:$/.test(m)) {
+            cls = 'json-key';
+          }
+          return `<span class="${cls}">${m}</span>`;
+        })
+        .replace(/\b(true|false|null)\b/g, '<span class="json-boolean">$1</span>')
+        .replace(/\b(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\b/g, '<span class="json-number">$1</span>');
+      return `<pre><code class="language-json">${highlighted}</code></pre>`;
+    }
+    return match;
+  });
+
+  // 6. 检测行内代码 (`code`) - 但跳过已经在 <pre><code> 中的内容
+  // 首先保护已有的 <pre><code>...</code></pre> 块
+  const protectedBlocks = [];
+  formatted = formatted.replace(/<pre><code>[\s\S]*?<\/code><\/pre>/g, (match) => {
+    protectedBlocks.push(match);
+    return `___PROTECTED_${protectedBlocks.length - 1}___`;
+  });
+
+  // 现在安全地处理行内代码
+  formatted = formatted.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+  // 7. 检测粗体 (**text**)
+  formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+
+  // 8. 检测斜体 (*text*)
+  formatted = formatted.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+
+  // 9. 将换行符转换为 <br>
+  formatted = formatted.replace(/\n/g, '<br>');
+
+  // 恢复保护的代码块
+  formatted = formatted.replace(/___PROTECTED_(\d+)___/g, (match, index) => {
+    return protectedBlocks[parseInt(index)];
+  });
+
+  // 新增：工具调用格式化
+  formatted = formatToolCalls(formatted);
+
+  // 新增：文件路径格式化
+  formatted = formatFilePaths(formatted);
+
+  return formatted;
+}
+
+// 新增函数：JSON 语法高亮
+function formatJsonWithHighlight(jsonStr) {
+  try {
+    const parsed = JSON.parse(jsonStr);
+    const formatted = JSON.stringify(parsed, null, 2);
+    return formatted
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/("(?:\\u[\dA-Fa-f]{4}|\\[^u]|[^\\"])*"(\s*:)?)/g, (m) => {
+        let cls = /:$/.test(m) ? 'json-key' : 'json-string';
+        return `<span class="${cls}">${m}</span>`;
+      })
+      .replace(/\b(true|false|null)\b/g, '<span class="json-boolean">$1</span>')
+      .replace(/\b(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\b/g, '<span class="json-number">$1</span>');
+  } catch (e) {
+    return escapeHtml(jsonStr);
+  }
+}
+
+// 新增函数：工具调用格式化
+function formatToolCalls(text) {
+  // 检测工具调用块模式
+  const toolCallPattern = /(?:call_id|Tool Call):\s*([a-f0-9-]+)\s*\n([\s\S]*?)(?=\n\n|\n(?:call_id|已创建|已删除|✓|Error)|$)/gi;
+
+  return text.replace(toolCallPattern, (match, callId, body) => {
+    // 提取工具信息
+    const nameMatch = body.match(/name:\s*(\w+)/i);
+    const typeMatch = body.match(/type:\s*(\w+)/i);
+    const inputMatch = body.match(/input:\s*(\{[\s\S]*\})/i);
+
+    const toolName = nameMatch ? nameMatch[1] : 'unknown';
+    const toolType = typeMatch ? typeMatch[1] : 'tool';
+
+    // 构建结构化 HTML
+    let result = `<div class="tool-call-compact">`;
+
+    // 标题栏
+    result += `<div class="tool-call-header">`;
+    result += `<span class="tool-icon">🔧</span>`;
+    result += `<span class="tool-name">${escapeHtml(toolName)}</span>`;
+    result += `<span class="tool-type">${escapeHtml(toolType)}</span>`;
+    result += `</div>`;
+
+    // input 参数块（如果有）
+    if (inputMatch) {
+      const inputJson = inputMatch[1];
+      // 格式化 JSON 并添加语法高亮
+      const formattedInput = formatJsonWithHighlight(inputJson);
+      result += `<div class="tool-input-section">`;
+      result += `<div class="section-label">输入参数</div>`;
+      result += `<pre class="tool-input-json">${formattedInput}</pre>`;
+      result += `</div>`;
+    }
+
+    result += `</div>`;
+    return result;
+  });
+}
+
+// 新增函数：文件路径格式化
+function formatFilePaths(text) {
+  // 检测文件路径模式
+  const pathPattern = /(?![<>])((?:\/[a-zA-Z0-9._-]+|[a-zA-Z]:\\[^\s<>)\]]+|[~][\/][^\s<>)\]]+)(?:\/[^\s<>)\]]*)*)/g;
+
+  return text.replace(pathPattern, (match) => {
+    // 长路径使用省略显示
+    if (match.length > 50) {
+      return `<span class="file-path-long" title="${escapeHtml(match)}">${escapeHtml(match)}</span>`;
+    }
+    return `<span class="file-path">${escapeHtml(match)}</span>`;
+  });
+}
 
 function addMessage(role, content) {
   const div = document.createElement('div');
   div.className = `message ${role}`;
-  div.textContent = content;
+  div.innerHTML = formatMessageContent(content);
   messagesDiv.appendChild(div);
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+  addMessageToHistory(role, content);
+}
+
+// 当前思考过程组件
+let currentThinkingLog = null;
+
+// 添加操作日志记录到思考过程面板
+function addOperationLog(text) {
+  // 如果当前没有思考过程组件，创建一个新的
+  if (!currentThinkingLog) {
+    createThinkingLog();
+  }
+
+  const div = document.createElement('div');
+  div.className = 'operation-log';
+  div.innerHTML = `
+    <div class="log-icon">⚙️</div>
+    <div class="log-text">${escapeHtml(text)}</div>
+    <div class="log-time">${new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
+  `;
+  currentThinkingLog.logContainer.appendChild(div);
+  currentThinkingLog.logContainer.scrollTop = currentThinkingLog.logContainer.scrollHeight;
+}
+
+// 创建思考过程组件
+function createThinkingLog() {
+  const container = document.createElement('div');
+  container.className = 'thinking-process';
+
+  const header = document.createElement('div');
+  header.className = 'thinking-header';
+  header.innerHTML = `
+    <span class="thinking-title">⚙️ 思考过程</span>
+    <button class="thinking-toggle">收起</button>
+  `;
+
+  const logContainer = document.createElement('div');
+  logContainer.className = 'thinking-log';
+
+  container.appendChild(header);
+  container.appendChild(logContainer);
+
+  // 折叠/展开功能
+  const toggleBtn = header.querySelector('.thinking-toggle');
+  toggleBtn.addEventListener('click', () => {
+    container.classList.toggle('collapsed');
+    toggleBtn.textContent = container.classList.contains('collapsed') ? '展开' : '收起';
+  });
+
+  messagesDiv.appendChild(container);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+  // 保存引用
+  currentThinkingLog = { container, logContainer };
+}
+
+// 完成当前思考过程（助手回复后调用）
+function completeThinkingLog() {
+  currentThinkingLog = null;
+}
+
+// 简单的 HTML 转义函数
+function escapeHtml(text) {
+  const map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return text.replace(/[&<>"']/g, m => map[m]);
 }
 
 async function sendMessage() {
@@ -18,12 +626,31 @@ async function sendMessage() {
 
   isProcessing = true;
   sendBtn.disabled = true;
+
+  // 重置思考过程组件，为新的对话做准备
+  currentThinkingLog = null;
+
   addMessage('user', message);
   input.value = '';
 
   try {
-    const response = await window.deepagents.chat(message);
-    addMessage('assistant', response.content);
+    // 显示"思考中"加载状态
+    const loadingElement = document.createElement('div');
+    loadingElement.className = 'message assistant';
+    loadingElement.innerHTML = '<span class="thinking-indicator">思考中...</span>';
+    messagesDiv.appendChild(loadingElement);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+    // 调用后端（使用流式模式，但当前架构下仍是一次性返回）
+    const response = await window.deepagents.chat(message, true, currentWorkspaceId);
+
+    // 移除加载状态，显示实际响应
+    loadingElement.remove();
+    // 响应结构: { status: 'success', data: { content: '...' } }
+    console.log('[sendMessage] Response:', response);
+    const content = response?.data?.content || response?.content || '';
+    console.log('[sendMessage] Extracted content length:', content.length);
+    addMessage('assistant', content);
   } catch (error) {
     addMessage('assistant', `Error: ${error.message}`);
   } finally {
@@ -32,14 +659,1341 @@ async function sendMessage() {
   }
 }
 
-sendBtn.addEventListener('click', sendMessage);
-input.addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') sendMessage();
-});
+// === 添加技能对话框 ===
+let addSkillDialog, skillPathInput, skillFileInput, skillPreview, skillPreviewContent;
+let selectedSkillFiles = null;
+let selectedSkillName = null;
 
-// 监听流式响应
-window.deepagents.onResponse((data) => {
-  if (data.status === 'success') {
-    addMessage('assistant', data.data.content);
+function showAddSkillDialog() {
+  addSkillDialog.style.display = 'flex';
+  skillPathInput.value = '';
+  skillPreview.style.display = 'none';
+  selectedSkillFiles = null;
+  selectedSkillName = null;
+  document.getElementById('upload-skill-btn').disabled = true;
+}
+
+function hideAddSkillDialog() {
+  addSkillDialog.style.display = 'none';
+}
+
+function setupAddSkillButton() {
+  // 获取所有 DOM 元素
+  addSkillDialog = document.getElementById('add-skill-dialog');
+  skillPathInput = document.getElementById('skill-path-input');
+  skillFileInput = document.getElementById('skill-file-input');
+  skillPreview = document.getElementById('skill-preview');
+  skillPreviewContent = document.getElementById('skill-preview-content');
+
+  const addSkillBtn = document.getElementById('add-skill-btn');
+  console.log('[setupAddSkillButton] addSkillBtn:', addSkillBtn);
+  console.log('[setupAddSkillButton] addSkillBtn tagName:', addSkillBtn?.tagName);
+
+  if (!addSkillBtn) {
+    console.error('[setupAddSkillButton] add-skill-btn not found!');
+    console.log('[setupAddSkillButton] Available buttons:', document.querySelectorAll('button[id]'));
+    return;
   }
-});
+
+  const browseBtn = document.getElementById('browse-skill-btn');
+  const cancelBtn = document.getElementById('cancel-skill-btn');
+  const uploadBtn = document.getElementById('upload-skill-btn');
+
+  console.log('[setupAddSkillButton] browseBtn:', browseBtn);
+  console.log('[setupAddSkillButton] cancelBtn:', cancelBtn);
+  console.log('[setupAddSkillButton] uploadBtn:', uploadBtn);
+
+  // 打开对话框 - 使用更明确的处理函数
+  const handleAddSkillClick = (e) => {
+    console.log('[addSkillBtn] Clicked! event:', e);
+    console.log('[addSkillBtn] Dialog element:', addSkillDialog);
+    e.preventDefault();
+    e.stopPropagation();
+    showAddSkillDialog();
+  };
+
+  addSkillBtn.addEventListener('click', handleAddSkillClick);
+  console.log('[setupAddSkillButton] Event listener attached to addSkillBtn');
+
+  // 浏览按钮
+  browseBtn.addEventListener('click', () => {
+    skillFileInput.click();
+  });
+
+  // 文件选择 - 读取文件内容而不是路径
+  skillFileInput.addEventListener('change', async (e) => {
+    const files = Array.from(e.target.files);
+    console.log('[FileSelect] Selected files:', files.length);
+
+    if (files.length === 0) return;
+
+    // 查找 SKILL.md 文件
+    const skillFile = files.find(f => f.name === 'SKILL.md');
+
+    if (!skillFile) {
+      skillPathInput.value = files[0].webkitRelativePath.split('/')[0];
+      skillPreview.style.display = 'block';
+      skillPreviewContent.innerHTML = '<span style="color: #ff3b30;">未找到 SKILL.md 文件</span>';
+      uploadBtn.disabled = true;
+      return;
+    }
+
+    // 提取技能名称（目录名）
+    const pathParts = skillFile.webkitRelativePath.split('/');
+    selectedSkillName = pathParts[pathParts.length - 2];
+
+    // 读取所有文件的内容
+    try {
+      uploadBtn.textContent = '读取文件中...';
+      uploadBtn.disabled = true;
+
+      const fileData = [];
+
+      for (const file of files) {
+        // 跳过目录
+        if (file.name === '.' || file.name === '') continue;
+
+        // 读取文件内容为 base64
+        const reader = new FileReader();
+        const content = await new Promise((resolve, reject) => {
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+
+        // content 是 data URL 格式: data:mime/type;base64,BASE64DATA
+        let base64Data = '';
+        let mimeType = 'text/plain';
+
+        if (typeof content === 'string' && content.startsWith('data:')) {
+          const match = content.match(/data:([^;]+);base64,(.+)/);
+          if (match) {
+            mimeType = match[1];
+            base64Data = match[2];
+          } else {
+            console.warn('[FileSelect] Unexpected data URL format:', content.substring(0, 100));
+          }
+        } else {
+          console.warn('[FileSelect] Content is not a data URL:', typeof content);
+        }
+
+        if (!base64Data) {
+          console.error('[FileSelect] Failed to extract base64 from:', content.substring(0, 100));
+          continue;
+        }
+
+        fileData.push({
+          name: file.name,
+          content: base64Data,
+          mimeType: mimeType,
+          size: file.size
+        });
+
+        console.log('[FileSelect] Loaded file:', file.name, 'size:', base64Data.length, 'bytes (base64)');
+      }
+
+      selectedSkillFiles = fileData;
+
+      skillPathInput.value = selectedSkillName;
+      skillPreview.style.display = 'block';
+      skillPreviewContent.innerHTML = `
+        <strong>${selectedSkillName}</strong><br>
+        <span style="color: #34c759;">✓ SKILL.md 文件已找到</span><br>
+        <span style="color: #86868b;">${fileData.length} 个文件已读取</span>
+      `;
+      uploadBtn.textContent = '上传';
+      uploadBtn.disabled = false;
+
+      console.log('[FileSelect] Files loaded:', fileData.map(f => f.name));
+    } catch (error) {
+      console.error('[FileSelect] Error reading files:', error);
+      skillPreview.style.display = 'block';
+      skillPreviewContent.innerHTML = `<span style="color: #ff3b30;">读取文件失败: ${error.message}</span>`;
+      uploadBtn.textContent = '上传';
+      uploadBtn.disabled = true;
+    }
+  });
+
+  // 取消按钮
+  cancelBtn.addEventListener('click', hideAddSkillDialog);
+
+  // 上传按钮
+  uploadBtn.addEventListener('click', async () => {
+    if (!selectedSkillName || !selectedSkillFiles) {
+      return;
+    }
+
+    try {
+      uploadBtn.disabled = true;
+      uploadBtn.textContent = '上传中...';
+
+      // 获取选中的存储位置
+      const locationInput = document.querySelector('input[name="skill-location"]:checked');
+      const location = locationInput ? locationInput.value : 'project';
+
+      const result = await window.deepagents.uploadSkill(selectedSkillName, selectedSkillFiles, location);
+
+      // 根据结果显示不同的路径信息
+      const locationText = location === 'user' ? '~/.deepagents/skills/' : '.deepagents/skills/';
+      alert(`技能 "${selectedSkillName}" 上传成功！\n\n已安装到: ${locationText}${selectedSkillName}/`);
+
+      hideAddSkillDialog();
+      loadSkills();
+    } catch (error) {
+      console.error('上传技能失败:', error);
+      alert('上传技能失败: ' + error.message);
+      uploadBtn.disabled = false;
+      uploadBtn.textContent = '上传';
+    }
+  });
+
+  // ESC 键关闭对话框
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && addSkillDialog.style.display === 'flex') {
+      hideAddSkillDialog();
+    }
+  });
+
+  // 点击背景关闭对话框
+  addSkillDialog.addEventListener('click', (e) => {
+    if (e.target === addSkillDialog) {
+      hideAddSkillDialog();
+    }
+  });
+}
+
+function setupGithubImportButton() {
+  const githubImportBtn = document.getElementById('github-import-btn');
+  const githubImportDialog = document.getElementById('github-import-dialog');
+  const skillSelectionDialog = document.getElementById('skill-selection-dialog');
+  const githubUrlInput = document.getElementById('github-url-input');
+  const useProxyCheckbox = document.getElementById('use-proxy-checkbox');
+  const confirmGithubImport = document.getElementById('confirm-github-import');
+  const cancelGithubImport = document.getElementById('cancel-github-import');
+  const githubImportStatus = document.getElementById('github-import-status');
+  const githubImportMessage = document.getElementById('github-import-message');
+
+  // 技能选择对话框元素
+  const skillsListContainer = document.getElementById('skills-list-container');
+  const skillsFoundCount = document.getElementById('skills-found-count');
+  const selectedCount = document.getElementById('selected-count');
+  const backToScanBtn = document.getElementById('back-to-scan');
+  const confirmSelectedImport = document.getElementById('confirm-selected-import');
+  const selectionImportStatus = document.getElementById('selection-import-status');
+  const selectionImportMessage = document.getElementById('selection-import-message');
+
+  // 用于保存扫描结果
+  let scanResult = null;
+
+  console.log('[setupGithubImportButton] githubImportBtn:', githubImportBtn);
+
+  if (!githubImportBtn) {
+    console.error('[setupGithubImportButton] github-import-btn not found!');
+    return;
+  }
+
+  // 打开扫描对话框
+  githubImportBtn.addEventListener('click', () => {
+    console.log('[githubImportBtn] Clicked!');
+    githubUrlInput.value = '';
+    githubImportStatus.style.display = 'none';
+    githubImportDialog.style.display = 'flex';
+    githubUrlInput.focus();
+  });
+
+  // 取消扫描
+  cancelGithubImport.addEventListener('click', () => {
+    githubImportDialog.style.display = 'none';
+    scanResult = null; // 清除扫描结果
+  });
+
+  // 返回扫描对话框
+  backToScanBtn.addEventListener('click', () => {
+    skillSelectionDialog.style.display = 'none';
+    githubImportDialog.style.display = 'flex';
+    // 注意：不清除 scanResult，允许用户重新选择
+  });
+
+  // 阶段1: 扫描技能
+  confirmGithubImport.addEventListener('click', async () => {
+    const url = githubUrlInput.value.trim();
+    const useProxy = useProxyCheckbox.checked;
+
+    console.log('[confirmGithubImport] URL:', url, 'useProxy:', useProxy);
+
+    // 验证 URL
+    if (!url.startsWith('https://github.com/')) {
+      alert('请输入有效的 GitHub URL（必须以 https://github.com/ 开头）');
+      return;
+    }
+
+    // 自动移除末尾的 .git 后缀
+    const cleanUrl = url.endsWith('.git') ? url.slice(0, -4) : url;
+
+    // 禁用按钮，显示状态
+    confirmGithubImport.disabled = true;
+    confirmGithubImport.textContent = '扫描中...';
+    githubImportStatus.style.display = 'block';
+    githubImportMessage.textContent = '正在克隆仓库并扫描技能，请稍候...';
+    githubImportMessage.style.color = '#1d1d1f';
+
+    try {
+      console.log('[confirmGithubImport] Calling scanGithubForSkills...');
+      const result = await window.deepagents.scanGithubForSkills(cleanUrl, useProxy);
+      console.log('[confirmGithubImport] Result:', result);
+
+      if (result.status === 'success') {
+        // 保存扫描结果
+        scanResult = result.data;
+
+        // 显示技能选择对话框
+        showSkillSelectionDialog(result.data.skills);
+      } else {
+        const errorMsg = result.error?.message || result.message || '未知错误';
+        githubImportMessage.textContent = '扫描失败: ' + errorMsg;
+        githubImportMessage.style.color = '#ff3b30';
+      }
+    } catch (error) {
+      console.error('[confirmGithubImport] Error:', error);
+      githubImportMessage.textContent = '扫描失败: ' + error.message;
+      githubImportMessage.style.color = '#ff3b30';
+    } finally {
+      confirmGithubImport.disabled = false;
+      confirmGithubImport.textContent = '扫描技能';
+    }
+  });
+
+  // 阶段2: 显示技能选择对话框
+  function showSkillSelectionDialog(skills) {
+    // 更新技能数量
+    skillsFoundCount.textContent = skills.length;
+    selectedCount.textContent = skills.length;
+
+    // 清空技能列表
+    skillsListContainer.innerHTML = '';
+
+    // 生成技能列表
+    skills.forEach(skill => {
+      const skillItem = document.createElement('div');
+      skillItem.style.cssText = `
+        margin-bottom: 12px;
+        padding: 12px;
+        background: #f5f5f7;
+        border-radius: 8px;
+        border: 1px solid #e5e5ea;
+        cursor: pointer;
+        transition: all 0.15s ease;
+      `;
+
+      // 选中状态样式
+      skillItem.addEventListener('mouseenter', () => {
+        if (!skillItem.dataset.selected) {
+          skillItem.style.background = '#ebebeb';
+        }
+      });
+      skillItem.addEventListener('mouseleave', () => {
+        if (!skillItem.dataset.selected) {
+          skillItem.style.background = '#f5f5f7';
+        }
+      });
+
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = true; // 默认全选
+      checkbox.style.cssText = 'margin: 0; cursor: pointer;';
+      checkbox.dataset.dirName = skill.dir_name;
+      checkbox.dataset.relativePath = skill.relative_path || skill.dir_name;  // 存储相对路径
+
+      const skillInfo = document.createElement('div');
+      skillInfo.style.cssText = `
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+      `;
+
+      const skillText = document.createElement('div');
+      skillText.style.cssText = 'flex: 1;';
+
+      const skillName = document.createElement('div');
+      skillName.textContent = skill.name;
+      skillName.style.cssText = `
+        font-size: 14px;
+        font-weight: 600;
+        color: #1d1d1f;
+        margin-bottom: 4px;
+      `;
+
+      const skillDesc = document.createElement('div');
+      skillDesc.textContent = skill.description;
+      skillDesc.style.cssText = `
+        font-size: 12px;
+        color: #6e6e73;
+        line-height: 1.4;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      `;
+
+      skillText.appendChild(skillName);
+      skillText.appendChild(skillDesc);
+      skillInfo.appendChild(checkbox);
+      skillInfo.appendChild(skillText);
+      skillItem.appendChild(skillInfo);
+
+      // 点击整行切换选中状态
+      skillItem.addEventListener('click', (e) => {
+        if (e.target !== checkbox) {
+          checkbox.checked = !checkbox.checked;
+        }
+        updateSelectedCount();
+      });
+
+      skillsListContainer.appendChild(skillItem);
+    });
+
+    // 切换到技能选择对话框
+    githubImportDialog.style.display = 'none';
+    skillSelectionDialog.style.display = 'flex';
+    selectionImportStatus.style.display = 'none';
+
+    // 更新选中数量
+    updateSelectedCount();
+
+    function updateSelectedCount() {
+      const checked = skillsListContainer.querySelectorAll('input[type="checkbox"]:checked');
+      selectedCount.textContent = checked.length;
+    }
+  }
+
+  // 阶段3: 导入选中的技能
+  confirmSelectedImport.addEventListener('click', async () => {
+    const location = document.querySelector('input[name="github-skill-location"]:checked').value;
+
+    // 获取选中的技能（包含 dir_name 和 relative_path）
+    const checkedBoxes = skillsListContainer.querySelectorAll('input[type="checkbox"]:checked');
+    const selectedSkills = Array.from(checkedBoxes).map(cb => ({
+      dir_name: cb.dataset.dirName,
+      relative_path: cb.dataset.relativePath
+    }));
+
+    if (selectedSkills.length === 0) {
+      alert('请至少选择一个技能');
+      return;
+    }
+
+    console.log('[confirmSelectedImport] Selected skills:', selectedSkills, 'location:', location);
+
+    // 禁用按钮，显示状态
+    confirmSelectedImport.disabled = true;
+    backToScanBtn.disabled = true;
+    selectionImportStatus.style.display = 'block';
+    selectionImportMessage.textContent = `正在导入 ${selectedSkills.length} 个技能...`;
+    selectionImportMessage.style.color = '#1d1d1f';
+
+    try {
+      console.log('[confirmSelectedImport] Calling importSelectedSkills...');
+      const result = await window.deepagents.importSelectedSkills(
+        scanResult.temp_dir,
+        selectedSkills,
+        location
+      );
+      console.log('[confirmSelectedImport] Result:', result);
+
+      if (result.status === 'success') {
+        const data = result.data;
+        let message = `导入完成！\n\n`;
+
+        if (data.imported_count > 0) {
+          message += `✓ 已导入: ${data.imported.join(', ')}\n`;
+        }
+        if (data.skipped_count > 0) {
+          message += `⊘ 已存在（跳过）: ${data.skipped.join(', ')}\n`;
+        }
+        if (data.failed_count > 0) {
+          message += `✗ 导入失败: ${data.failed.join(', ')}\n`;
+        }
+
+        alert(message);
+
+        // 关闭对话框并刷新技能列表
+        skillSelectionDialog.style.display = 'none';
+        loadSkills();
+      } else {
+        const errorMsg = result.error?.message || result.message || '未知错误';
+        selectionImportMessage.textContent = '导入失败: ' + errorMsg;
+        selectionImportMessage.style.color = '#ff3b30';
+      }
+    } catch (error) {
+      console.error('[confirmSelectedImport] Error:', error);
+      selectionImportMessage.textContent = '导入失败: ' + error.message;
+      selectionImportMessage.style.color = '#ff3b30';
+    } finally {
+      confirmSelectedImport.disabled = false;
+      backToScanBtn.disabled = false;
+    }
+  });
+
+  // ESC 键关闭对话框
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (skillSelectionDialog.style.display === 'flex') {
+        skillSelectionDialog.style.display = 'none';
+        githubImportDialog.style.display = 'flex';
+      } else if (githubImportDialog.style.display === 'flex') {
+        githubImportDialog.style.display = 'none';
+        scanResult = null;
+      }
+    }
+  });
+
+  // 点击背景关闭对话框
+  githubImportDialog.addEventListener('click', (e) => {
+    if (e.target === githubImportDialog) {
+      githubImportDialog.style.display = 'none';
+      scanResult = null;
+    }
+  });
+
+  skillSelectionDialog.addEventListener('click', (e) => {
+    if (e.target === skillSelectionDialog) {
+      skillSelectionDialog.style.display = 'none';
+      githubImportDialog.style.display = 'flex';
+    }
+  });
+}
+
+// 在 DOM 加载完成后设置
+function initializeApp() {
+  console.log('[INIT] Initializing app, readyState:', document.readyState);
+
+  // 初始化 DOM 元素引用
+  messagesDiv = document.getElementById('messages');
+  input = document.getElementById('message-input');
+  sendBtn = document.getElementById('send-btn');
+  historyList = document.getElementById('history-list');
+  skillsList = document.getElementById('skills-list');
+
+  console.log('[INIT] DOM elements initialized');
+  console.log('[INIT] add-skill-btn exists:', !!document.getElementById('add-skill-btn'));
+
+  setupTabs();
+  loadConversations();
+  setupAddSkillButton();
+  setupGithubImportButton();
+  setupHITL(); // 初始化 HITL 功能
+  setupWorkspaceManager(); // 初始化工作空间管理
+
+  // 设置消息发送事件监听器
+  sendBtn.addEventListener('click', sendMessage);
+  input.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendMessage();
+  });
+
+  console.log('[INIT] App initialized');
+}
+
+// 暴露添加技能对话框函数到全局（用于内联 onclick）
+window.openAddSkillDialog = function() {
+  console.log('[openAddSkillDialog] Called from global scope');
+  if (typeof showAddSkillDialog === 'function') {
+    showAddSkillDialog();
+  } else {
+    console.error('[openAddSkillDialog] showAddSkillDialog not defined yet');
+  }
+};
+
+// 始终等待 DOMContentLoaded
+if (document.readyState === 'loading') {
+  console.log('[INIT] Waiting for DOMContentLoaded');
+  document.addEventListener('DOMContentLoaded', initializeApp);
+} else {
+  console.log('[INIT] DOM already loaded, initializing now');
+  // 使用 setTimeout 确保 DOM 完全渲染
+  setTimeout(initializeApp, 0);
+}
+
+// === HITL (Human-in-the-Loop) 功能 ===
+let currentRequestId = null;  // 当前等待批准的请求 ID
+let hitlCallbackRegistered = false;  // 防止重复注册回调
+let isProcessingDecision = false;  // 防止重复提交决定
+let currentToolInfo = null;  // 保存当前工具信息用于日志显示
+let autoApproveAll = false;  // 自动批准全部模式
+
+function setupHITL() {
+  console.log('[HITL] Setting up Human-in-the-Loop support');
+
+  // 只注册一次回调
+  if (!hitlCallbackRegistered) {
+    // 监听来自 Python 的 interrupt_request 消息
+    window.deepagents.onResponse((data) => {
+      console.log('[HITL] Received message:', data);
+      console.log('[HITL] Message type:', data?.type);
+
+      if (data.type === 'interrupt_request') {
+        console.log('[HITL] Showing tool approval dialog');
+        showToolApprovalDialog(data);
+      }
+    });
+    hitlCallbackRegistered = true;
+    console.log('[HITL] Response callback registered');
+  }
+
+  // 自动批准全部按钮
+  const autoApproveBtn = document.getElementById('auto-approve-btn');
+  if (autoApproveBtn) {
+    autoApproveBtn.addEventListener('click', async () => {
+      console.log('[HITL] Auto-approve all mode enabled');
+      autoApproveAll = true;
+
+      // 更新按钮状态
+      autoApproveBtn.textContent = '✓ 已开启自动批准';
+      autoApproveBtn.disabled = true;
+
+      // 批准当前工具
+      await handleToolDecision('approve');
+
+      // 显示自动批准状态提示
+      addOperationLog('🤖 已开启自动批准模式，后续工具将自动批准');
+    });
+  }
+
+  // 批准按钮
+  const approveBtn = document.getElementById('approve-tool-btn');
+  if (approveBtn) {
+    approveBtn.addEventListener('click', async () => {
+      await handleToolDecision('approve');
+    });
+  }
+
+  // 拒绝按钮
+  const rejectBtn = document.getElementById('reject-tool-btn');
+  if (rejectBtn) {
+    rejectBtn.addEventListener('click', async () => {
+      await handleToolDecision('reject');
+    });
+  }
+
+  console.log('[HITL] Setup complete');
+}
+
+function showToolApprovalDialog(data) {
+  console.log('[HITL] showToolApprovalDialog called with:', data);
+  console.log('[HITL] autoApproveAll:', autoApproveAll);
+
+  // 检查是否开启自动批准模式
+  if (autoApproveAll) {
+    console.log('[HITL] Auto-approve mode enabled, automatically approving:', data.request_id);
+
+    const toolName = data.data.tool_name || 'unknown';
+    const toolInput = data.data.tool_input || {};
+    const agentThinking = data.data.agent_thinking || '';
+
+    // 保存工具信息
+    currentToolInfo = { toolName, toolInput };
+    currentRequestId = data.request_id;
+
+    // 显示 Agent 思考内容
+    if (agentThinking && agentThinking.trim()) {
+      addOperationLog(`💭 Agent 思考:\n${agentThinking.trim()}`);
+    }
+
+    // 自动批准并添加日志
+    const inputSummary = formatToolInput(toolName, toolInput);
+    addOperationLog(`🤖 自动批准: ${toolName}\n${inputSummary}`);
+
+    // 直接发送批准
+    handleToolDecision('approve');
+    return;
+  }
+
+  // 检查是否已经在处理相同的请求
+  if (currentRequestId === data.request_id) {
+    console.log('[HITL] Already processing this request, ignoring duplicate');
+    return;
+  }
+
+  // 隐藏当前对话框（如果已显示）
+  const dialog = document.getElementById('tool-approval-dialog');
+  dialog.style.display = 'none';
+
+  // 等待一下确保 DOM 更新
+  setTimeout(() => {
+    currentRequestId = data.request_id;
+    console.log('[HITL] Set currentRequestId to:', currentRequestId);
+
+    const toolName = data.data.tool_name || 'unknown';
+    const toolInput = data.data.tool_input || {};
+    const agentThinking = data.data.agent_thinking || '';
+
+    // 保存工具信息用于后续日志显示
+    currentToolInfo = { toolName, toolInput };
+
+    // 更新对话框内容
+    document.getElementById('tool-name-display').textContent = toolName;
+    document.getElementById('tool-input-display').textContent = JSON.stringify(toolInput, null, 2);
+
+    // 显示对话框
+    console.log('[HITL] Setting dialog display to flex');
+    dialog.style.display = 'flex';
+    console.log('[HITL] Dialog display style:', dialog.style.display);
+    console.log('[HITL] Dialog visibility:', dialog.offsetParent !== null);
+
+    // 如果有 Agent 思考内容，先显示思考
+    if (agentThinking && agentThinking.trim()) {
+      addOperationLog(`💭 Agent 思考:\n${agentThinking.trim()}`);
+    }
+
+    // 添加待批准日志（包含工具详情）
+    const inputSummary = formatToolInput(toolName, toolInput);
+    addOperationLog(`🔔 等待批准: ${toolName}\n${inputSummary}`);
+  }, 50);
+}
+
+// 格式化工具输入为简洁的摘要
+function formatToolInput(toolName, toolInput) {
+  if (Object.keys(toolInput).length === 0) {
+    return '(无参数)';
+  }
+
+  switch (toolName) {
+    case 'write_file':
+      return `文件: ${toolInput.file_path || '(未知路径)'}`;
+    case 'read_file':
+      return `文件: ${toolInput.file_path || '(未知路径)'}`;
+    case 'shell':
+      return `命令: ${toolInput.command || '(未知命令)'}`;
+    case 'ls':
+      return `路径: ${toolInput.path || '(当前目录)'}`;
+    case 'grep':
+      return `搜索: ${toolInput.pattern || '(未知模式)'} 在 ${toolInput.path || '(未知路径)'}`;
+    case 'task':
+      return `子代理: ${toolInput.subagent_type || 'general-purpose'}`;
+    default:
+      // 对于其他工具，显示前两个参数
+      const entries = Object.entries(toolInput).slice(0, 2);
+      return entries.map(([k, v]) => `${k}: ${JSON.stringify(v).slice(0, 50)}`).join(', ');
+  }
+}
+
+async function handleToolDecision(action) {
+  console.log('[HITL] User decision:', action, 'for request:', currentRequestId);
+
+  // 防止重复提交
+  if (isProcessingDecision) {
+    console.log('[HITL] Already processing a decision, ignoring');
+    return;
+  }
+
+  if (!currentRequestId) {
+    console.error('[HITL] No request ID to respond to');
+    alert('错误：没有待批准的操作');
+    return;
+  }
+
+  isProcessingDecision = true;
+  const requestIdToSend = currentRequestId;
+
+  // 隐藏对话框
+  const dialog = document.getElementById('tool-approval-dialog');
+  dialog.style.display = 'none';
+
+  // 清除当前请求 ID（在发送之前，以防止重复点击）
+  currentRequestId = null;
+
+  // 获取工具信息用于显示记录
+  const actionText = action === 'approve' ? '✅ 已批准' : '❌ 已拒绝';
+  let logMessage = '';
+
+  if (currentToolInfo) {
+    const inputSummary = formatToolInput(currentToolInfo.toolName, currentToolInfo.toolInput);
+    logMessage = `${actionText}: ${currentToolInfo.toolName}\n${inputSummary}`;
+    currentToolInfo = null;  // 清除保存的工具信息
+  } else {
+    const toolName = document.getElementById('tool-name-display').textContent;
+    logMessage = `${actionText}工具调用: ${toolName}`;
+  }
+
+  // 添加操作记录到聊天界面
+  addOperationLog(logMessage);
+
+  try {
+    console.log('[HITL] Sending approval:', requestIdToSend, action);
+    // 发送用户决定到后端
+    await window.deepagents.sendToolApproval(requestIdToSend, action);
+    console.log('[HITL] Approval sent successfully');
+  } catch (error) {
+    console.error('[HITL] Failed to send decision:', error);
+    alert('操作失败: ' + error.message);
+    // 发送失败时恢复请求 ID
+    currentRequestId = requestIdToSend;
+  } finally {
+    // 无论成功或失败，都重置处理标志
+    isProcessingDecision = false;
+  }
+}
+
+// === 配置菜单 ===
+
+// 打开配置对话框
+async function openConfigDialog() {
+  const dialog = document.getElementById('config-dialog');
+  const statusDiv = document.getElementById('config-status');
+
+  try {
+    console.log('[Config] Loading configuration...');
+    const config = await window.deepagents.getConfig();
+
+    // 填充表单
+    document.getElementById('openai-api-key').value = config.openai_api_key || '';
+    document.getElementById('openai-model').value = config.openai_model || 'gpt-4o-mini';
+    document.getElementById('openai-base-url').value = config.openai_base_url || '';
+    document.getElementById('tavily-api-key').value = config.tavily_api_key || '';
+    document.getElementById('http-proxy').value = config.http_proxy || '';
+    document.getElementById('https-proxy').value = config.https_proxy || '';
+
+    // 隐藏状态消息
+    statusDiv.style.display = 'none';
+
+    // 显示对话框
+    dialog.style.display = 'flex';
+    console.log('[Config] Configuration loaded successfully');
+  } catch (error) {
+    console.error('[Config] Failed to load configuration:', error);
+    showConfigStatus('加载配置失败: ' + error.message, 'error');
+  }
+}
+
+// 关闭配置对话框
+function closeConfigDialog() {
+  const dialog = document.getElementById('config-dialog');
+  dialog.style.display = 'none';
+}
+
+// 显示状态消息
+function showConfigStatus(message, type = 'info') {
+  const statusDiv = document.getElementById('config-status');
+  statusDiv.textContent = message;
+  statusDiv.style.display = 'block';
+
+  // 设置样式
+  if (type === 'success') {
+    statusDiv.style.background = '#d4edda';
+    statusDiv.style.color = '#155724';
+  } else if (type === 'error') {
+    statusDiv.style.background = '#f8d7da';
+    statusDiv.style.color = '#721c24';
+  } else {
+    statusDiv.style.background = '#d1ecf1';
+    statusDiv.style.color = '#0c5460';
+  }
+
+  // 3秒后自动隐藏（成功消息）
+  if (type === 'success') {
+    setTimeout(() => {
+      statusDiv.style.display = 'none';
+    }, 3000);
+  }
+}
+
+// 保存配置
+async function saveConfig(event) {
+  event.preventDefault();
+
+  const form = event.target;
+  const statusDiv = document.getElementById('config-status');
+
+  try {
+    console.log('[Config] Saving configuration...');
+
+    // 收集表单数据（后端会自动处理脱敏值的恢复）
+    const newConfig = {
+      openai_api_key: document.getElementById('openai-api-key').value,
+      openai_model: document.getElementById('openai-model').value || 'gpt-4o-mini',
+      openai_base_url: document.getElementById('openai-base-url').value,
+      tavily_api_key: document.getElementById('tavily-api-key').value,
+      http_proxy: document.getElementById('http-proxy').value,
+      https_proxy: document.getElementById('https-proxy').value
+    };
+
+    // 保存配置（后端会自动恢复脱敏的 API 密钥）
+    await window.deepagents.setConfig(newConfig);
+
+    // 重新加载配置
+    await window.deepagents.reloadConfig();
+
+    console.log('[Config] Configuration saved successfully');
+    showConfigStatus('配置已保存！将在下次对话时生效', 'success');
+
+    // 2秒后关闭对话框
+    setTimeout(() => {
+      closeConfigDialog();
+    }, 2000);
+
+  } catch (error) {
+    console.error('[Config] Failed to save configuration:', error);
+    showConfigStatus('保存失败: ' + error.message, 'error');
+  }
+}
+
+// 初始化配置菜单
+function initConfigMenu() {
+  console.log('[Config] Initializing configuration menu...');
+
+  // 设置按钮点击事件
+  const settingsBtn = document.getElementById('settings-btn');
+  if (settingsBtn) {
+    settingsBtn.addEventListener('click', openConfigDialog);
+    console.log('[Config] Settings button event registered');
+  } else {
+    console.error('[Config] Settings button not found!');
+  }
+
+  // 关闭按钮
+  const closeBtn = document.getElementById('close-config-btn');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', closeConfigDialog);
+  }
+
+  // 取消按钮
+  const cancelBtn = document.getElementById('cancel-config-btn');
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', closeConfigDialog);
+  }
+
+  // 表单提交
+  const form = document.getElementById('config-form');
+  if (form) {
+    form.addEventListener('submit', saveConfig);
+  }
+
+  // 点击对话框外部关闭
+  const dialog = document.getElementById('config-dialog');
+  if (dialog) {
+    dialog.addEventListener('click', (event) => {
+      if (event.target === dialog) {
+        closeConfigDialog();
+      }
+    });
+  }
+
+  console.log('[Config] Configuration menu initialized');
+}
+
+// === 工作空间管理 ===
+let workspaces = [];
+let currentWorkspaceId = null;
+
+// 图标映射
+const workspaceIcons = {
+  'folder': '📁',
+  'code': '💻',
+  'book': '📚',
+  'briefcase': '💼',
+  'lightbulb': '💡'
+};
+
+function setupWorkspaceManager() {
+  console.log('[Workspace] Initializing workspace manager...');
+
+  // 工作空间选择器按钮
+  const workspaceSelector = document.getElementById('workspace-selector');
+  const workspaceSettingsBtn = document.getElementById('workspace-settings-btn');
+  const workspaceMenu = document.getElementById('workspace-menu');
+
+  if (workspaceSelector) {
+    // 切换下拉菜单
+    workspaceSelector.addEventListener('click', (e) => {
+      e.stopPropagation();
+      workspaceMenu.classList.toggle('show');
+      loadWorkspacesList();
+    });
+
+    // 点击其他地方关闭菜单
+    document.addEventListener('click', () => {
+      workspaceMenu.classList.remove('show');
+    });
+
+    // 阻止菜单内部点击关闭
+    workspaceMenu.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+  }
+
+  // 设置按钮
+  if (workspaceSettingsBtn) {
+    workspaceSettingsBtn.addEventListener('click', () => {
+      showWorkspaceSettings();
+    });
+  }
+
+  // 创建工作空间对话框
+  setupCreateWorkspaceDialog();
+
+  // 工作空间设置对话框
+  setupWorkspaceSettingsDialog();
+
+  // 初始加载工作空间
+  loadWorkspaces();
+
+  console.log('[Workspace] Workspace manager initialized');
+}
+
+// 加载工作空间列表
+async function loadWorkspaces() {
+  try {
+    const result = await window.deepagents.listWorkspaces();
+    workspaces = result.data?.workspaces || [];
+
+    // 获取当前工作空间（从 localStorage）
+    const savedWorkspaceId = localStorage.getItem('deepagents-current-workspace');
+
+    if (savedWorkspaceId && workspaces.find(w => w.id === savedWorkspaceId)) {
+      currentWorkspaceId = savedWorkspaceId;
+    } else if (workspaces.length > 0) {
+      currentWorkspaceId = workspaces[0].id;
+    }
+
+    updateWorkspaceUI();
+
+    console.log('[Workspace] Loaded workspaces:', workspaces.length, 'current:', currentWorkspaceId);
+  } catch (error) {
+    console.error('[Workspace] Failed to load workspaces:', error);
+  }
+}
+
+// 更新工作空间 UI
+function updateWorkspaceUI() {
+  const workspaceSelector = document.getElementById('workspace-selector');
+  const currentWorkspace = workspaces.find(w => w.id === currentWorkspaceId);
+
+  if (workspaceSelector && currentWorkspace) {
+    const icon = workspaceIcons[currentWorkspace.icon] || '📁';
+    workspaceSelector.textContent = `${icon} ${currentWorkspace.name}`;
+  }
+}
+
+// 加载工作空间列表到下拉菜单
+function loadWorkspacesList() {
+  const workspaceMenu = document.getElementById('workspace-menu');
+
+  if (!workspaceMenu) return;
+
+  let html = '';
+
+  // 显示所有工作空间
+  workspaces.forEach(workspace => {
+    const icon = workspaceIcons[workspace.icon] || '📁';
+    const isActive = workspace.id === currentWorkspaceId;
+    html += `
+      <div class="workspace-menu-item ${isActive ? 'active' : ''}" data-workspace-id="${workspace.id}">
+        <span class="workspace-icon">${icon}</span>
+        <span class="workspace-name">${escapeHtml(workspace.name)}</span>
+        <span class="workspace-category">${escapeHtml(workspace.category)}</span>
+      </div>
+    `;
+  });
+
+  // 分隔线
+  html += '<div class="workspace-menu-divider"></div>';
+
+  // 创建新工作空间选项
+  html += `
+    <div class="workspace-menu-action" id="create-workspace-action">
+      <span>➕</span>
+      <span>创建新工作空间</span>
+    </div>
+  `;
+
+  workspaceMenu.innerHTML = html;
+
+  // 绑定点击事件
+  workspaceMenu.querySelectorAll('.workspace-menu-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const workspaceId = item.getAttribute('data-workspace-id');
+      switchWorkspace(workspaceId);
+      workspaceMenu.classList.remove('show');
+    });
+  });
+
+  // 创建工作空间按钮
+  const createAction = document.getElementById('create-workspace-action');
+  if (createAction) {
+    createAction.addEventListener('click', () => {
+      workspaceMenu.classList.remove('show');
+      showCreateWorkspaceDialog();
+    });
+  }
+}
+
+// 切换工作空间
+async function switchWorkspace(workspaceId) {
+  if (workspaceId === currentWorkspaceId) return;
+
+  // 确认切换（如果有未保存的内容）
+  if (messagesDiv && messagesDiv.children.length > 0) {
+    const confirmed = confirm('切换工作空间将清空当前对话视图，确定要继续吗？');
+    if (!confirmed) return;
+  }
+
+  console.log('[Workspace] Switching to workspace:', workspaceId);
+
+  currentWorkspaceId = workspaceId;
+  localStorage.setItem('deepagents-current-workspace', workspaceId);
+
+  // 清空对话视图
+  if (messagesDiv) {
+    messagesDiv.innerHTML = '';
+  }
+
+  // 重置对话
+  currentConversationId = null;
+
+  // 更新 UI
+  updateWorkspaceUI();
+
+  console.log('[Workspace] Switched to workspace:', workspaceId);
+}
+
+// 创建工作空间对话框
+function setupCreateWorkspaceDialog() {
+  const dialog = document.getElementById('create-workspace-dialog');
+  const form = document.getElementById('create-workspace-form');
+  const cancelBtn = document.getElementById('cancel-create-workspace');
+
+  // 取消按钮
+  cancelBtn.addEventListener('click', () => {
+    dialog.style.display = 'none';
+  });
+
+  // 表单提交
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const name = document.getElementById('new-workspace-name').value.trim();
+    const category = document.getElementById('new-workspace-category').value;
+    const icon = document.getElementById('new-workspace-icon').value;
+
+    if (!name) return;
+
+    try {
+      // 生成 ID（使用名称的拼音或简单处理）
+      const id = name.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-') || `workspace-${Date.now()}`;
+
+      const result = await window.deepagents.createWorkspace({
+        id,
+        name,
+        category,
+        icon,
+        enabled_skills: ['*']
+      });
+
+      // 关闭对话框
+      dialog.style.display = 'none';
+
+      // 重新加载工作空间列表
+      await loadWorkspaces();
+
+      // 切换到新创建的工作空间
+      switchWorkspace(result.data.id);
+
+      alert(`工作空间 "${name}" 创建成功！`);
+    } catch (error) {
+      console.error('[Workspace] Failed to create workspace:', error);
+      alert('创建工作空间失败: ' + error.message);
+    }
+  });
+
+  // 点击外部关闭
+  dialog.addEventListener('click', (e) => {
+    if (e.target === dialog) {
+      dialog.style.display = 'none';
+    }
+  });
+}
+
+function showCreateWorkspaceDialog() {
+  const dialog = document.getElementById('create-workspace-dialog');
+  dialog.style.display = 'flex';
+
+  // 重置表单
+  document.getElementById('new-workspace-name').value = '';
+  document.getElementById('new-workspace-category').value = '通用';
+  document.getElementById('new-workspace-icon').value = 'folder';
+}
+
+// 工作空间设置对话框
+let editingWorkspaceSkills = [];
+
+function setupWorkspaceSettingsDialog() {
+  const dialog = document.getElementById('workspace-settings-dialog');
+  const closeBtn = document.getElementById('close-workspace-settings');
+  const cancelBtn = document.getElementById('cancel-workspace-settings');
+  const saveBtn = document.getElementById('save-workspace-settings');
+  const deleteBtn = document.getElementById('delete-workspace-btn');
+
+  // 关闭按钮
+  closeBtn.addEventListener('click', () => {
+    dialog.style.display = 'none';
+  });
+
+  cancelBtn.addEventListener('click', () => {
+    dialog.style.display = 'none';
+  });
+
+  // 保存按钮
+  saveBtn.addEventListener('click', async () => {
+    try {
+      await window.deepagents.setWorkspaceSkills(currentWorkspaceId, editingWorkspaceSkills);
+      dialog.style.display = 'none';
+      await loadWorkspaces();
+      alert('工作空间设置已保存！');
+    } catch (error) {
+      console.error('[Workspace] Failed to save settings:', error);
+      alert('保存设置失败: ' + error.message);
+    }
+  });
+
+  // 删除按钮
+  deleteBtn.addEventListener('click', async () => {
+    if (currentWorkspaceId === 'default') {
+      alert('默认工作空间不能删除！');
+      return;
+    }
+
+    const currentWorkspace = workspaces.find(w => w.id === currentWorkspaceId);
+    const confirmed = confirm(`确定要删除工作空间 "${currentWorkspace?.name}" 吗？\n\n文件目录将保留在磁盘上。`);
+    if (!confirmed) return;
+
+    try {
+      await window.deepagents.deleteWorkspace(currentWorkspaceId);
+      dialog.style.display = 'none';
+
+      // 重新加载工作空间列表
+      await loadWorkspaces();
+
+      // 切换到默认工作空间
+      switchWorkspace('default');
+
+      alert('工作空间已删除！');
+    } catch (error) {
+      console.error('[Workspace] Failed to delete workspace:', error);
+      alert('删除工作空间失败: ' + error.message);
+    }
+  });
+
+  // 点击外部关闭
+  dialog.addEventListener('click', (e) => {
+    if (e.target === dialog) {
+      dialog.style.display = 'none';
+    }
+  });
+}
+
+async function showWorkspaceSettings() {
+  const dialog = document.getElementById('workspace-settings-dialog');
+  const currentWorkspace = workspaces.find(w => w.id === currentWorkspaceId);
+
+  if (!currentWorkspace) {
+    alert('请先选择一个工作空间');
+    return;
+  }
+
+  // 更新当前工作空间信息
+  document.getElementById('current-workspace-name').textContent = currentWorkspace.name;
+  document.getElementById('current-workspace-category').textContent = currentWorkspace.category;
+
+  // 加载技能列表
+  const skillsListDiv = document.getElementById('workspace-skills-list');
+  skillsListDiv.innerHTML = '<div style="text-align: center; color: #86868b; font-size: 12px; padding: 20px;">加载技能列表中...</div>';
+
+  try {
+    // 获取所有可用技能
+    const skillsResult = await window.deepagents.listSkills();
+    const allSkills = skillsResult.data?.skills || skillsResult.skills || [];
+
+    // 获取当前工作空间启用的技能
+    editingWorkspaceSkills = currentWorkspace.enabled_skills || ['*'];
+
+    // 渲染技能选择列表
+    if (allSkills.length === 0) {
+      skillsListDiv.innerHTML = '<div style="text-align: center; color: #86868b; font-size: 12px; padding: 20px;">暂无可用技能</div>';
+    } else {
+      let html = '';
+
+      // "全部技能"选项
+      const allEnabled = editingWorkspaceSkills.includes('*');
+      html += `
+        <label style="display: flex; align-items: center; gap: 8px; padding: 8px 0; cursor: pointer; border-bottom: 1px solid #e5e5ea;">
+          <input type="checkbox" id="skill-all" ${allEnabled ? 'checked' : ''} style="margin: 0;">
+          <span style="font-size: 13px; color: #1d1d1f;">全部技能</span>
+        </label>
+      `;
+
+      // 各个技能选项
+      allSkills.forEach(skill => {
+        const checked = allEnabled || editingWorkspaceSkills.includes(skill.dir_name);
+        html += `
+          <label style="display: flex; align-items: center; gap: 8px; padding: 8px 0; cursor: pointer; border-bottom: 1px solid #e5e5ea;">
+            <input type="checkbox" class="skill-checkbox" data-skill-id="${skill.dir_name}" ${checked ? 'checked' : ''} ${allEnabled ? 'disabled' : ''} style="margin: 0;">
+            <div style="flex: 1;">
+              <div style="font-size: 13px; color: #1d1d1f;">${escapeHtml(skill.name)}</div>
+              <div style="font-size: 11px; color: #86868b;">${escapeHtml(skill.description)}</div>
+            </div>
+          </label>
+        `;
+      });
+
+      skillsListDiv.innerHTML = html;
+
+      // 绑定"全部技能"复选框事件
+      const allCheckbox = document.getElementById('skill-all');
+      if (allCheckbox) {
+        allCheckbox.addEventListener('change', (e) => {
+          const checked = e.target.checked;
+          const checkboxes = skillsListDiv.querySelectorAll('.skill-checkbox');
+          checkboxes.forEach(cb => {
+            cb.disabled = checked;
+            if (checked) {
+              cb.checked = false;
+            }
+          });
+
+          if (checked) {
+            editingWorkspaceSkills = ['*'];
+          } else {
+            editingWorkspaceSkills = [];
+          }
+        });
+      }
+
+      // 绑定各个技能复选框事件
+      const skillCheckboxes = skillsListDiv.querySelectorAll('.skill-checkbox');
+      skillCheckboxes.forEach(cb => {
+        cb.addEventListener('change', (e) => {
+          const skillId = e.target.getAttribute('data-skill-id');
+          const checked = e.target.checked;
+
+          if (checked) {
+            editingWorkspaceSkills.push(skillId);
+          } else {
+            editingWorkspaceSkills = editingWorkspaceSkills.filter(s => s !== skillId);
+          }
+        });
+      });
+    }
+
+    dialog.style.display = 'flex';
+  } catch (error) {
+    console.error('[Workspace] Failed to load skills:', error);
+    skillsListDiv.innerHTML = '<div style="text-align: center; color: #ff3b30; font-size: 12px; padding: 20px;">加载技能列表失败</div>';
+    dialog.style.display = 'flex';
+  }
+}
+
+// 在 DOM 加载完成后初始化
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initConfigMenu);
+} else {
+  initConfigMenu();
+}
