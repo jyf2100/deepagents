@@ -215,4 +215,6 @@ __marimo__/
 .idea
 .worktrees/
 desktop/release/
+desktop/node_modules/
 .deepagents/
+dist/
