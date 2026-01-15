@@ -218,3 +218,4 @@ desktop/release/
 desktop/node_modules/
 .deepagents/
 dist/
+plans/
