@@ -3,23 +3,30 @@ productName: DeepAgents
 directories:
   output: release
   buildResources: build
+asar: true
+asarUnpack:
+  - node_modules/msgpackr/**/*
 files:
+  - package.json
   - src/**/*
+  - node_modules/msgpackr/**/*
 extraResources:
-  - from: ../../libs/deepagents
-    to: deepagents
-  - from: ../../libs/deepagents-cli
-    to: deepagents-cli
+  - from: "src/resources/deepagents-desktop-agent"
+    to: "deepagents-desktop-agent"
+    filter: ["**/*"]
 
 mac:
   category: public.app-category.developer-tools
-  icon: src/resources/icons/icon.icns
+  icon: src/resources/icons/icon.png
+  hardenedRuntime: true
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
   target:
     - target: dmg
       arch: [x64, arm64]
 
 win:
-  icon: src/resources/icons/icon.ico
+  icon: src/resources/icons/icon.png
   target:
     - target: nsis
       arch: [x64]

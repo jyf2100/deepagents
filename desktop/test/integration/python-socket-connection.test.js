@@ -77,21 +77,35 @@ describe('Python Socket Connection (Integration)', () => {
       console.error(`[Python Error] ${data}`);
     });
 
-    // 等待 Python 连接
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    // 等待 Python 连接（最多 30 秒）
+    await Promise.race([
+      new Promise(resolve => setTimeout(resolve, 30000)),
+      (async () => {
+        while (connectedClients.length === 0) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      })()
+    ]);
   });
 
   afterAll(async () => {
-    // 清理
-    if (socketClient) {
-      socketClient.destroy();
-    }
-    if (pythonProcess) {
-      pythonProcess.kill();
-    }
+    // 清理 - 先关闭 socket 服务器
     if (socketServer) {
       socketServer.close();
     }
+    // 清理客户端连接
+    if (socketClient) {
+      socketClient.destroy();
+    }
+    // 关闭 Python 进程并等待退出
+    if (pythonProcess) {
+      pythonProcess.kill('SIGTERM');
+      await new Promise(resolve => {
+        pythonProcess.on('exit', resolve);
+        setTimeout(resolve, 2000); // 最多等待 2 秒
+      });
+    }
+    // 清理 socket 文件
     if (fs.existsSync(socketPath)) {
       fs.unlinkSync(socketPath);
     }

@@ -1,0 +1,3 @@
+[console_scripts]
+deepagents = deepagents_cli:cli_main
+deepagents-cli = deepagents_cli:cli_main

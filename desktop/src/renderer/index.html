@@ -2,64 +2,1227 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>DeepAgents</title>
+  <title>Cowork</title>
   <style>
+    /* Mac Classic Style - 增强版 */
+    * {
+      box-sizing: border-box;
+    }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', Helvetica, Arial, sans-serif;
       margin: 0;
-      padding: 20px;
-      background: #1a1a1a;
-      color: #fff;
+      padding: 0;
+      background: #f5f5f7;
+      color: #1d1d1f;
+      height: 100vh;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    #container {
+      display: flex;
+      height: 100vh;
+    }
+    /* 左侧面板 - Mac 风格 */
+    #side-panel {
+      width: 280px;
+      height: 100%;
+      background: linear-gradient(to bottom, #ffffff, #fafafa);
+      border-right: 1px solid #d1d1d6;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 1px 0 3px rgba(0,0,0,0.04);
+      transition: width 0.3s ease;
+    }
+
+    /* 技能标签激活时，侧边栏扩展覆盖整个区域 */
+    #side-panel.skills-active {
+      width: 100%;
+      max-width: 100%;
+      height: 100vh;
+    }
+
+    /* 技能标签激活时，隐藏聊天面板 */
+    #side-panel.skills-active ~ #chat-panel {
+      display: none;
+    }
+
+    /* 技能标签激活时，隐藏工具确认对话框和其他固定元素 */
+    #side-panel.skills-active ~ #add-skill-dialog,
+    #side-panel.skills-active ~ #tool-approval-dialog {
+      z-index: 3000;
+    }
+    /* 标签页 - Mac Segmented Control */
+    #tabs {
+      display: flex;
+      margin: 16px;
+      margin-bottom: 8px;
+      background: #e3e3e8;
+      border-radius: 8px;
+      padding: 2px;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.08);
+    }
+    .tab {
+      flex: 1;
+      padding: 6px 12px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 500;
+      color: #6e6e73;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+    }
+    .tab:hover {
+      color: #1d1d1f;
+    }
+    .tab.active {
+      background: #ffffff;
+      color: #007aff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1), inset 0 -1px 0 rgba(0,0,0,0.05);
+    }
+    #settings-btn {
+      flex: 0 0 auto;
+      width: 32px;
+      padding: 0;
+      background: transparent;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #settings-btn:hover {
+      background: rgba(0,0,0,0.05);
+    }
+    /* 面板内容 */
+    #panel-content {
+      flex: 1;
+      min-height: 0; /* 允许 flex 子元素正确收缩 */
+      overflow-y: auto;
+      padding: 0 12px 12px 12px;
+      display: flex;
+      flex-direction: column;
+    }
+    .panel-view {
+      display: none;
+    }
+    .panel-view.active {
+      display: block;
+    }
+    /* 历史记录项 - Mac list style */
+    .history-item {
+      display: flex;
+      align-items: center;
+      padding: 10px 12px;
+      margin-bottom: 2px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      color: #1d1d1f;
+      transition: all 0.2s ease;
+    }
+    .history-item:hover {
+      background: #f5f5f7;
+    }
+    .history-item.active {
+      background: #007aff;
+      color: #ffffff;
+      box-shadow: 0 2px 4px rgba(0,122,255,0.25);
+    }
+    .history-item.active .history-time {
+      color: rgba(255,255,255,0.75);
+    }
+    .history-title {
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .history-time {
+      font-size: 10px;
+      color: #86868b;
+      margin-top: 2px;
+    }
+    /* 历史记录内容区域 */
+    .history-content {
+      flex: 1;
+      min-width: 0; /* 允许文本正确截断 */
+    }
+    /* 删除按钮 */
+    .history-delete-btn {
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      border: none;
+      background: transparent;
+      color: #86868b;
+      font-size: 18px;
+      line-height: 1;
+      padding: 0;
+      margin-left: 8px;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .history-delete-btn:hover {
+      background: rgba(0,0,0,0.05);
+      color: #ff3b30;
+    }
+    .history-item.active .history-delete-btn {
+      color: rgba(255,255,255,0.7);
+    }
+    .history-item.active .history-delete-btn:hover {
+      background: rgba(255,255,255,0.15);
+      color: #ffffff;
+    }
+    /* 技能列表项 - Mac card style */
+    .skill-item {
+      padding: 12px;
+      margin-bottom: 8px;
+      border-radius: 10px;
+      background: linear-gradient(to bottom, #ffffff, #fafafa);
+      border: 1px solid #e5e5ea;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+    .skill-item:hover {
+      border-color: #d1d1d6;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      transform: translateY(-1px);
+    }
+    .skill-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 4px;
+    }
+    .skill-name {
+      font-weight: 500;
+      font-size: 13px;
+      color: #1d1d1f;
+      flex: 1;
+      padding-right: 8px;
+      letter-spacing: -0.01em;
+    }
+    .skill-source {
+      font-size: 9px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+    .skill-source.user {
+      background: #34c759;
+      color: #ffffff;
+    }
+    .skill-source.project {
+      background: #5856d6;
+      color: #ffffff;
+    }
+    .skill-description {
+      font-size: 11px;
+      color: #6e6e73;
+      line-height: 1.4;
+      margin-bottom: 6px;
+    }
+    /* 技能卡片底部 */
+    .skill-footer {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 8px;
+    }
+    /* 删除按钮 */
+    .delete-skill-btn {
+      padding: 6px 12px;
+      font-size: 11px;
+      font-weight: 500;
+      color: #ff3b30;
+      background: transparent;
+      border: 1px solid #ff3b30;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .delete-skill-btn:hover {
+      background: #ff3b30;
+      color: #ffffff;
+    }
+    .delete-skill-btn:active {
+      transform: scale(0.98);
+    }
+    .delete-skill-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    /* 加载状态 */
+    .loading {
+      text-align: center;
+      padding: 30px;
+      color: #86868b;
+      font-size: 12px;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 30px 16px;
+      color: #86868b;
+      font-size: 12px;
+    }
+    /* 右侧聊天区域 */
+    #chat-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #ffffff;
+    }
+
+    /* 主消息区域 */
+    #chat-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+      background: #ffffff;
     }
     #messages {
-      height: calc(100vh - 120px);
+      flex: 1;
       overflow-y: auto;
-      margin-bottom: 20px;
+      margin-bottom: 12px;
     }
+    /* 消息气泡 - Mac iMessage 风格 */
     .message {
-      margin-bottom: 15px;
-      padding: 10px;
-      border-radius: 8px;
+      margin-bottom: 12px;
+      padding: 10px 14px;
+      border-radius: 18px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      max-width: 75%;
+      max-height: 400px;
+      overflow-y: auto;
+      font-size: 14px;
+      line-height: 1.4;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+    }
+    /* 自定义滚动条样式 */
+    .message::-webkit-scrollbar {
+      width: 6px;
+    }
+    .message::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .message::-webkit-scrollbar-thumb {
+      background: rgba(0,0,0,0.2);
+      border-radius: 3px;
+    }
+    .message::-webkit-scrollbar-thumb:hover {
+      background: rgba(0,0,0,0.3);
     }
     .user {
-      background: #2563eb;
-      text-align: right;
+      background: linear-gradient(135deg, #007aff 0%, #0051d5 100%);
+      color: #ffffff;
+      margin-left: auto;
+      border-bottom-right-radius: 4px;
     }
     .assistant {
-      background: #374151;
+      background: #e5e5ea;
+      color: #1d1d1f;
+      border-bottom-left-radius: 4px;
+    }
+    /* 操作日志样式 */
+    .operation-log {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 10px 12px;
+      margin: 8px 0;
+      background: linear-gradient(135deg, #f5f5f7 0%, #e8e8ed 100%);
+      border-radius: 10px;
+      border: 1px solid #d1d1d6;
+      font-size: 12px;
+      color: #6e6e73;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+    .operation-log .log-icon {
+      font-size: 14px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .operation-log .log-text {
+      flex: 1;
+      font-weight: 500;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    .operation-log .log-time {
+      font-size: 10px;
+      color: #86868b;
+      font-weight: 400;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    /* 思考过程组件 */
+    .thinking-process {
+      margin: 12px 0;
+      border-radius: 12px;
+      background: linear-gradient(to bottom, #f9f9fb, #f5f5f7);
+      border: 1px solid #e5e5ea;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .thinking-process.collapsed .thinking-log {
+      display: none;
+    }
+    .thinking-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-bottom: 1px solid #e5e5ea;
+      background: linear-gradient(to right, rgba(0,122,255,0.05), transparent);
+    }
+    .thinking-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #6e6e73;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .thinking-toggle {
+      padding: 4px 10px;
+      font-size: 11px;
+      background: transparent;
+      border: 1px solid #d1d1d6;
+      border-radius: 4px;
+      color: #6e6e73;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .thinking-toggle:hover {
+      background: #e5e5ea;
+      color: #1d1d1f;
+    }
+    .thinking-log {
+      max-height: 200px;
+      overflow-y: auto;
+      padding: 12px;
+      background: #ffffff;
+    }
+    .thinking-log::-webkit-scrollbar {
+      width: 6px;
+    }
+    .thinking-log::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .thinking-log::-webkit-scrollbar-thumb {
+      background: rgba(0,0,0,0.15);
+      border-radius: 3px;
     }
     #input-area {
       display: flex;
-      gap: 10px;
+      gap: 8px;
     }
     #message-input {
       flex: 1;
-      padding: 10px;
-      border-radius: 8px;
-      border: none;
-      background: #374151;
-      color: #fff;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid #d1d1d6;
+      background: #ffffff;
+      color: #1d1d1f;
+      font-size: 14px;
+      transition: all 0.2s ease;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.04);
     }
+    #message-input:focus {
+      outline: none;
+      border-color: #007aff;
+      box-shadow: 0 0 0 3px rgba(0,122,255,0.15), inset 0 1px 2px rgba(0,0,0,0.04);
+    }
+    #message-input::placeholder {
+      color: #86868b;
+    }
+    /* Mac 经典按钮样式 */
     button {
-      padding: 10px 20px;
+      padding: 8px 18px;
       border-radius: 8px;
       border: none;
-      background: #2563eb;
-      color: #fff;
+      background: linear-gradient(to bottom, #007aff, #005ecb);
+      color: #ffffff;
       cursor: pointer;
+      font-weight: 500;
+      font-size: 13px;
+      letter-spacing: 0.01em;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 1px rgba(0,0,0,0.08);
+    }
+    button:hover {
+      background: linear-gradient(to bottom, #0063d1, #004db8);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.18), 0 1px 2px rgba(0,0,0,0.12);
+      transform: translateY(-1px);
+    }
+    button:active {
+      background: linear-gradient(to bottom, #0051d5, #003d91);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.12);
+      transform: translateY(0);
     }
     button:disabled {
       opacity: 0.5;
       cursor: not-allowed;
+      background: linear-gradient(to bottom, #e5e5ea, #d1d1d6);
+      box-shadow: none;
+      transform: none;
+    }
+    /* 次要按钮样式 - Mac 取消按钮 */
+    button.secondary {
+      background: linear-gradient(to bottom, #f5f5f7, #e8e8ed);
+      color: #1d1d1f;
+      border: 1px solid #d1d1d6;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.5);
+    }
+    button.secondary:hover {
+      background: linear-gradient(to bottom, #e8e8ed, #d8d8dd);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.5);
+    }
+    button.secondary:active {
+      background: linear-gradient(to bottom, #d8d8dd, #c8c8cd);
+    }
+    /* Mac 滚动条样式 */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(0,0,0,0.2);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(0,0,0,0.3);
+    }
+
+    /* 工作空间切换器样式 */
+    #workspace-switcher {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: linear-gradient(to bottom, #f5f5f7, #e8e8ed);
+      border-bottom: 1px solid #d1d1d6;
+    }
+    #workspace-selector {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid #d1d1d6;
+      background: #ffffff;
+      color: #1d1d1f;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    #workspace-selector:hover {
+      border-color: #007aff;
+    }
+    #workspace-settings-btn {
+      padding: 8px 12px;
+      font-size: 12px;
+      background: transparent;
+      border: 1px solid #d1d1d6;
+      color: #1d1d1f;
+    }
+    #workspace-settings-btn:hover {
+      background: #e5e5ea;
+    }
+    /* 工作空间菜单 */
+    #workspace-menu {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 16px;
+      margin-top: 4px;
+      background: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      border: 1px solid #e5e5ea;
+      z-index: 1000;
+      min-width: 200px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    #workspace-menu.show {
+      display: block;
+    }
+    .workspace-menu-item {
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #1d1d1f;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.15s ease;
+    }
+    .workspace-menu-item:hover {
+      background: #f5f5f7;
+    }
+    .workspace-menu-item.active {
+      background: #e8f4fd;
+      color: #007aff;
+    }
+    .workspace-menu-item .workspace-icon {
+      font-size: 14px;
+    }
+    .workspace-menu-item .workspace-name {
+      flex: 1;
+    }
+    .workspace-menu-item .workspace-category {
+      font-size: 10px;
+      color: #86868b;
+      text-transform: uppercase;
+    }
+    .workspace-menu-divider {
+      height: 1px;
+      background: #e5e5ea;
+      margin: 4px 0;
+    }
+    .workspace-menu-action {
+      padding: 10px 14px;
+      font-size: 12px;
+      color: #007aff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .workspace-menu-action:hover {
+      background: #f5f5f7;
+    }
+
+    /* 思考中动画 */
+    .thinking-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      color: #6e6e73;
+      font-size: 13px;
+    }
+    .thinking-indicator::after {
+      content: '...';
+      animation: ellipsis 1.5s infinite;
+    }
+    @keyframes ellipsis {
+      0% { content: ''; }
+      25% { content: '.'; }
+      50% { content: '..'; }
+      75% { content: '...'; }
+      100% { content: ''; }
+    }
+
+    /* 格式化消息内容样式 */
+    .message code {
+      background: rgba(0, 0, 0, 0.06);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
+      font-size: 12px;
+      color: #d63384;
+    }
+    .message pre {
+      background: #f8f5f0;
+      color: #000000;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #e5e5ea;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      overflow-x: auto;
+      max-height: 300px;
+      overflow-y: auto;
+      margin: 8px 0;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    /* 代码块滚动条样式 */
+    .message pre::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .message pre::-webkit-scrollbar-track {
+      background: #f0f0f0;
+    }
+    .message pre::-webkit-scrollbar-thumb {
+      background: #c0c0c0;
+      border-radius: 3px;
+    }
+    .message pre::-webkit-scrollbar-thumb:hover {
+      background: #a0a0a0;
+    }
+    .message pre code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+    }
+    .message strong {
+      font-weight: 600;
+    }
+    .message em {
+      font-style: italic;
+      color: #6e6e73;
+    }
+    /* 用户消息中的代码样式 */
+    .user.message code {
+      background: rgba(255, 255, 255, 0.2);
+      color: #ffffff;
+    }
+    .user.message pre {
+      background: rgba(0, 0, 0, 0.3);
+    }
+    /* JSON 语法高亮 - 浅色主题 */
+    .json-key {
+      color: #0066cc;
+    }
+    .json-string {
+      color: #d63384;
+    }
+    .json-boolean {
+      color: #0066cc;
+    }
+    .json-number {
+      color: #008800;
+    }
+    /* 工具调用紧凑卡片 */
+    .tool-call-compact {
+      margin: 8px 0;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #f0f8ff 0%, #e8f4f8 100%);
+      border: 1px solid #d1d1d6;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .tool-call-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: linear-gradient(to right, rgba(0,122,255,0.08), transparent);
+      border-bottom: 1px solid #e5e5ea;
+    }
+    .tool-icon {
+      font-size: 14px;
+    }
+    .tool-name {
+      font-weight: 600;
+      font-size: 13px;
+      color: #007aff;
+    }
+    .tool-type {
+      font-size: 11px;
+      color: #6e6e73;
+      padding: 2px 6px;
+      background: #e5e5ea;
+      border-radius: 4px;
+      text-transform: capitalize;
+    }
+    /* 工具输入参数区域 */
+    .tool-input-section {
+      padding: 10px 12px;
+      background: #ffffff;
+    }
+    .section-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: #6e6e73;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    .tool-input-json {
+      background: #f8f5f0;
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      line-height: 1.4;
+      max-height: 150px;
+      overflow: auto;
+      margin: 0;
+      word-break: break-all;
+    }
+    .tool-input-json::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    .tool-input-json::-webkit-scrollbar-track {
+      background: #f0f0f0;
+    }
+    .tool-input-json::-webkit-scrollbar-thumb {
+      background: #c0c0c0;
+      border-radius: 2px;
+    }
+    /* 文件路径样式 */
+    .file-path {
+      font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
+      font-size: 11px;
+      color: #0066cc;
+      background: rgba(0,102,204,0.08);
+      padding: 2px 6px;
+      border-radius: 4px;
+      word-break: break-all;
+    }
+    .file-path-long {
+      font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
+      font-size: 11px;
+      color: #0066cc;
+      background: rgba(0,102,204,0.08);
+      padding: 2px 6px;
+      border-radius: 4px;
+      display: inline-block;
+      max-width: 300px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      vertical-align: middle;
+      cursor: help;
+    }
+    .file-path-long:hover {
+      max-width: none;
+      white-space: normal;
+    }
+
+    /* SkillsLM 网页嵌入面板样式 */
+    #skillslm-webview-panel {
+      display: none;
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    #skillslm-webview {
+      display: block;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #ffffff;
+      width: 100%;
+      height: 100%;
+      border: none;
+      border-radius: 8px;
+    }
+
+    /* 技能面板内容区域 */
+    #skills-panel-content {
+      display: none;
+      flex: 1;
+      min-height: 0; /* 允许 flex 子元素正确收缩 */
+    }
+
+    /* 技能面板内容 - 默认隐藏 */
+    #skills-panel-content {
+      display: none !important;
+    }
+
+    /* 当侧边栏有 skills-active 类时显示技能面板 */
+    #side-panel.skills-active #skills-panel-content {
+      display: flex !important;
+    }
+
+    /* 当侧边栏有 skills-active 类时隐藏历史视图 */
+    #side-panel.skills-active #history-view {
+      display: none !important;
+    }
+
+    /* SkillsLM webview 面板 */
+    #skillslm-webview-panel {
+      display: none !important;
+    }
+
+    /* 当侧边栏有 skills-active 类时显示 webview 面板 */
+    #side-panel.skills-active #skillslm-webview-panel {
+      display: block !important;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
     }
   </style>
 </head>
 <body>
-  <div id="messages"></div>
-  <div id="input-area">
-    <input type="text" id="message-input" placeholder="Type your message..." />
-    <button id="send-btn">Send</button>
+  <div id="container">
+    <!-- 左侧面板 -->
+    <div id="side-panel">
+      <!-- 标签切换 -->
+      <div id="tabs">
+        <div class="tab active" data-tab="history">历史</div>
+        <div class="tab" data-tab="skills">技能</div>
+        <button id="settings-btn" title="模型配置">⚙️</button>
+      </div>
+
+      <!-- 技能面板双栏内容 (历史+技能标签共用区域) -->
+      <div id="panel-content" style="flex: 1; padding: 0 12px 12px 12px; display: flex; flex-direction: column;">
+        <!-- 历史记录视图 -->
+        <div id="history-view" class="panel-view active" style="flex: 1;">
+          <div id="history-list">
+            <!-- 历史记录将在这里动态添加 -->
+          </div>
+        </div>
+
+        <!-- 技能面板内容：双栏布局 (技能标签激活时显示) -->
+        <div id="skills-panel-content" style="flex: 1; min-height: 0; flex-direction: row; gap: 12px;">
+          <!-- 左侧：技能列表 -->
+          <div id="skills-list-panel" style="flex: 0 0 auto; width: 240px; overflow-y: auto;">
+            <div style="padding: 8px 8px 0 8px; display: flex; gap: 8px;">
+              <button id="add-skill-btn" onclick="
+                const dialog = document.getElementById('add-skill-dialog');
+                if (dialog) {
+                  dialog.style.display = 'flex';
+                  const skillPathInput = document.getElementById('skill-path-input');
+                  const skillPreview = document.getElementById('skill-preview');
+                  const uploadBtn = document.getElementById('upload-skill-btn');
+                  if (skillPathInput) skillPathInput.value = '';
+                  if (skillPreview) skillPreview.style.display = 'none';
+                  if (uploadBtn) uploadBtn.disabled = true;
+                }
+              " style="flex: 1; font-size: 12px; padding: 8px; cursor: pointer;">
+                本地
+              </button>
+              <button id="github-import-btn" style="flex: 1; font-size: 12px; padding: 8px; cursor: pointer;">
+                GitHub
+              </button>
+            </div>
+            <div id="skills-list" class="loading">
+              加载技能中...
+            </div>
+          </div>
+
+          <!-- 右侧：SkillsLM 网页 -->
+          <div id="skillslm-webview-panel" style="flex: 1; border-left: 1px solid #e5e5ea; padding-left: 12px; overflow: hidden;">
+            <iframe id="skillslm-webview"
+                    src="https://skillslm.com"
+                    style="width: 100%; height: 100%; border: none; border-radius: 8px;">
+            </iframe>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 添加技能对话框 -->
+    <div id="add-skill-dialog" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 1000; align-items: center; justify-content: center;">
+      <div style="background: #ffffff; border-radius: 12px; padding: 24px; width: 480px; max-width: 90%; box-shadow: 0 12px 40px rgba(0,0,0,0.15);">
+        <h3 style="margin: 0 0 8px 0; font-size: 17px; font-weight: 600; color: #1d1d1f; letter-spacing: -0.3px;">上传技能文件</h3>
+        <p style="margin: 0 0 20px 0; font-size: 13px; color: #6e6e73; line-height: 1.4;">选择包含 SKILL.md 文件的技能目录</p>
+
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; font-size: 12px; font-weight: 500; color: #1d1d1f; margin-bottom: 8px;">技能目录</label>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="skill-path-input" placeholder="选择技能目录..." style="flex: 1; padding: 10px 12px; border: 1px solid #d1d1d6; border-radius: 6px; font-size: 13px; background: #f5f5f7; color: #1d1d1f; box-sizing: border-box;" readonly>
+            <button id="browse-skill-btn" style="padding: 10px 16px; white-space: nowrap; font-size: 13px;">选择...</button>
+          </div>
+          <input type="file" id="skill-file-input" webkitdirectory directory style="display: none;">
+          <div style="font-size: 11px; color: #86868b; margin-top: 8px; line-height: 1.4;">
+            技能目录应包含 SKILL.md 文件
+          </div>
+        </div>
+
+        <div id="skill-preview" style="display: none; margin-bottom: 20px; padding: 12px; background: #f5f5f7; border-radius: 8px;">
+          <div style="font-size: 11px; font-weight: 500; color: #6e6e73; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">找到技能文件</div>
+          <div id="skill-preview-content" style="font-size: 13px; color: #1d1d1f; line-height: 1.4;"></div>
+        </div>
+
+        <!-- 存储位置选择 -->
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; font-size: 12px; font-weight: 500; color: #1d1d1f; margin-bottom: 8px;">存储位置</label>
+          <div style="display: flex; gap: 12px;">
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+              <input type="radio" name="skill-location" value="project" checked style="margin: 0;">
+              <span style="font-size: 13px; color: #1d1d1f;">项目 (.deepagents/skills/)</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+              <input type="radio" name="skill-location" value="user" style="margin: 0;">
+              <span style="font-size: 13px; color: #1d1d1f;">用户 (~/.deepagents/skills/)</span>
+            </label>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 8px; justify-content: flex-end; padding-top: 8px; border-top: 1px solid #e5e5ea;">
+          <button id="cancel-skill-btn" class="secondary" style="padding: 8px 16px;">取消</button>
+          <button id="upload-skill-btn" style="padding: 8px 16px;" disabled>上传</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- GitHub 导入对话框 -->
+    <div id="github-import-dialog" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 1000; align-items: center; justify-content: center;">
+      <div style="background: #ffffff; border-radius: 12px; padding: 24px; width: 480px; max-width: 90%; box-shadow: 0 12px 40px rgba(0,0,0,0.15);">
+        <h3 style="margin: 0 0 8px 0; font-size: 17px; font-weight: 600; color: #1d1d1f; letter-spacing: -0.3px;">从 GitHub 导入技能</h3>
+        <p style="margin: 0 0 20px 0; font-size: 13px; color: #6e6e73; line-height: 1.4;">输入 GitHub 仓库 URL，自动扫描并导入技能</p>
+
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; font-size: 12px; font-weight: 500; color: #1d1d1f; margin-bottom: 8px;">GitHub 仓库 URL</label>
+          <input type="text" id="github-url-input" placeholder="https://github.com/user/repo" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d1d6; border-radius: 6px; font-size: 13px; background: #f5f5f7; color: #1d1d1f; box-sizing: border-box;" />
+          <div style="font-size: 11px; color: #86868b; margin-top: 8px; line-height: 1.4;">
+            仓库将被克隆到临时目录，然后自动扫描包含 SKILL.md 的技能目录
+          </div>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; font-size: 12px; font-weight: 500; color: #1d1d1f; margin-bottom: 8px;">存储位置</label>
+          <div style="display: flex; gap: 12px;">
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+              <input type="radio" name="github-skill-location" value="project" checked style="margin: 0;">
+              <span style="font-size: 13px; color: #1d1d1f;">项目 (.deepagents/skills/)</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+              <input type="radio" name="github-skill-location" value="user" style="margin: 0;">
+              <span style="font-size: 13px; color: #1d1d1f;">用户 (~/.deepagents/skills/)</span>
+            </label>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+            <input type="checkbox" id="use-proxy-checkbox" style="margin: 0;">
+            <span style="font-size: 13px; color: #1d1d1f;">使用代理 (HTTP_PROXY / HTTPS_PROXY)</span>
+          </label>
+        </div>
+
+        <div id="github-import-status" style="display: none; margin-bottom: 20px; padding: 12px; background: #f5f5f7; border-radius: 8px;">
+          <span id="github-import-message" style="font-size: 13px; color: #1d1d1f;"></span>
+        </div>
+
+        <div style="display: flex; gap: 8px; justify-content: flex-end; padding-top: 8px; border-top: 1px solid #e5e5ea;">
+          <button id="cancel-github-import" class="secondary" style="padding: 8px 16px;">取消</button>
+          <button id="confirm-github-import" style="padding: 8px 16px;">扫描技能</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 技能选择对话框 -->
+    <div id="skill-selection-dialog" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 1001; align-items: center; justify-content: center;">
+      <div style="background: #ffffff; border-radius: 12px; padding: 24px; width: 520px; max-width: 90%; max-height: 80vh; box-shadow: 0 12px 40px rgba(0,0,0,0.15); display: flex; flex-direction: column;">
+        <h3 style="margin: 0 0 8px 0; font-size: 17px; font-weight: 600; color: #1d1d1f; letter-spacing: -0.3px;">选择要导入的技能</h3>
+        <p style="margin: 0 0 16px 0; font-size: 13px; color: #6e6e73; line-height: 1.4;">
+          找到 <span id="skills-found-count">0</span> 个技能，请勾选要导入的技能
+        </p>
+
+        <div id="skills-list-container" style="flex: 1; overflow-y: auto; margin-bottom: 16px; padding-right: 8px;">
+          <!-- 技能列表将动态插入这里 -->
+        </div>
+
+        <div id="selection-import-status" style="display: none; margin-bottom: 16px; padding: 12px; background: #f5f5f7; border-radius: 8px;">
+          <span id="selection-import-message" style="font-size: 13px; color: #1d1d1f;"></span>
+        </div>
+
+        <div style="display: flex; gap: 8px; justify-content: flex-end; padding-top: 8px; border-top: 1px solid #e5e5ea;">
+          <button id="back-to-scan" class="secondary" style="padding: 8px 16px;">返回</button>
+          <button id="confirm-selected-import" style="padding: 8px 16px;">导入 <span id="selected-count">0</span> 个技能</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 工具确认对话框 (HITL) -->
+    <div id="tool-approval-dialog" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 2000; align-items: center; justify-content: center;">
+      <div style="background: #ffffff; border-radius: 12px; padding: 24px; width: 480px; max-width: 90%; box-shadow: 0 12px 40px rgba(0,0,0,0.15);">
+        <h3 style="margin: 0 0 8px 0; font-size: 17px; font-weight: 600; color: #1d1d1f; letter-spacing: -0.3px;">工具执行确认</h3>
+        <p style="margin: 0 0 20px 0; font-size: 13px; color: #6e6e73; line-height: 1.4;">Agent 即将执行以下操作</p>
+
+        <div style="margin-bottom: 20px; padding: 16px; background: #f5f5f7; border-radius: 8px;">
+          <div style="font-size: 11px; font-weight: 500; color: #6e6e73; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">工具名称</div>
+          <div id="tool-name-display" style="font-size: 15px; font-weight: 600; color: #007aff; margin-bottom: 12px;">-</div>
+
+          <div style="font-size: 11px; font-weight: 500; color: #6e6e73; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">工具参数</div>
+          <pre id="tool-input-display" style="font-size: 12px; color: #1d1d1f; background: #ffffff; padding: 10px; border-radius: 6px; overflow-x: auto; white-space: pre-wrap;">-</pre>
+        </div>
+
+        <div style="display: flex; gap: 8px; justify-content: flex-end; padding-top: 8px; border-top: 1px solid #e5e5ea;">
+          <button id="reject-tool-btn" class="secondary" style="padding: 8px 16px;">取消</button>
+          <button id="auto-approve-btn" class="secondary" style="padding: 8px 16px;">自动批准全部</button>
+          <button id="approve-tool-btn" style="padding: 8px 16px;">允许执行</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 模型配置对话框 -->
+    <div id="config-dialog" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 3000; align-items: center; justify-content: center;">
+      <div style="background: #ffffff; border-radius: 12px; padding: 24px; width: 560px; max-width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 12px 40px rgba(0,0,0,0.15);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <h3 style="margin: 0; font-size: 17px; font-weight: 600; color: #1d1d1f; letter-spacing: -0.3px;">模型配置</h3>
+          <button id="close-config-btn" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #6e6e73; padding: 4px 8px;">×</button>
+        </div>
+
+        <!-- 配置表单 -->
+        <form id="config-form">
+          <!-- OpenAI 配置 -->
+          <div style="margin-bottom: 20px; padding: 16px; background: #f5f5f7; border-radius: 8px;">
+            <div style="font-size: 13px; font-weight: 600; color: #1d1d1f; margin-bottom: 12px;">OpenAI</div>
+            <div style="margin-bottom: 12px;">
+              <label style="display: block; font-size: 11px; font-weight: 500; color: #6e6e73; margin-bottom: 6px;">API Key</label>
+              <input type="password" id="openai-api-key" placeholder="sk-..." style="width: 100%; padding: 8px 12px; border: 1px solid #d1d1d6; border-radius: 6px; font-size: 13px; box-sizing: border-box;">
+            </div>
+            <div>
+              <label style="display: block; font-size: 11px; font-weight: 500; color: #6e6e73; margin-bottom: 6px;">Model</label>
+              <input type="text" id="openai-model" placeholder="gpt-4o-mini" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d1d6; border-radius: 6px; font-size: 13px; box-sizing: border-box;">
+            </div>
+            <div>
+              <label style="display: block; font-size: 11px; font-weight: 500; color: #6e6e73; margin-bottom: 6px;">Base URL</label>
+              <input type="text" id="openai-base-url" placeholder="https://api.openai.com/v1" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d1d6; border-radius: 6px; font-size: 13px; box-sizing: border-box;">
+            </div>
+          </div>
+
+          <!-- Tavily 配置 -->
+          <div style="margin-bottom: 20px; padding: 16px; background: #f5f5f7; border-radius: 8px;">
+            <div style="font-size: 13px; font-weight: 600; color: #1d1d1f; margin-bottom: 12px;">Tavily 搜索</div>
+            <div>
+              <label style="display: block; font-size: 11px; font-weight: 500; color: #6e6e73; margin-bottom: 6px;">API Key</label>
+              <input type="password" id="tavily-api-key" placeholder="tvly-..." style="width: 100%; padding: 8px 12px; border: 1px solid #d1d1d6; border-radius: 6px; font-size: 13px; box-sizing: border-box;">
+            </div>
+          </div>
+
+          <!-- 代理配置 -->
+          <div style="margin-bottom: 20px; padding: 16px; background: #f5f5f7; border-radius: 8px;">
+            <div style="font-size: 13px; font-weight: 600; color: #1d1d1f; margin-bottom: 12px;">代理设置</div>
+            <div style="margin-bottom: 12px;">
+              <label style="display: block; font-size: 11px; font-weight: 500; color: #6e6e73; margin-bottom: 6px;">HTTP Proxy</label>
+              <input type="text" id="http-proxy" placeholder="http://proxy.example.com:8080" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d1d6; border-radius: 6px; font-size: 13px; box-sizing: border-box;">
+            </div>
+            <div>
+              <label style="display: block; font-size: 11px; font-weight: 500; color: #6e6e73; margin-bottom: 6px;">HTTPS Proxy</label>
+              <input type="text" id="https-proxy" placeholder="http://proxy.example.com:8080" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d1d6; border-radius: 6px; font-size: 13px; box-sizing: border-box;">
+            </div>
+          </div>
+
+          <!-- 按钮组 -->
+          <div style="display: flex; gap: 8px; justify-content: flex-end; padding-top: 16px; border-top: 1px solid #e5e5ea;">
+            <button type="button" id="cancel-config-btn" class="secondary" style="padding: 8px 16px;">取消</button>
+            <button type="submit" id="save-config-btn" style="padding: 8px 16px;">保存</button>
+          </div>
+        </form>
+
+        <!-- 状态消息 -->
+        <div id="config-status" style="display: none; margin-top: 12px; padding: 8px 12px; border-radius: 6px; font-size: 12px; text-align: center;"></div>
+      </div>
+    </div>
+
+    <!-- 创建工作空间对话框 -->
+    <div id="create-workspace-dialog" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 3000; align-items: center; justify-content: center;">
+      <div style="background: #ffffff; border-radius: 12px; padding: 24px; width: 480px; max-width: 90%; box-shadow: 0 12px 40px rgba(0,0,0,0.15);">
+        <h3 style="margin: 0 0 8px 0; font-size: 17px; font-weight: 600; color: #1d1d1f; letter-spacing: -0.3px;">创建新工作空间</h3>
+        <p style="margin: 0 0 20px 0; font-size: 13px; color: #6e6e73; line-height: 1.4;">创建一个独立的工作空间，文件操作将限制在该工作空间目录内</p>
+
+        <form id="create-workspace-form">
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; font-size: 12px; font-weight: 500; color: #1d1d1f; margin-bottom: 8px;">工作空间名称</label>
+            <input type="text" id="new-workspace-name" placeholder="例如：开发工作空间" required style="width: 100%; padding: 10px 12px; border: 1px solid #d1d1d6; border-radius: 6px; font-size: 13px; box-sizing: border-box;">
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; font-size: 12px; font-weight: 500; color: #1d1d1f; margin-bottom: 8px;">分类</label>
+            <select id="new-workspace-category" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d1d6; border-radius: 6px; font-size: 13px; box-sizing: border-box; background: #ffffff;">
+              <option value="通用">通用</option>
+              <option value="开发">开发</option>
+              <option value="写作">写作</option>
+              <option value="学习">学习</option>
+              <option value="工作">工作</option>
+            </select>
+          </div>
+
+          <div style="margin-bottom: 20px;">
+            <label style="display: block; font-size: 12px; font-weight: 500; color: #1d1d1f; margin-bottom: 8px;">图标</label>
+            <select id="new-workspace-icon" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d1d6; border-radius: 6px; font-size: 13px; box-sizing: border-box; background: #ffffff;">
+              <option value="folder">📁 文件夹</option>
+              <option value="code">💻 代码</option>
+              <option value="book">📚 书籍</option>
+              <option value="briefcase">💼 工作包</option>
+              <option value="lightbulb">💡 灯泡</option>
+            </select>
+          </div>
+
+          <div style="display: flex; gap: 8px; justify-content: flex-end; padding-top: 8px; border-top: 1px solid #e5e5ea;">
+            <button type="button" id="cancel-create-workspace" class="secondary" style="padding: 8px 16px;">取消</button>
+            <button type="submit" id="confirm-create-workspace" style="padding: 8px 16px;">创建</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- 工作空间设置对话框 -->
+    <div id="workspace-settings-dialog" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 3000; align-items: center; justify-content: center;">
+      <div style="background: #ffffff; border-radius: 12px; padding: 24px; width: 520px; max-width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 12px 40px rgba(0,0,0,0.15);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <h3 style="margin: 0; font-size: 17px; font-weight: 600; color: #1d1d1f; letter-spacing: -0.3px;">工作空间设置</h3>
+          <button id="close-workspace-settings" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #6e6e73; padding: 4px 8px;">×</button>
+        </div>
+
+        <!-- 当前工作空间信息 -->
+        <div style="margin-bottom: 20px; padding: 16px; background: #f5f5f7; border-radius: 8px;">
+          <div style="font-size: 11px; font-weight: 500; color: #6e6e73; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">当前工作空间</div>
+          <div id="current-workspace-name" style="font-size: 16px; font-weight: 600; color: #1d1d1f;">默认工作空间</div>
+          <div id="current-workspace-category" style="font-size: 12px; color: #86868b; margin-top: 4px;">通用</div>
+        </div>
+
+        <!-- 技能选择 -->
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; font-size: 12px; font-weight: 500; color: #1d1d1f; margin-bottom: 12px;">启用的技能</label>
+          <div id="workspace-skills-list" style="max-height: 200px; overflow-y: auto; padding: 12px; background: #f5f5f7; border-radius: 8px;">
+            <div style="text-align: center; color: #86868b; font-size: 12px; padding: 20px;">加载技能列表中...</div>
+          </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div style="display: flex; gap: 8px; justify-content: space-between; padding-top: 16px; border-top: 1px solid #e5e5ea;">
+          <button type="button" id="delete-workspace-btn" class="secondary" style="padding: 8px 16px; color: #ff3b30; border-color: #ff3b30;">删除工作空间</button>
+          <div style="display: flex; gap: 8px;">
+            <button type="button" id="cancel-workspace-settings" class="secondary" style="padding: 8px 16px;">取消</button>
+            <button type="button" id="save-workspace-settings" style="padding: 8px 16px;">保存设置</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右侧聊天区域 -->
+    <div id="chat-panel">
+      <!-- 工作空间切换器 -->
+      <div id="workspace-switcher" style="position: relative;">
+        <button id="workspace-selector">📁 默认工作空间</button>
+        <button id="workspace-settings-btn">⚙️</button>
+        <!-- 工作空间下拉菜单 -->
+        <div id="workspace-menu">
+          <!-- 工作空间列表将动态插入这里 -->
+        </div>
+      </div>
+
+      <div id="messages"></div>
+      <div id="input-area">
+        <input type="text" id="message-input" placeholder="输入消息..." />
+        <button id="send-btn">发送</button>
+      </div>
+    </div>
   </div>
+  <!-- 内联脚本：确保添加技能按钮工作 -->
+  <script>
+    window.showAddSkillDialogGlobal = function() {
+      const dialog = document.getElementById('add-skill-dialog');
+      if (dialog) {
+        dialog.style.display = 'flex';
+        const skillPathInput = document.getElementById('skill-path-input');
+        const skillPreview = document.getElementById('skill-preview');
+        const uploadBtn = document.getElementById('upload-skill-btn');
+        if (skillPathInput) skillPathInput.value = '';
+        if (skillPreview) skillPreview.style.display = 'none';
+        if (uploadBtn) uploadBtn.disabled = true;
+      }
+    };
+  </script>
   <script src="app.js"></script>
 </body>
 </html>
