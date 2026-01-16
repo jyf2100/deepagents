@@ -13,7 +13,8 @@ try {
 
 contextBridge.exposeInMainWorld('deepagents', {
   // 发送聊天消息
-  chat: (message, stream = false, workspaceId = null) => ipcRenderer.invoke('chat', message, stream, workspaceId),
+  chat: (message, stream = false, workspaceId = null, conversationId = null) =>
+    ipcRenderer.invoke('chat', message, stream, workspaceId, conversationId),
 
   // 获取技能列表
   listSkills: () => ipcRenderer.invoke('listSkills'),
@@ -47,6 +48,16 @@ contextBridge.exposeInMainWorld('deepagents', {
   deleteWorkspace: (workspaceId) => ipcRenderer.invoke('deleteWorkspace', workspaceId),
   updateWorkspace: (workspaceId, updates) => ipcRenderer.invoke('updateWorkspace', workspaceId, updates),
   setWorkspaceSkills: (workspaceId, enabledSkills) => ipcRenderer.invoke('setWorkspaceSkills', workspaceId, enabledSkills),
+
+  // 对话管理
+  createConversation: (workspaceId, title = null) => ipcRenderer.invoke('createConversation', workspaceId, title),
+  listConversations: (workspaceId) => ipcRenderer.invoke('listConversations', workspaceId),
+  deleteConversation: (conversationId) => ipcRenderer.invoke('deleteConversation', conversationId),
+  switchConversation: (workspaceId, conversationId) => ipcRenderer.invoke('switchConversation', workspaceId, conversationId),
+  renameConversation: (conversationId, title) => ipcRenderer.invoke('renameConversation', conversationId, title),
+
+  // 文件选择对话框
+  selectDirectory: () => ipcRenderer.invoke('selectDirectory'),
 
   // 监听响应（用于流式响应和 HITL interrupt_request）
   onResponse: (callback) => {

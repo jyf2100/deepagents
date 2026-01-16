@@ -443,6 +443,9 @@ class Settings:
     def get_workspace_dir(self, agent_name: str, workspace_id: str) -> Path:
         """Get workspace directory path for an agent.
 
+        DEPRECATED: Returns ~/.deepagents/{agent_name}/{workspace_id}/
+        Use get_workspace_dir_v2() for new unified location.
+
         Args:
             agent_name: Name of the agent (e.g., 'desktop')
             workspace_id: Workspace identifier (e.g., 'default', 'workspace1')
@@ -452,6 +455,21 @@ class Settings:
         """
         return self.get_agent_dir(agent_name) / workspace_id
 
+    def get_workspace_dir_v2(self, workspace_id: str) -> Path:
+        """Get workspace directory path (unified location).
+
+        New implementation that returns ~/.deepagents/workspaces/{workspace_id}/
+        This unifies all workspace data (memory, skills, files) in one location.
+
+        Args:
+            workspace_id: Workspace identifier
+
+        Returns:
+            Path to ~/.deepagents/workspaces/{workspace_id}/
+        """
+        from pathlib import Path
+        return Path.home() / ".deepagents" / "workspaces" / workspace_id
+
     def get_workspace_memory_path(self, agent_name: str, workspace_id: str) -> Path:
         """Get agent memory file path for a workspace.
 
@@ -460,33 +478,33 @@ class Settings:
             workspace_id: Workspace identifier
 
         Returns:
-            Path to ~/.deepagents/{agent_name}/{workspace_id}/agent.md
+            Path to ~/.deepagents/workspaces/{workspace_id}/agent.md
         """
-        return self.get_workspace_dir(agent_name, workspace_id) / 'agent.md'
+        return self.get_workspace_dir_v2(workspace_id) / 'agent.md'
 
     def get_workspace_skills_dir(self, agent_name: str, workspace_id: str) -> Path:
         """Get skills directory path for a workspace.
 
         Args:
-            agent_name: Name of the agent
+            agent_name: Name of the agent (kept for signature compatibility)
             workspace_id: Workspace identifier
 
         Returns:
-            Path to ~/.deepagents/{agent_name}/{workspace_id}/skills/
+            Path to ~/.deepagents/workspaces/{workspace_id}/skills/
         """
-        return self.get_workspace_dir(agent_name, workspace_id) / 'skills'
+        return self.get_workspace_dir_v2(workspace_id) / 'skills'
 
     def ensure_workspace_dir(self, agent_name: str, workspace_id: str) -> Path:
         """Ensure workspace directory exists and return its path.
 
         Args:
-            agent_name: Name of the agent
+            agent_name: Name of the agent (kept for signature compatibility)
             workspace_id: Workspace identifier
 
         Returns:
-            Path to ~/.deepagents/{agent_name}/{workspace_id}/
+            Path to ~/.deepagents/workspaces/{workspace_id}/
         """
-        workspace_dir = self.get_workspace_dir(agent_name, workspace_id)
+        workspace_dir = self.get_workspace_dir_v2(workspace_id)
         workspace_dir.mkdir(parents=True, exist_ok=True)
         return workspace_dir
 
@@ -494,11 +512,11 @@ class Settings:
         """Ensure workspace skills directory exists and return its path.
 
         Args:
-            agent_name: Name of the agent
+            agent_name: Name of the agent (kept for signature compatibility)
             workspace_id: Workspace identifier
 
         Returns:
-            Path to ~/.deepagents/{agent_name}/{workspace_id}/skills/
+            Path to ~/.deepagents/workspaces/{workspace_id}/skills/
         """
         skills_dir = self.get_workspace_skills_dir(agent_name, workspace_id)
         skills_dir.mkdir(parents=True, exist_ok=True)

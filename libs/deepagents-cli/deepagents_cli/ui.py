@@ -17,9 +17,14 @@ from .file_ops import FileOperationRecord
 
 def truncate_value(value: str, max_length: int = MAX_ARG_LENGTH) -> str:
     """Truncate a string value if it exceeds max_length."""
-    if len(value) > max_length:
-        return value[:max_length] + "..."
-    return value
+    # Handle None values
+    if value is None:
+        return ""
+    # Ensure value is a string
+    value_str = str(value) if not isinstance(value, str) else value
+    if len(value_str) > max_length:
+        return value_str[:max_length] + "..."
+    return value_str
 
 
 def format_tool_display(tool_name: str, tool_args: dict) -> str:
@@ -136,8 +141,10 @@ def format_tool_display(tool_name: str, tool_args: dict) -> str:
     elif tool_name == "task":
         # Task: show the task description
         if "description" in tool_args:
-            desc = str(tool_args["description"])
-            desc = truncate_value(desc, 100)
+            desc = tool_args["description"]
+            if desc is None:
+                desc = ""
+            desc = truncate_value(str(desc), 100)
             return f'{tool_name}("{desc}")'
 
     elif tool_name == "write_todos":
@@ -148,7 +155,13 @@ def format_tool_display(tool_name: str, tool_args: dict) -> str:
 
     # Fallback: generic formatting for unknown tools
     # Show all arguments in key=value format
-    args_str = ", ".join(f"{k}={truncate_value(str(v), 50)}" for k, v in tool_args.items())
+    try:
+        args_str = ", ".join(
+            f"{k}={truncate_value(str(v) if v is not None else '', 50)}"
+            for k, v in tool_args.items()
+        )
+    except Exception:
+        args_str = "..."
     return f"{tool_name}({args_str})"
 
 

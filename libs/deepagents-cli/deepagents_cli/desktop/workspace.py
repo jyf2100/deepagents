@@ -38,24 +38,47 @@ class WorkspaceConfig:
         category: Workspace category for grouping
         enabled_skills: List of skill names enabled for this workspace
                          ["*"] means all skills enabled
-        root_dir: Absolute path to workspace file directory
+        root_dir: Absolute path to workspace file directory (legacy, for backward compat)
+        custom_path: User-specified custom path for workspace files (overrides root_dir)
         created_at: ISO timestamp of workspace creation
         icon: Icon name for UI display
+        conversation_ids: List of conversation IDs belonging to this workspace
     """
     id: str
     name: str
     category: str = "通用"
     enabled_skills: list[str] = field(default_factory=lambda: ["*"])
     root_dir: str = ""
+    custom_path: str = ""
     created_at: str = ""
     icon: str = "folder"
+    conversation_ids: list[str] = field(default_factory=list)
 
     def __post_init__(self):
         """Initialize derived fields after creation."""
-        if not self.root_dir:
+        if not self.root_dir and not self.custom_path:
+            # Default: use workspaces/{id}/files/ for backward compatibility
             self.root_dir = str(WORKSPACES_BASE_DIR / self.id / "files")
         if not self.created_at:
             self.created_at = datetime.now().isoformat()
+
+    def get_workspace_root(self) -> Path:
+        """Get the actual workspace root directory path.
+
+        Priority:
+        1. custom_path (if set) - User-specified path
+        2. root_dir - Configured path
+        3. Default path - workspaces/{id}/files/
+
+        Returns:
+            Path to the workspace root directory
+        """
+        if self.custom_path:
+            return Path(self.custom_path).expanduser()
+        elif self.root_dir:
+            return Path(self.root_dir).expanduser()
+        else:
+            return WORKSPACES_BASE_DIR / self.id / "files"
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
@@ -143,17 +166,54 @@ class WorkspaceManager:
             raise
 
     def _ensure_workspace_directory(self, workspace: WorkspaceConfig) -> Path:
-        """Ensure workspace directory exists.
+        """Ensure workspace directory and subdirectories exist.
+
+        Creates:
+        - Workspace metadata directory (workspaces/{id}/)
+        - skills/ subdirectory for workspace-specific skills
+        - agent.md file for workspace-specific memory (if not exists)
+        - files/ subdirectory for file operations
+
+        Directory structure:
+        workspaces/{id}/
+        ├── agent.md          # Workspace memory
+        ├── skills/           # Workspace-specific skills
+        └── files/            # File operations directory
 
         Args:
             workspace: Workspace configuration
 
         Returns:
-            Path to workspace directory
+            Path to workspace metadata directory (workspaces/{id}/)
         """
-        workspace_dir = Path(workspace.root_dir).expanduser()
-        workspace_dir.mkdir(parents=True, exist_ok=True)
-        return workspace_dir
+        # Use the unified workspace directory (not the files subdirectory)
+        from deepagents_cli.config import Settings
+        workspace_meta_dir = Settings().get_workspace_dir_v2(workspace.id)
+        workspace_meta_dir.mkdir(parents=True, exist_ok=True)
+
+        # Create skills subdirectory for workspace-specific skills
+        skills_dir = workspace_meta_dir / "skills"
+        skills_dir.mkdir(parents=True, exist_ok=True)
+
+        # Create workspace agent.md if it doesn't exist
+        agent_md = workspace_meta_dir / "agent.md"
+        if not agent_md.exists():
+            # Try to copy from global default configuration
+            from deepagents_cli.config import settings
+            default_agent_md = settings.get_user_agent_md_path("desktop")
+            if default_agent_md.exists():
+                import shutil
+                shutil.copy(default_agent_md, agent_md)
+            else:
+                # Create empty file with header
+                agent_md.write_text("# 工作空间配置\n\n")
+            logger.debug(f"Created workspace agent.md for {workspace.id}")
+
+        # Ensure files directory exists (for file operations)
+        workspace_file_dir = workspace.get_workspace_root()
+        workspace_file_dir.mkdir(parents=True, exist_ok=True)
+
+        return workspace_meta_dir
 
     def get_workspace(self, workspace_id: str) -> WorkspaceConfig | None:
         """Get workspace configuration by ID.
@@ -266,7 +326,8 @@ class WorkspaceManager:
         name: str | None = None,
         category: str | None = None,
         enabled_skills: list[str] | None = None,
-        icon: str | None = None
+        icon: str | None = None,
+        custom_path: str | None = None
     ) -> WorkspaceConfig | None:
         """Update workspace configuration.
 
@@ -276,6 +337,7 @@ class WorkspaceManager:
             category: New category (optional)
             enabled_skills: New enabled skills list (optional)
             icon: New icon (optional)
+            custom_path: New custom path (optional)
 
         Returns:
             Updated workspace configuration or None if not found
@@ -292,6 +354,10 @@ class WorkspaceManager:
             workspace.enabled_skills = enabled_skills
         if icon is not None:
             workspace.icon = icon
+        if custom_path is not None:
+            workspace.custom_path = custom_path
+            # Re-create directory structure if path changed
+            self._ensure_workspace_directory(workspace)
 
         # Update config
         config = self._load_config()
@@ -301,6 +367,18 @@ class WorkspaceManager:
 
         logger.info(f"Updated workspace: {workspace_id}")
         return workspace
+
+    def save_workspace(self, workspace: WorkspaceConfig) -> None:
+        """Save workspace configuration to file.
+
+        Args:
+            workspace: Workspace configuration to save
+        """
+        config = self._load_config()
+        config["workspaces"][workspace.id] = workspace.to_dict()
+        self._config = config
+        self._save_config()
+        logger.debug(f"Saved workspace: {workspace.id}")
 
     def delete_workspace(self, workspace_id: str) -> bool:
         """Delete a workspace.

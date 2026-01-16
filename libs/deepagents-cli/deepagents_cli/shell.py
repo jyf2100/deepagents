@@ -89,11 +89,12 @@ class ShellMiddleware(AgentMiddleware[AgentState, Any]):
             raise ToolException(msg)
 
         # Debug log: show workspace_root and command
-        import sys
-        print(f"[ShellMiddleware] workspace_root: {self._workspace_root}", file=sys.stderr, flush=True)
-        print(f"[ShellMiddleware] command: {command}", file=sys.stderr, flush=True)
-
         try:
+            with open(os.path.expanduser("~/deepagents-desktop-python.log"), "a") as log_file:
+                log_file.write(f"[ShellMiddleware] workspace_root: {self._workspace_root}\n")
+                log_file.write(f"[ShellMiddleware] command: {command}\n")
+                log_file.flush()
+
             result = subprocess.run(
                 command,
                 check=False,
@@ -104,6 +105,10 @@ class ShellMiddleware(AgentMiddleware[AgentState, Any]):
                 env=self._env,
                 cwd=self._workspace_root,
             )
+
+            with open(os.path.expanduser("~/deepagents-desktop-python.log"), "a") as log_file:
+                log_file.write(f"[ShellMiddleware] output: {result.stdout[:200] if result.stdout else '<no output>'}\n")
+                log_file.flush()
 
             # Combine stdout and stderr
             output_parts = []

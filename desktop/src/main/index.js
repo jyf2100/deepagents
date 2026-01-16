@@ -287,7 +287,7 @@ function startPythonAgent() {
 }
 
 // === IPC Handlers ===
-ipcMain.handle('chat', async (event, message, stream = false, workspaceId = null) => {
+ipcMain.handle('chat', async (event, message, stream = false, workspaceId = null, conversationId = null) => {
   const requestId = randomUUID();
 
   const promise = new Promise((resolve, reject) => {
@@ -302,7 +302,12 @@ ipcMain.handle('chat', async (event, message, stream = false, workspaceId = null
   await sendToSocket({
     request_id: requestId,
     method: 'chat',
-    params: { message, stream, workspace_id: workspaceId }
+    params: {
+      message: String(message || ''),  // Ensure message is string
+      stream,
+      workspace_id: String(workspaceId || ''),
+      conversation_id: conversationId ? String(conversationId) : null
+    }
   });
 
   return promise;
@@ -697,6 +702,131 @@ ipcMain.handle('setWorkspaceSkills', async (event, workspaceId, enabledSkills) =
   });
 
   return promise;
+});
+
+// === Conversation Management ===
+
+// 创建新对话
+ipcMain.handle('createConversation', async (event, workspaceId, title = null) => {
+  console.log('[createConversation] Called with:', workspaceId, title);
+
+  const requestId = randomUUID();
+  const promise = new Promise((resolve, reject) => {
+    pendingRequests.set(requestId, { resolve, reject });
+  });
+
+  // 生成新的对话 ID
+  const conversationId = randomUUID();
+  const conversationTitle = title || '新对话';
+
+  await sendToSocket({
+    request_id: requestId,
+    method: 'create_conversation',
+    params: {
+      workspace_id: String(workspaceId || ''),
+      conversation_id: conversationId,
+      title: conversationTitle
+    }
+  });
+
+  // 返回包含 conversationId 的响应
+  const result = await promise;
+  if (result.status === 'success' && result.data) {
+    result.data.conversation_id = conversationId;
+  }
+  return result;
+});
+
+// 列出工作空间的对话
+ipcMain.handle('listConversations', async (event, workspaceId) => {
+  console.log('[listConversations] Called with:', workspaceId);
+
+  const requestId = randomUUID();
+  const promise = new Promise((resolve, reject) => {
+    pendingRequests.set(requestId, { resolve, reject });
+  });
+
+  await sendToSocket({
+    request_id: requestId,
+    method: 'list_conversations',
+    params: {
+      workspace_id: String(workspaceId || '')
+    }
+  });
+
+  return promise;
+});
+
+// 删除对话
+ipcMain.handle('deleteConversation', async (event, conversationId) => {
+  console.log('[deleteConversation] Called with:', conversationId);
+
+  const requestId = randomUUID();
+  const promise = new Promise((resolve, reject) => {
+    pendingRequests.set(requestId, { resolve, reject });
+  });
+
+  await sendToSocket({
+    request_id: requestId,
+    method: 'delete_conversation',
+    params: {
+      conversation_id: String(conversationId || '')
+    }
+  });
+
+  return promise;
+});
+
+// 切换对话
+ipcMain.handle('switchConversation', async (event, workspaceId, conversationId) => {
+  console.log('[switchConversation] Called with:', { workspaceId, conversationId });
+
+  const requestId = randomUUID();
+  const promise = new Promise((resolve, reject) => {
+    pendingRequests.set(requestId, { resolve, reject });
+  });
+
+  await sendToSocket({
+    request_id: requestId,
+    method: 'switch_conversation',
+    params: {
+      workspace_id: String(workspaceId || ''),
+      conversation_id: String(conversationId || '')
+    }
+  });
+
+  return promise;
+});
+
+// 重命名对话
+ipcMain.handle('renameConversation', async (event, conversationId, title) => {
+  console.log('[renameConversation] Called with:', conversationId, title);
+
+  const requestId = randomUUID();
+  const promise = new Promise((resolve, reject) => {
+    pendingRequests.set(requestId, { resolve, reject });
+  });
+
+  await sendToSocket({
+    request_id: requestId,
+    method: 'rename_conversation',
+    params: {
+      conversation_id: String(conversationId || ''),
+      title: String(title || '')
+    }
+  });
+
+  return promise;
+});
+
+// 选择目录对话框
+ipcMain.handle('selectDirectory', async () => {
+  const { dialog } = require('electron');
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openDirectory'],
+    title: '选择工作空间目录'
+  });
+  return result;
 });
 
 // === Window Management ===

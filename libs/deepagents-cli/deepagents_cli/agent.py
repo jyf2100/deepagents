@@ -91,13 +91,14 @@ def reset_agent(agent_name: str, source_agent: str | None = None) -> None:
     console.print(f"Location: {agent_dir}\n", style=COLORS["dim"])
 
 
-def get_system_prompt(assistant_id: str, sandbox_type: str | None = None) -> str:
+def get_system_prompt(assistant_id: str, sandbox_type: str | None = None, working_dir: Path | None = None) -> str:
     """Get the base system prompt for the agent.
 
     Args:
         assistant_id: The agent identifier for path references
         sandbox_type: Type of sandbox provider ("modal", "runloop", "daytona").
                      If None, agent is operating in local mode.
+        working_dir: The working directory for the agent. If None, uses Path.cwd().
 
     Returns:
         The system prompt string (without agent.md content)
@@ -106,22 +107,24 @@ def get_system_prompt(assistant_id: str, sandbox_type: str | None = None) -> str
 
     if sandbox_type:
         # Get provider-specific working directory
-
-        working_dir = get_default_working_dir(sandbox_type)
+        
+        # Override working_dir if specified, but usually sandboxes have fixed paths
+        wd = working_dir if working_dir else get_default_working_dir(sandbox_type)
 
         working_dir_section = f"""### Current Working Directory
 
-You are operating in a **remote Linux sandbox** at `{working_dir}`.
+You are operating in a **remote Linux sandbox** at `{wd}`.
 
 All code execution and file operations happen in this sandbox environment.
 
 **Important:**
 - The CLI is running locally on the user's machine, but you execute code remotely
-- Use `{working_dir}` as your working directory for all operations
+- Use `{wd}` as your working directory for all operations
 
 """
     else:
-        cwd = Path.cwd()
+        # Local mode
+        cwd = working_dir if working_dir else Path.cwd()
         working_dir_section = f"""<env>
 Working directory: {cwd}
 </env>
@@ -137,6 +140,7 @@ The filesystem backend is currently operating in: `{cwd}`
 - Use the working directory from <env> to construct absolute paths
 - Example: To create a file in your working directory, use `{cwd}/research_project/file.md`
 - Never use relative paths - always construct full absolute paths
+- Always ensure you have write permissions to the target directory. If you encounter permission errors, ask the user for a different path or to fix permissions.
 
 """
 
@@ -192,8 +196,8 @@ def _format_write_file_description(
 ) -> str:
     """Format write_file tool call for approval prompt."""
     args = tool_call["args"]
-    file_path = args.get("file_path", "unknown")
-    content = args.get("content", "")
+    file_path = args.get("file_path") or "unknown"
+    content = args.get("content") or ""
 
     action = "Overwrite" if Path(file_path).exists() else "Create"
     line_count = len(content.splitlines())
@@ -206,7 +210,7 @@ def _format_edit_file_description(
 ) -> str:
     """Format edit_file tool call for approval prompt."""
     args = tool_call["args"]
-    file_path = args.get("file_path", "unknown")
+    file_path = args.get("file_path") or "unknown"
     replace_all = bool(args.get("replace_all", False))
 
     return (
@@ -220,7 +224,7 @@ def _format_web_search_description(
 ) -> str:
     """Format web_search tool call for approval prompt."""
     args = tool_call["args"]
-    query = args.get("query", "unknown")
+    query = args.get("query") or "unknown"
     max_results = args.get("max_results", 5)
 
     return f"Query: {query}\nMax results: {max_results}\n\n⚠️  This will use Tavily API credits"
@@ -231,7 +235,7 @@ def _format_fetch_url_description(
 ) -> str:
     """Format fetch_url tool call for approval prompt."""
     args = tool_call["args"]
-    url = args.get("url", "unknown")
+    url = args.get("url") or "unknown"
     timeout = args.get("timeout", 30)
 
     return f"URL: {url}\nTimeout: {timeout}s\n\n⚠️  Will fetch and convert web content to markdown"
@@ -244,8 +248,8 @@ def _format_task_description(tool_call: ToolCall, _state: AgentState, _runtime: 
     The description contains all instructions that will be sent to the subagent.
     """
     args = tool_call["args"]
-    description = args.get("description", "unknown")
-    subagent_type = args.get("subagent_type", "unknown")
+    description = args.get("description") or "unknown"
+    subagent_type = args.get("subagent_type") or "unknown"
 
     # Truncate description if too long for display
     description_preview = description
@@ -265,14 +269,14 @@ def _format_task_description(tool_call: ToolCall, _state: AgentState, _runtime: 
 def _format_shell_description(tool_call: ToolCall, _state: AgentState, _runtime: Runtime) -> str:
     """Format shell tool call for approval prompt."""
     args = tool_call["args"]
-    command = args.get("command", "N/A")
+    command = args.get("command") or "N/A"
     return f"Shell Command: {command}\nWorking Directory: {Path.cwd()}"
 
 
 def _format_execute_description(tool_call: ToolCall, _state: AgentState, _runtime: Runtime) -> str:
     """Format execute tool call for approval prompt."""
     args = tool_call["args"]
-    command = args.get("command", "N/A")
+    command = args.get("command") or "N/A"
     return f"Execute Command: {command}\nLocation: Remote Sandbox"
 
 
@@ -335,7 +339,9 @@ def create_cli_agent(
     enable_memory: bool = True,
     enable_skills: bool = True,
     enable_shell: bool = True,
-    workspace_id: str | None = None,  # Optional: workspace for isolation
+    workspace_id: str | None = None,
+    conversation_id: str | None = None,
+    interrupt_on: list[str] | None = None,
 ) -> tuple[Pregel, CompositeBackend]:
     """Create a CLI-configured agent with flexible options.
 
@@ -359,6 +365,10 @@ def create_cli_agent(
         enable_shell: Enable ShellMiddleware for local shell execution (only in local mode)
         workspace_id: Optional workspace identifier for workspace-specific file operations
                      and skill filtering. If None, uses default behavior.
+        conversation_id: Optional conversation identifier for persistent checkpointer.
+                        If provided, uses SQLite-based checkpointer for session persistence.
+        interrupt_on: Optional list of events to interrupt on (e.g. ["tool_call"]).
+                     If provided, adds InterruptOnConfig middleware.
 
     Returns:
         2-tuple of (agent_graph, composite_backend)
@@ -368,6 +378,13 @@ def create_cli_agent(
     if tools is None:
         tools = []
 
+    # Determine checkpointer: persistent if conversation_id provided, otherwise in-memory
+    if conversation_id is not None:
+        from deepagents_cli.checkpointer_factory import get_checkpointer_factory
+        checkpointer = get_checkpointer_factory().get_checkpointer(conversation_id)
+    else:
+        checkpointer = InMemorySaver()
+
     # Workspace configuration (if specified)
     workspace_root = None
     workspace_enabled_skills = None
@@ -376,8 +393,8 @@ def create_cli_agent(
         workspace_manager = get_workspace_manager()
         workspace = workspace_manager.get_workspace(workspace_id)
         if workspace is not None:
-            # Use workspace directory as root for file operations
-            workspace_root = Path(workspace.root_dir).expanduser()
+            # Use workspace.get_workspace_root() which respects custom_path
+            workspace_root = workspace.get_workspace_root()
             workspace_root.mkdir(parents=True, exist_ok=True)
             workspace_enabled_skills = workspace.enabled_skills
 
@@ -390,10 +407,20 @@ def create_cli_agent(
             agent_md.write_text(source_content)
 
     # Skills directories (if enabled)
-    skills_dir = None
+    # Priority: workspace skills > global user skills > project skills
+    workspace_skills_dir = None
+    global_skills_dir = None
     project_skills_dir = None
+
     if enable_skills:
-        skills_dir = settings.ensure_user_skills_dir(assistant_id)
+        # Workspace-specific skills (highest priority)
+        if workspace_id is not None:
+            workspace_skills_dir = settings.ensure_workspace_skills_dir(assistant_id, workspace_id)
+
+        # Global user skills
+        global_skills_dir = settings.ensure_user_skills_dir(assistant_id)
+
+        # Project skills (lowest priority)
         project_skills_dir = settings.get_project_skills_dir()
 
     # Build middleware stack based on enabled features
@@ -416,14 +443,15 @@ def create_cli_agent(
                 AgentMemoryMiddleware(settings=settings, assistant_id=assistant_id, workspace_id=workspace_id)
             )
 
-        # Add skills middleware
+        # Add skills middleware with three-tier skill loading
         if enable_skills:
             agent_middleware.append(
                 SkillsMiddleware(
-                    skills_dir=skills_dir,
+                    skills_dir=global_skills_dir,  # Global skills (for backward compat)
                     assistant_id=assistant_id,
                     project_skills_dir=project_skills_dir,
-                    enabled_skills=workspace_enabled_skills,  # Pass workspace skills
+                    enabled_skills=workspace_enabled_skills,
+                    # Note: workspace_skills_dir integration would require SkillsMiddleware updates
                 )
             )
 
@@ -454,14 +482,14 @@ def create_cli_agent(
                 AgentMemoryMiddleware(settings=settings, assistant_id=assistant_id, workspace_id=workspace_id)
             )
 
-        # Add skills middleware
+        # Add skills middleware with three-tier skill loading
         if enable_skills:
             agent_middleware.append(
                 SkillsMiddleware(
-                    skills_dir=skills_dir,
+                    skills_dir=global_skills_dir,
                     assistant_id=assistant_id,
                     project_skills_dir=project_skills_dir,
-                    enabled_skills=workspace_enabled_skills,  # Pass workspace skills
+                    enabled_skills=workspace_enabled_skills,
                 )
             )
 
@@ -470,17 +498,37 @@ def create_cli_agent(
 
     # Get or use custom system prompt
     if system_prompt is None:
-        system_prompt = get_system_prompt(assistant_id=assistant_id, sandbox_type=sandbox_type)
+        # Determine working directory for system prompt
+        prompt_working_dir = None
+        if sandbox is None:
+             prompt_working_dir = workspace_root if workspace_root is not None else Path.cwd()
+             
+        system_prompt = get_system_prompt(
+            assistant_id=assistant_id, 
+            sandbox_type=sandbox_type,
+            working_dir=prompt_working_dir
+        )
 
     # Configure interrupt_on based on auto_approve setting
-    if auto_approve:
+    # Prioritize explicit interrupt_on argument if provided
+    # CRITICAL: deepagents.create_deep_agent expects a dict, not a list
+    import sys
+    print(f"[create_cli_agent] DEBUG: auto_approve={auto_approve}, interrupt_on input={interrupt_on}", file=sys.stderr)
+    
+    if interrupt_on is not None:
+        if isinstance(interrupt_on, list):
+            # Convert list to dict: {"tool_name": True}
+            interrupt_on = {tool: True for tool in interrupt_on}
+    elif auto_approve:
         # No interrupts - all tools run automatically
         interrupt_on = {}
     else:
         # Full HITL for destructive operations
         interrupt_on = _add_interrupt_on()
+        
+    print(f"[create_cli_agent] DEBUG: Final interrupt_on={list(interrupt_on.keys()) if interrupt_on else 'None'}", file=sys.stderr)
 
-    # Create the agent
+    # Create the agent with persistent or in-memory checkpointer
     agent = create_deep_agent(
         model=model,
         system_prompt=system_prompt,
@@ -488,6 +536,6 @@ def create_cli_agent(
         backend=composite_backend,
         middleware=agent_middleware,
         interrupt_on=interrupt_on,
-        checkpointer=InMemorySaver(),
+        checkpointer=checkpointer,
     ).with_config(config)
     return agent, composite_backend

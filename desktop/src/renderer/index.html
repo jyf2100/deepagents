@@ -2,6 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://skillslm.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://skillslm.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://skillslm.com;">
   <title>Cowork</title>
   <style>
     /* Mac Classic Style - 增强版 */
@@ -855,6 +856,76 @@
       min-height: 0;
       overflow: hidden;
     }
+
+    /* 工作空间头部 */
+    .workspace-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px;
+      background: #f5f5f7;
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+
+    .workspace-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      flex: 1;
+      padding: 4px;
+      border-radius: 6px;
+      transition: background 0.2s;
+    }
+
+    .workspace-info:hover {
+      background: #e8e8ed;
+    }
+
+    .workspace-icon {
+      font-size: 16px;
+    }
+
+    .workspace-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1d1d1f;
+    }
+
+    .create-workspace-btn {
+      padding: 6px 12px;
+      border: 1px solid #d1d1d6;
+      border-radius: 6px;
+      background: #ffffff;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .create-workspace-btn:hover {
+      background: #e8e8ed;
+    }
+
+    /* 分隔线 */
+    .workspace-divider {
+      height: 1px;
+      background: #e1e1e6;
+      margin: 8px 0;
+    }
+
+    /* 对话区域标题 */
+    .conversation-header {
+      padding: 4px 12px 0 12px;
+    }
+
+    .section-label {
+      font-size: 11px;
+      color: #86868b;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
   </style>
 </head>
 <body>
@@ -1134,6 +1205,15 @@
               <option value="学习">学习</option>
               <option value="工作">工作</option>
             </select>
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; font-size: 12px; font-weight: 500; color: #1d1d1f; margin-bottom: 8px;">工作目录（可选）</label>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" id="new-workspace-path" placeholder="默认: ~/.deepagents/workspaces/{id}/files" style="flex: 1; padding: 10px 12px; border: 1px solid #d1d1d6; border-radius: 6px; font-size: 13px; box-sizing: border-box;" readonly>
+              <button type="button" id="browse-workspace-path" style="padding: 10px 16px; border: 1px solid #d1d1d6; border-radius: 6px; font-size: 13px; background: #f5f5f7; cursor: pointer; white-space: nowrap;">浏览...</button>
+            </div>
+            <small style="display: block; margin-top: 4px; font-size: 11px; color: #6e6e73;">留空使用默认路径</small>
           </div>
 
           <div style="margin-bottom: 20px;">

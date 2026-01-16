@@ -96,6 +96,9 @@ def create_deep_agent(
     Returns:
         A configured deep agent.
     """
+    import sys
+    print(f"[create_deep_agent] DEBUG: interrupt_on={list(interrupt_on.keys()) if interrupt_on else 'None'}", file=sys.stderr)
+
     if model is None:
         model = get_default_model()
     elif isinstance(model, str):

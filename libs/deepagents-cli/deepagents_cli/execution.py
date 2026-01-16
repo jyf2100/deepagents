@@ -47,7 +47,7 @@ def prompt_for_tool_approval(
         Decision (ApproveDecision or RejectDecision) OR
         dict with {"type": "auto_approve_all"} to switch to auto-approve mode
     """
-    description = action_request.get("description", "No description available")
+    description = action_request.get("description") or "No description available"
     name = action_request["name"]
     args = action_request["args"]
     preview = build_approval_preview(name, args, assistant_id) if name else None
@@ -559,7 +559,7 @@ async def execute_task(
                                 status.stop()
                                 spinner_active = False
 
-                            description = action_request.get("description", "tool action")
+                            description = action_request.get("description") or "tool action"
                             console.print()
                             console.print(f"  [dim]⚡ {description}[/dim]")
 

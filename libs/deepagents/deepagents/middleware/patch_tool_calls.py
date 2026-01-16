@@ -20,6 +20,11 @@ class PatchToolCallsMiddleware(AgentMiddleware):
         patched_messages = []
         # Iterate over the messages and add any dangling tool calls
         for i, msg in enumerate(messages):
+            # Patch empty content for vLLM/litellm compatibility
+            if msg.type == "ai" and msg.tool_calls and not msg.content:
+                # Replace empty content with a space to satisfy strict vLLM validation
+                msg.content = " "
+                
             patched_messages.append(msg)
             if msg.type == "ai" and msg.tool_calls:
                 for tool_call in msg.tool_calls:

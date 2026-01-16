@@ -18,6 +18,9 @@ from deepagents_cli.config import Settings
 class AgentMemoryState(AgentState):
     """State for the agent memory middleware."""
 
+    workspace_memory: NotRequired[str]
+    """Workspace-specific preferences from ~/.deepagents/workspaces/{id}/ (highest priority)."""
+
     user_memory: NotRequired[str]
     """Personal preferences from ~/.deepagents/{agent}/ (applies everywhere)."""
 
@@ -27,6 +30,9 @@ class AgentMemoryState(AgentState):
 
 class AgentMemoryStateUpdate(TypedDict):
     """A state update for the agent memory middleware."""
+
+    workspace_memory: NotRequired[str]
+    """Workspace-specific preferences from ~/.deepagents/workspaces/{id}/."""
 
     user_memory: NotRequired[str]
     """Personal preferences from ~/.deepagents/{agent}/ (applies everywhere)."""
@@ -201,9 +207,10 @@ class AgentMemoryMiddleware(AgentMiddleware):
 
         # User paths - use workspace-specific path if workspace_id is provided
         if workspace_id:
-            self.agent_dir = settings.get_workspace_dir(assistant_id, workspace_id)
+            # 使用统一的 workspaces 路径
+            self.agent_dir = settings.get_workspace_dir_v2(workspace_id)
             # Store both display path (with ~) and absolute path for file operations
-            self.agent_dir_display = f"~/.deepagents/{assistant_id}/{workspace_id}"
+            self.agent_dir_display = f"~/.deepagents/workspaces/{workspace_id}"
             self.agent_dir_absolute = str(self.agent_dir)
         else:
             self.agent_dir = settings.get_agent_dir(assistant_id)
@@ -237,6 +244,13 @@ class AgentMemoryMiddleware(AgentMiddleware):
         """
         result: AgentMemoryStateUpdate = {}
 
+        # Load workspace memory if workspace_id is provided (highest priority)
+        if self.workspace_id is not None and "workspace_memory" not in state:
+            workspace_agent_md = self.agent_dir / "agent.md"
+            if workspace_agent_md.exists():
+                with contextlib.suppress(OSError, UnicodeDecodeError):
+                    result["workspace_memory"] = workspace_agent_md.read_text()
+
         # Load user memory if not already in state
         if "user_memory" not in state:
             user_path = self.settings.get_user_agent_md_path(self.assistant_id)
@@ -264,9 +278,25 @@ class AgentMemoryMiddleware(AgentMiddleware):
         """
         # Extract memory from state
         state = cast("AgentMemoryState", request.state)
+        workspace_memory = state.get("workspace_memory")
         user_memory = state.get("user_memory")
         project_memory = state.get("project_memory")
         base_system_prompt = request.system_prompt
+
+        # Build memory sections with priority: workspace > user > project
+        memory_parts = []
+        if workspace_memory:
+            memory_parts.append(f"<workspace_memory>\n{workspace_memory}\n</workspace_memory>")
+        if user_memory:
+            memory_parts.append(f"<user_memory>\n{user_memory}\n</user_memory>")
+        if project_memory:
+            memory_parts.append(f"<project_memory>\n{project_memory}\n</project_memory>")
+
+        # Combine all memory sections
+        if memory_parts:
+            memory_section = "\n\n".join(memory_parts)
+        else:
+            memory_section = "<no_memory>"
 
         # Build project memory info for documentation
         if self.project_root and project_memory:
@@ -281,12 +311,6 @@ class AgentMemoryMiddleware(AgentMiddleware):
             project_deepagents_dir = str(self.project_root / ".deepagents")
         else:
             project_deepagents_dir = "[project-root]/.deepagents (not in a project)"
-
-        # Format memory section with both memories
-        memory_section = self.system_prompt_template.format(
-            user_memory=user_memory if user_memory else "(No user agent.md)",
-            project_memory=project_memory if project_memory else "(No project agent.md)",
-        )
 
         system_prompt = memory_section
 

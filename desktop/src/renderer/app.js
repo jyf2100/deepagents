@@ -257,95 +257,192 @@ function addMessageToHistory(role, content) {
   saveConversations();
 }
 
+// 获取当前工作空间名称
+function getCurrentWorkspaceName() {
+  if (!currentWorkspaceId) return '未选择工作空间';
+  const workspace = workspaces.find(w => w.id === currentWorkspaceId);
+  return workspace ? workspace.name : '未知工作空间';
+}
+
+// 切换工作空间菜单
+function toggleWorkspaceMenu() {
+  const workspaceSelector = document.getElementById('workspace-selector');
+  if (workspaceSelector) {
+    workspaceSelector.click();
+  }
+}
+
 function renderHistory() {
   historyList.innerHTML = '';
 
+  // 工作空间头部
+  const workspaceHeader = document.createElement('div');
+  workspaceHeader.className = 'workspace-header';
+
+  const workspaceInfo = document.createElement('div');
+  workspaceInfo.className = 'workspace-info';
+  workspaceInfo.onclick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleWorkspaceMenu();
+  };
+
+  workspaceInfo.innerHTML = `
+    <span class="workspace-icon">📁</span>
+    <span class="workspace-name">${getCurrentWorkspaceName()}</span>
+  `;
+
+  const createWorkspaceBtn = document.createElement('button');
+  createWorkspaceBtn.className = 'create-workspace-btn';
+  createWorkspaceBtn.textContent = '+ 新建';
+  createWorkspaceBtn.onclick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    showCreateWorkspaceDialog();
+  };
+
+  workspaceHeader.appendChild(workspaceInfo);
+  workspaceHeader.appendChild(createWorkspaceBtn);
+  historyList.appendChild(workspaceHeader);
+
+  // 分隔线
+  const divider = document.createElement('div');
+  divider.className = 'workspace-divider';
+  historyList.appendChild(divider);
+
+  // 对话区域标题
+  const conversationHeader = document.createElement('div');
+  conversationHeader.className = 'conversation-header';
+  conversationHeader.innerHTML = '<span class="section-label">💬 对话列表</span>';
+  historyList.appendChild(conversationHeader);
+
+  // 新对话按钮
   const newChatBtn = document.createElement('div');
   newChatBtn.className = 'history-item';
   newChatBtn.innerHTML = '<div class="history-title">+ 新对话</div>';
   newChatBtn.onclick = () => {
-    currentConversationId = null;
-    messagesDiv.innerHTML = '';
-    renderHistory();
+    createNewConversation();
   };
   historyList.appendChild(newChatBtn);
 
+  // 渲染对话列表
   conversations.forEach(conv => {
     const item = document.createElement('div');
     item.className = `history-item ${conv.id === currentConversationId ? 'active' : ''}`;
 
-    const time = new Date(conv.updatedAt).toLocaleString('zh-CN', {
+    // 使用 created_at 或 updated_at 字段
+    const timeField = conv.updated_at || conv.created_at;
+    const time = timeField ? new Date(timeField).toLocaleString('zh-CN', {
       month: 'numeric',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
-    });
+    }) : '';
 
     item.innerHTML = `
       <div class="history-content">
-        <div class="history-title">${escapeHtml(conv.title)}</div>
+        <div class="history-title">${escapeHtml(conv.title || '未命名对话')}</div>
         <div class="history-time">${time}</div>
       </div>
       <button class="history-delete-btn" data-id="${conv.id}" title="删除对话">×</button>
     `;
 
-    // 点击加载对话
+    // 点击切换对话
     item.addEventListener('click', (e) => {
       // 如果点击的是删除按钮，不触发加载
       if (e.target.classList.contains('history-delete-btn')) {
         return;
       }
-      loadConversation(conv.id);
+      switchConversation(conv.id);
     });
 
     // 删除按钮事件
     const deleteBtn = item.querySelector('.history-delete-btn');
     deleteBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      deleteConversation(conv.id);
+      deleteConversationBackend(conv.id);
     });
 
     historyList.appendChild(item);
   });
 }
 
-// 删除对话
-function deleteConversation(id) {
-  const conversation = conversations.find(c => c.id === id);
-  if (!conversation) return;
+// 创建新对话
+async function createNewConversation() {
+  if (!currentWorkspaceId) {
+    alert('请先选择一个工作空间');
+    return;
+  }
 
-  if (confirm(`确定要删除对话"${conversation.title}"吗？`)) {
-    // 从数组中删除
-    conversations = conversations.filter(c => c.id !== id);
+  try {
+    const result = await window.deepagents.createConversation(currentWorkspaceId);
+    const conversationId = result.data.conversation_id;
 
-    // 如果删除的是当前对话，清空消息区域
-    if (currentConversationId === id) {
-      currentConversationId = null;
-      messagesDiv.innerHTML = '';
-    }
+    // 切换到新对话
+    await switchConversation(conversationId);
 
-    // 保存并重新渲染
-    saveConversations();
-    renderHistory();
+    console.log('[Conversation] Created new conversation:', conversationId);
+  } catch (error) {
+    console.error('[Conversation] Failed to create conversation:', error);
+    alert('创建对话失败: ' + error.message);
   }
 }
 
-function loadConversation(id) {
-  const conversation = conversations.find(c => c.id === id);
+// 切换对话
+async function switchConversation(conversationId) {
+  if (!currentWorkspaceId) {
+    console.error('[Conversation] No workspace selected');
+    return;
+  }
+
+  try {
+    await window.deepagents.switchConversation(currentWorkspaceId, conversationId);
+    currentConversationId = conversationId;
+
+    // 清空消息视图
+    if (messagesDiv) {
+      messagesDiv.innerHTML = '';
+    }
+
+    // 更新历史列表高亮
+    renderHistory();
+
+    console.log('[Conversation] Switched to conversation:', conversationId);
+  } catch (error) {
+    console.error('[Conversation] Failed to switch conversation:', error);
+  }
+}
+
+// 删除对话（使用后端 API）
+async function deleteConversationBackend(conversationId) {
+  const conversation = conversations.find(c => c.id === conversationId);
   if (!conversation) return;
 
-  currentConversationId = id;
-  messagesDiv.innerHTML = '';
+  const confirmed = confirm(`确定要删除对话"${conversation.title || '未命名对话'}"吗？`);
+  if (!confirmed) return;
 
-  conversation.messages.forEach(msg => {
-    const div = document.createElement('div');
-    div.className = `message ${msg.role}`;
-    div.textContent = msg.content;
-    messagesDiv.appendChild(div);
-  });
+  try {
+    await window.deepagents.deleteConversation(conversationId);
 
-  messagesDiv.scrollTop = messagesDiv.scrollHeight;
-  renderHistory();
+    // 从本地数组中删除
+    conversations = conversations.filter(c => c.id !== conversationId);
+
+    // 如果删除的是当前对话，清空消息区域
+    if (currentConversationId === conversationId) {
+      currentConversationId = null;
+      if (messagesDiv) {
+        messagesDiv.innerHTML = '';
+      }
+    }
+
+    // 重新渲染
+    renderHistory();
+
+    console.log('[Conversation] Deleted conversation:', conversationId);
+  } catch (error) {
+    console.error('[Conversation] Failed to delete conversation:', error);
+    alert('删除对话失败: ' + error.message);
+  }
 }
 
 function escapeHtml(text) {
@@ -642,13 +739,33 @@ async function sendMessage() {
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
 
     // 调用后端（使用流式模式，但当前架构下仍是一次性返回）
-    const response = await window.deepagents.chat(message, true, currentWorkspaceId);
+    // 传递简单字符串消息，而不是对象，避免后端解析错误
+    const response = await window.deepagents.chat(message, true, currentWorkspaceId, currentConversationId);
 
     // 移除加载状态，显示实际响应
     loadingElement.remove();
     // 响应结构: { status: 'success', data: { content: '...' } }
     console.log('[sendMessage] Response:', response);
-    const content = response?.data?.content || response?.content || '';
+    
+    // 安全地提取内容，处理可能的对象类型
+    let content = '';
+    if (response?.data?.content) {
+      content = response.data.content;
+    } else if (response?.content) {
+      content = response.content;
+    }
+    
+    // 确保 content 是字符串
+    if (typeof content === 'object') {
+      try {
+        content = JSON.stringify(content);
+      } catch (e) {
+        content = String(content);
+      }
+    } else {
+      content = String(content || '');
+    }
+
     console.log('[sendMessage] Extracted content length:', content.length);
     addMessage('assistant', content);
   } catch (error) {
@@ -1372,7 +1489,15 @@ function formatToolInput(toolName, toolInput) {
     default:
       // 对于其他工具，显示前两个参数
       const entries = Object.entries(toolInput).slice(0, 2);
-      return entries.map(([k, v]) => `${k}: ${JSON.stringify(v).slice(0, 50)}`).join(', ');
+      return entries.map(([k, v]) => {
+        const vStr = JSON.stringify(v);
+        // Handle undefined/null values
+        if (vStr === undefined || vStr === null) {
+          return `${k}: (null)`;
+        }
+        // Safe slice
+        return `${k}: ${vStr.slice(0, 50)}${vStr.length > 50 ? '...' : ''}`;
+      }).join(', ');
   }
 }
 
@@ -1656,6 +1781,11 @@ async function loadWorkspaces() {
 
     updateWorkspaceUI();
 
+    // 加载当前工作空间的对话列表
+    if (currentWorkspaceId) {
+      await loadWorkspaceConversations(currentWorkspaceId);
+    }
+
     console.log('[Workspace] Loaded workspaces:', workspaces.length, 'current:', currentWorkspaceId);
   } catch (error) {
     console.error('[Workspace] Failed to load workspaces:', error);
@@ -1749,10 +1879,27 @@ async function switchWorkspace(workspaceId) {
   // 重置对话
   currentConversationId = null;
 
+  // 加载该工作空间的对话列表
+  await loadWorkspaceConversations(workspaceId);
+
   // 更新 UI
   updateWorkspaceUI();
 
   console.log('[Workspace] Switched to workspace:', workspaceId);
+}
+
+// 加载工作空间的对话列表
+async function loadWorkspaceConversations(workspaceId) {
+  try {
+    const result = await window.deepagents.listConversations(workspaceId);
+    conversations = result.data?.conversations || [];
+    console.log('[Conversation] Loaded conversations for workspace:', workspaceId, conversations.length);
+    renderHistory();
+  } catch (error) {
+    console.error('[Conversation] Failed to load conversations:', error);
+    conversations = [];
+    renderHistory();
+  }
 }
 
 // 创建工作空间对话框
@@ -1760,11 +1907,37 @@ function setupCreateWorkspaceDialog() {
   const dialog = document.getElementById('create-workspace-dialog');
   const form = document.getElementById('create-workspace-form');
   const cancelBtn = document.getElementById('cancel-create-workspace');
+  const browseBtn = document.getElementById('browse-workspace-path');
+  const pathInput = document.getElementById('new-workspace-path');
+
+  // 存储选择的路径
+  let selectedCustomPath = '';
 
   // 取消按钮
   cancelBtn.addEventListener('click', () => {
     dialog.style.display = 'none';
+    // 重置路径选择
+    selectedCustomPath = '';
+    pathInput.value = '';
   });
+
+  // 浏览按钮 - 使用 Electron 的 dialog API
+  if (browseBtn) {
+    browseBtn.addEventListener('click', async () => {
+      try {
+        // 注意：需要确保 Electron 主进程暴露了 dialog API
+        // 如果没有，需要先在 main.js 中添加 ipcMain.handle
+        const result = await window.deepagents.selectDirectory();
+        if (result && result.canceled === false && result.filePaths && result.filePaths.length > 0) {
+          selectedCustomPath = result.filePaths[0];
+          pathInput.value = selectedCustomPath;
+        }
+      } catch (error) {
+        console.error('[Workspace] Failed to select directory:', error);
+        alert('选择目录失败: ' + error.message);
+      }
+    });
+  }
 
   // 表单提交
   form.addEventListener('submit', async (e) => {
@@ -1773,6 +1946,7 @@ function setupCreateWorkspaceDialog() {
     const name = document.getElementById('new-workspace-name').value.trim();
     const category = document.getElementById('new-workspace-category').value;
     const icon = document.getElementById('new-workspace-icon').value;
+    const customPath = pathInput.value.trim();
 
     if (!name) return;
 
@@ -1785,11 +1959,16 @@ function setupCreateWorkspaceDialog() {
         name,
         category,
         icon,
+        custom_path: customPath || '',  // 传递自定义路径
         enabled_skills: ['*']
       });
 
       // 关闭对话框
       dialog.style.display = 'none';
+
+      // 重置路径选择
+      selectedCustomPath = '';
+      pathInput.value = '';
 
       // 重新加载工作空间列表
       await loadWorkspaces();
@@ -1808,6 +1987,9 @@ function setupCreateWorkspaceDialog() {
   dialog.addEventListener('click', (e) => {
     if (e.target === dialog) {
       dialog.style.display = 'none';
+      // 重置路径选择
+      selectedCustomPath = '';
+      pathInput.value = '';
     }
   });
 }
