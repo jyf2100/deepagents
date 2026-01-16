@@ -187,8 +187,8 @@ class WorkspaceManager:
             Path to workspace metadata directory (workspaces/{id}/)
         """
         # Use the unified workspace directory (not the files subdirectory)
-        from deepagents_cli.config import Settings
-        workspace_meta_dir = Settings().get_workspace_dir_v2(workspace.id)
+        from deepagents_cli.config import settings
+        workspace_meta_dir = settings.get_workspace_dir_v2(workspace.id)
         workspace_meta_dir.mkdir(parents=True, exist_ok=True)
 
         # Create skills subdirectory for workspace-specific skills
