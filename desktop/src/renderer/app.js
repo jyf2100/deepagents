@@ -234,11 +234,25 @@ function getCurrentConversation() {
   return conversations.find(c => c.id === currentConversationId);
 }
 
-function updateConversationTitle(conversation, firstMessage) {
+async function updateConversationTitle(conversation, firstMessage, syncToBackend = true) {
   const title = firstMessage.slice(0, 30) + (firstMessage.length > 30 ? '...' : '');
   conversation.title = title;
   saveConversations();
   renderHistory();
+
+  // 同步标题到后端
+  if (syncToBackend) {
+    try {
+      if (conversation.id) {
+        await window.deepagents.renameConversation(conversation.id, title);
+        console.log('[Conversation] Synced title to backend:', title);
+      }
+    } catch (error) {
+      console.error('[Conversation] Failed to sync title to backend:', error);
+    }
+  } else {
+    console.log('[Conversation] Updated local title, skipping backend sync for now');
+  }
 }
 
 function addMessageToHistory(role, content) {
@@ -256,7 +270,8 @@ function addMessageToHistory(role, content) {
   conversation.updatedAt = new Date().toISOString();
 
   if (role === 'user' && conversation.messages.filter(m => m.role === 'user').length === 1) {
-    updateConversationTitle(conversation, content);
+    // 仅更新本地标题，不立即同步到后端（防止后端对话尚未创建）
+    updateConversationTitle(conversation, content, false);
   }
 
   saveConversations();
@@ -278,6 +293,7 @@ function toggleWorkspaceMenu() {
 }
 
 function renderHistory() {
+  console.log('[renderHistory] Start rendering. Conversations count:', conversations.length);
   historyList.innerHTML = '';
 
   // 工作空间头部
@@ -335,14 +351,22 @@ function renderHistory() {
     const item = document.createElement('div');
     item.className = `history-item ${conv.id === currentConversationId ? 'active' : ''}`;
 
-    // 使用 created_at 或 updated_at 字段
-    const timeField = conv.updated_at || conv.created_at;
-    const time = timeField ? new Date(timeField).toLocaleString('zh-CN', {
-      month: 'numeric',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }) : '';
+    // 使用 created_at/updated_at (后端) 或 createdAt/updatedAt (本地)
+    const timeField = conv.updated_at || conv.created_at || conv.updatedAt || conv.createdAt;
+    
+    let time = '';
+    if (timeField) {
+      const date = new Date(timeField);
+      // 检查日期是否有效
+      if (!isNaN(date.getTime())) {
+        time = date.toLocaleString('zh-CN', {
+          month: 'numeric',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
+    }
 
     item.innerHTML = `
       <div class="history-content">
@@ -354,8 +378,10 @@ function renderHistory() {
 
     // 点击切换对话
     item.addEventListener('click', (e) => {
+      console.log('[HistoryItem] Clicked conversation:', conv.id, conv.title);
       // 如果点击的是删除按钮，不触发加载
       if (e.target.classList.contains('history-delete-btn')) {
+        console.log('[HistoryItem] Clicked delete button, ignoring switch');
         return;
       }
       switchConversation(conv.id);
@@ -395,6 +421,7 @@ async function createNewConversation() {
 
 // 切换对话
 async function switchConversation(conversationId) {
+  console.log('[switchConversation] Called with ID:', conversationId);
   if (!currentWorkspaceId) {
     console.error('[Conversation] No workspace selected');
     return;
@@ -430,6 +457,7 @@ async function loadConversationHistory(workspaceId, conversationId) {
     }
 
     const result = await window.deepagents.getConversationHistory(workspaceId, conversationId);
+    console.log('[loadConversationHistory] Raw result:', JSON.stringify(result));
     
     // 清空加载指示器
     if (messagesDiv) {
@@ -470,6 +498,14 @@ async function loadConversationHistory(workspaceId, conversationId) {
       messages.forEach(msg => {
         let role = 'unknown';
         let content = msg.content || '';
+        
+        // Debug log for troubleshooting missing history
+        console.log('[History] Processing msg:', { 
+          type: msg.type, 
+          contentLen: content.length, 
+          toolCalls: msg.tool_calls ? msg.tool_calls.length : 0,
+          rawContent: content.substring(0, 50)
+        });
 
         // 映射消息类型到 UI 角色
         if (msg.type === 'human' || msg.type === 'user') {
@@ -589,6 +625,10 @@ function formatMessageContent(content) {
   });
 
   // 2. 检测 JSON 对象（在 HTML 转义之前）
+  // 简化 JSON 检测逻辑，避免复杂的正则导致性能问题
+  // 只检测代码块中的 JSON，或者明显的 JSON 对象
+  // 暂时移除自动检测行内复杂 JSON 的功能，防止正则回溯导致的卡死
+  /*
   let jsonIndex = 0;
   formatted = formatted.replace(/(\{(?:[^{}]|\{[^{}]*\})*\})/g, (match) => {
     try {
@@ -601,6 +641,7 @@ function formatMessageContent(content) {
       return match;
     }
   });
+  */
 
   // 3. 转义 HTML 防止 XSS
   formatted = escapeHtml(formatted);
@@ -875,6 +916,16 @@ async function sendMessage() {
 
     console.log('[sendMessage] Extracted content length:', content.length);
     addMessage('assistant', content);
+
+    // 如果是第一条用户消息，现在可以安全地同步标题到后端了
+    const conversation = getCurrentConversation();
+    if (conversation && conversation.messages.filter(m => m.role === 'user').length === 1) {
+      const firstMsg = conversation.messages.find(m => m.role === 'user');
+      if (firstMsg) {
+        console.log('[sendMessage] Syncing title to backend after successful chat');
+        updateConversationTitle(conversation, firstMsg.content, true);
+      }
+    }
   } catch (error) {
     addMessage('assistant', `Error: ${error.message}`);
   } finally {

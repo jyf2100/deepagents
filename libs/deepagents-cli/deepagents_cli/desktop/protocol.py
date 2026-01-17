@@ -3,6 +3,7 @@
 import asyncio
 import msgpack
 import os
+import sys
 from typing import Any
 
 from deepagents_cli.agent import create_cli_agent
@@ -466,6 +467,13 @@ class DesktopProtocol:
         # Update current state
         self.current_workspace_id = workspace_id
         self.current_conversation_id = conversation_id
+
+        # Ensure conversation metadata exists (handle implicit creation via chat)
+        if workspace_id and conversation_id:
+            try:
+                await self._ensure_conversation_metadata(workspace_id, conversation_id, user_message)
+            except Exception as e:
+                print(f"[_handle_chat] WARNING: Failed to ensure conversation metadata: {e}", file=sys.stderr)
 
         # Get or create agent with caching
         try:
@@ -1060,7 +1068,55 @@ class DesktopProtocol:
                 'error': {'code': 'AGENT_ERROR', 'message': str(e)}
             }
 
-    # === Workspace Management Methods ===
+    async def _ensure_conversation_metadata(self, workspace_id: str, conversation_id: str, first_message: str | None = None) -> None:
+        """Ensure conversation metadata exists for implicitly created conversations.
+
+        If the conversation was created via chat() (e.g. using a timestamp ID from frontend)
+        instead of create_conversation(), the metadata file might not exist.
+        This method creates it to ensure persistence in the list.
+        """
+        from deepagents_cli.desktop.workspace import get_workspace_manager
+        from deepagents_cli.config import settings
+        from pathlib import Path
+        import json
+        import sys
+
+        workspace_manager = get_workspace_manager()
+        workspace = workspace_manager.get_workspace(workspace_id)
+
+        if not workspace:
+            print(f"[_ensure_conversation_metadata] Workspace not found: {workspace_id}", file=sys.stderr)
+            return
+
+        # 1. Add to workspace conversation_ids if missing
+        if conversation_id not in workspace.conversation_ids:
+            print(f"[_ensure_conversation_metadata] Adding {conversation_id} to workspace {workspace_id}", file=sys.stderr)
+            workspace.conversation_ids.append(conversation_id)
+            workspace_manager.save_workspace(workspace)
+
+        # 2. Create metadata JSON if missing
+        conv_dir = settings.get_workspace_dir_v2(workspace_id) / 'conversations'
+        conv_dir.mkdir(parents=True, exist_ok=True)
+        conv_file = conv_dir / f'{conversation_id}.json'
+
+        if not conv_file.exists():
+            print(f"[_ensure_conversation_metadata] Creating metadata for {conversation_id}", file=sys.stderr)
+            
+            # Generate title from message or default
+            title = '新对话'
+            if first_message and isinstance(first_message, str) and first_message.strip():
+                title = first_message.strip()[:30]
+                if len(first_message.strip()) > 30:
+                    title += '...'
+            
+            conv_metadata = {
+                'id': conversation_id,
+                'workspace_id': workspace_id,
+                'title': title,
+                'created_at': str(Path.cwd()), # Use current time logic
+                'updated_at': str(Path.cwd())
+            }
+            conv_file.write_text(json.dumps(conv_metadata, ensure_ascii=False, indent=2))
 
     async def _handle_list_workspaces(self, request_id: str) -> dict[str, Any]:
         """Handle list_workspaces request."""
@@ -1929,6 +1985,7 @@ class DesktopProtocol:
 
             # Load conversation metadata from workspace
             conv_dir = settings.get_workspace_dir_v2(workspace_id) / 'conversations'
+            print(f"[_handle_list_conversations] Loading conversations from: {conv_dir}", file=sys.stderr)
 
             conversations = []
             if conv_dir.exists():
@@ -1936,8 +1993,14 @@ class DesktopProtocol:
                     try:
                         metadata = json.loads(conv_file.read_text())
                         conversations.append(metadata)
-                    except Exception:
+                    except Exception as e:
+                        print(f"[_handle_list_conversations] Error reading {conv_file}: {e}", file=sys.stderr)
                         continue
+            
+            # Sort conversations by updated_at (descending)
+            conversations.sort(key=lambda x: x.get('updated_at', ''), reverse=True)
+            
+            print(f"[_handle_list_conversations] Found {len(conversations)} conversations", file=sys.stderr)
 
             return {
                 'request_id': request_id,
@@ -2171,6 +2234,15 @@ class DesktopProtocol:
             
             print(f"[_handle_get_conversation_history] Fetching history for thread_id: {thread_id}", file=sys.stderr)
 
+            # DEBUG: Check DB file
+            from deepagents_cli.checkpointer_factory import get_checkpointer_factory
+            factory = get_checkpointer_factory()
+            db_path = factory.base_path / f"{conversation_id}.db"
+            if db_path.exists():
+                print(f"[_handle_get_conversation_history] DB file exists: {db_path}, size: {db_path.stat().st_size} bytes", file=sys.stderr)
+            else:
+                 print(f"[_handle_get_conversation_history] DB file DOES NOT exist: {db_path}", file=sys.stderr)
+
             # Fetch state
             state = await agent.aget_state(agent_config)
             messages = state.values.get("messages", [])
@@ -2179,9 +2251,11 @@ class DesktopProtocol:
 
             # Serialize messages
             history = []
-            for msg in messages:
+            for i, msg in enumerate(messages):
                 msg_type = getattr(msg, 'type', 'unknown')
                 content = getattr(msg, 'content', '')
+                
+                print(f"[_handle_get_conversation_history] MSG {i}: type={msg_type}, content_len={len(str(content))}, content_preview={str(content)[:50]}", file=sys.stderr)
                 
                 # Basic message object
                 msg_obj = {
