@@ -55,6 +55,7 @@ contextBridge.exposeInMainWorld('deepagents', {
   deleteConversation: (conversationId) => ipcRenderer.invoke('deleteConversation', conversationId),
   switchConversation: (workspaceId, conversationId) => ipcRenderer.invoke('switchConversation', workspaceId, conversationId),
   renameConversation: (conversationId, title) => ipcRenderer.invoke('renameConversation', conversationId, title),
+  getConversationHistory: (workspaceId, conversationId) => ipcRenderer.invoke('getConversationHistory', workspaceId, conversationId),
 
   // 文件选择对话框
   selectDirectory: () => ipcRenderer.invoke('selectDirectory'),

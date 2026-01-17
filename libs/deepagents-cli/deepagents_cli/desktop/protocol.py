@@ -406,6 +406,9 @@ class DesktopProtocol:
         if request_type == "rename_conversation":
             return await self._handle_rename_conversation(message.get('request_id'), message.get('params', {}))
 
+        if request_type == "get_conversation_history":
+            return await self._handle_get_conversation_history(message.get('request_id'), message.get('params', {}))
+
         return {
             'request_id': message.get('request_id'),
             'status': 'error',
@@ -859,18 +862,6 @@ class DesktopProtocol:
             # Resume agent with user decision
             import traceback
             try:
-                # CRITICAL FIX: When using Command(resume=...), the value is passed directly 
-                # to the interrupt() call in the node/middleware.
-                # The middleware expects a dict with "decisions" key for the SPECIFIC interrupt.
-                # But LangGraph's Command(resume=value) maps value to the interrupt.
-                # If we have multiple interrupts, we need to handle that, but typically there's one.
-                
-                # If we are using Command(resume=hitl_response), LangGraph matches the dict keys 
-                # to interrupt IDs. So hitl_response is correct: {id: value}.
-                # The 'value' should be what interrupt() returns.
-                # In middleware.py: decisions = interrupt(hitl_request)["decisions"]
-                # So the value for the interrupt ID should be: {"decisions": [...]}
-                
                 response = await self.agent.ainvoke(
                     Command(resume=hitl_response),
                     config=agent_config
@@ -879,6 +870,68 @@ class DesktopProtocol:
                 print(f"[_handle_tool_approval] ainvoke error: {invoke_error}", file=sys.stderr)
                 print(f"[_handle_tool_approval] traceback: {traceback.format_exc()}", file=sys.stderr)
                 raise invoke_error
+
+            # Check for new interrupts immediately after resume
+            if isinstance(response, dict) and '__interrupt__' in response:
+                interrupts = response['__interrupt__']
+                if interrupts:
+                    print(f"[_handle_tool_approval] New interrupt detected during resume!", file=sys.stderr)
+                    # Clear previous pending interrupts (the ones we just handled)
+                    self.pending_interrupts.clear()
+
+                    for interrupt_obj in interrupts:
+                        self.pending_interrupts[interrupt_obj.id] = interrupt_obj.value
+
+                    # Extract tool info from first action request for frontend
+                    tool_name = 'unknown_tool'
+                    tool_args = {}
+                    agent_thinking = ''
+                    action_requests = []
+                    for hitl_request in self.pending_interrupts.values():
+                        action_requests = hitl_request.get("action_requests", [])
+                        if action_requests and len(action_requests) > 0:
+                            action = action_requests[0]
+                            tool_name = action.get('name', 'unknown_tool')
+                            tool_args = action.get('args', {})
+                            agent_thinking = action.get('description', '')
+                            break
+                    
+                    # Try to capture the output of the previous tool execution to show context
+                    # This is optional but helpful
+                    prev_output = ""
+                    try:
+                        final_state = await self.agent.aget_state(agent_config)
+                        final_messages = final_state.values.get("messages", [])
+                        if final_messages:
+                            last_msg = final_messages[-1]
+                            # If the last message is an AIMessage (thinking about next tool), 
+                            # check the one before it for ToolMessage
+                            if hasattr(last_msg, 'tool_calls') and last_msg.tool_calls and len(final_messages) > 1:
+                                prev_msg = final_messages[-2]
+                                if hasattr(prev_msg, 'type') and prev_msg.type == 'tool':
+                                    prev_output = str(prev_msg.content)[:200] + "..."
+                            elif hasattr(last_msg, 'type') and last_msg.type == 'tool':
+                                prev_output = str(last_msg.content)[:200] + "..."
+                    except Exception:
+                        pass
+                    
+                    if prev_output:
+                        print(f"[_handle_tool_approval] Captured previous tool output: {prev_output}", file=sys.stderr)
+                        # We could prepend it to agent_thinking, but let's just log it for now
+                        # agent_thinking = f"[Previous Output]: {prev_output}\n\n{agent_thinking}"
+
+                    # CRITICAL: Use the original chat request_id
+                    original_request_id = getattr(self, '_original_chat_request_id', request_id)
+                    
+                    return {
+                        'request_id': original_request_id,
+                        'type': 'interrupt_request',
+                        'data': {
+                            'tool_name': tool_name,
+                            'tool_input': tool_args,
+                            'agent_thinking': agent_thinking
+                        }
+                    }
 
             # Clear pending interrupts
             self.pending_interrupts.clear()
@@ -2064,6 +2117,93 @@ class DesktopProtocol:
                 'error': {
                     'code': 'RENAME_CONVERSATION_FAILED',
                     'message': f'Failed to rename conversation: {str(e)}'
+                }
+            }
+
+    async def _handle_get_conversation_history(self, request_id: str, params: dict[str, Any]) -> dict[str, Any]:
+        """Handle get_conversation_history request.
+
+        Retrieves the message history for a specific conversation.
+        """
+        import sys
+        print(f"[_handle_get_conversation_history] Called with params: {params}", file=sys.stderr)
+
+        try:
+            workspace_id = params.get('workspace_id')
+            conversation_id = params.get('conversation_id')
+
+            if not conversation_id:
+                return {
+                    'request_id': request_id,
+                    'status': 'error',
+                    'error': {
+                        'code': 'INVALID_PARAMS',
+                        'message': 'conversation_id is required'
+                    }
+                }
+
+            # Get agent for this conversation (this loads the checkpointer)
+            agent, _ = self._get_or_create_agent(
+                workspace_id=workspace_id,
+                conversation_id=conversation_id
+            )
+
+            # Determine thread_id
+            thread_id = conversation_id if conversation_id else (workspace_id if workspace_id else "default")
+            agent_config = {"configurable": {"thread_id": thread_id}}
+            
+            print(f"[_handle_get_conversation_history] Fetching history for thread_id: {thread_id}", file=sys.stderr)
+
+            # Fetch state
+            state = await agent.aget_state(agent_config)
+            messages = state.values.get("messages", [])
+            
+            print(f"[_handle_get_conversation_history] Found {len(messages)} messages", file=sys.stderr)
+
+            # Serialize messages
+            history = []
+            for msg in messages:
+                msg_type = getattr(msg, 'type', 'unknown')
+                content = getattr(msg, 'content', '')
+                
+                # Basic message object
+                msg_obj = {
+                    'type': msg_type,
+                    'content': content
+                }
+                
+                # Add additional fields based on type
+                if msg_type == 'tool':
+                    msg_obj['name'] = getattr(msg, 'name', '')
+                    msg_obj['tool_call_id'] = getattr(msg, 'tool_call_id', '')
+                elif msg_type == 'ai':
+                    if hasattr(msg, 'tool_calls') and msg.tool_calls:
+                        msg_obj['tool_calls'] = [
+                            {
+                                'name': tc.get('name'),
+                                'args': tc.get('args'),
+                                'id': tc.get('id')
+                            }
+                            for tc in msg.tool_calls
+                        ]
+                
+                history.append(msg_obj)
+
+            return {
+                'request_id': request_id,
+                'status': 'success',
+                'data': {
+                    'conversation_id': conversation_id,
+                    'messages': history
+                }
+            }
+        except Exception as e:
+            return {
+                'request_id': request_id,
+                'status': 'error',
+                'error': {
+                    'code': 'GET_HISTORY_FAILED',
+                    'message': f'Failed to get conversation history: {str(e)}'
                 }
             }
 

@@ -819,6 +819,27 @@ ipcMain.handle('renameConversation', async (event, conversationId, title) => {
   return promise;
 });
 
+// 获取对话历史
+ipcMain.handle('getConversationHistory', async (event, workspaceId, conversationId) => {
+  console.log('[getConversationHistory] Called with:', { workspaceId, conversationId });
+
+  const requestId = randomUUID();
+  const promise = new Promise((resolve, reject) => {
+    pendingRequests.set(requestId, { resolve, reject });
+  });
+
+  await sendToSocket({
+    request_id: requestId,
+    method: 'get_conversation_history',
+    params: {
+      workspace_id: String(workspaceId || ''),
+      conversation_id: String(conversationId || '')
+    }
+  });
+
+  return promise;
+});
+
 // 选择目录对话框
 ipcMain.handle('selectDirectory', async () => {
   const { dialog } = require('electron');

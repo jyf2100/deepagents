@@ -247,6 +247,11 @@ function addMessageToHistory(role, content) {
     conversation = createConversation();
   }
 
+  // 确保 messages 数组存在
+  if (!conversation.messages) {
+    conversation.messages = [];
+  }
+
   conversation.messages.push({ role, content, timestamp: new Date().toISOString() });
   conversation.updatedAt = new Date().toISOString();
 
@@ -408,9 +413,111 @@ async function switchConversation(conversationId) {
     renderHistory();
 
     console.log('[Conversation] Switched to conversation:', conversationId);
+
+    // 加载并渲染历史消息
+    loadConversationHistory(currentWorkspaceId, conversationId);
   } catch (error) {
     console.error('[Conversation] Failed to switch conversation:', error);
   }
+}
+
+// 加载对话历史
+async function loadConversationHistory(workspaceId, conversationId) {
+  try {
+    // 显示加载指示器
+    if (messagesDiv) {
+      messagesDiv.innerHTML = '<div class="loading-history">加载历史记录中...</div>';
+    }
+
+    const result = await window.deepagents.getConversationHistory(workspaceId, conversationId);
+    
+    // 清空加载指示器
+    if (messagesDiv) {
+      messagesDiv.innerHTML = '';
+    }
+
+    if (result.status === 'success' && result.data && result.data.messages) {
+      const messages = result.data.messages;
+      console.log('[History] Loaded messages:', messages.length);
+
+      // 同步到本地状态，防止 addMessageToHistory 报错
+      const conversation = conversations.find(c => c.id === conversationId);
+      if (conversation) {
+        // 将后端消息格式转换为本地格式并保存
+        conversation.messages = messages.map(msg => {
+          let role = 'unknown';
+          let content = msg.content || '';
+          
+          if (msg.type === 'human' || msg.type === 'user') {
+            role = 'user';
+          } else if (msg.type === 'ai' || msg.type === 'assistant') {
+            role = 'assistant';
+          } else if (msg.type === 'tool') {
+            role = 'tool'; // 保留原始类型，但在 UI 中可能作为 assistant 显示
+          }
+          
+          return {
+            role: role,
+            content: content,
+            type: msg.type, // 保存原始类型
+            tool_calls: msg.tool_calls, // 保存工具调用
+            timestamp: new Date().toISOString() // 模拟时间戳
+          };
+        });
+        console.log('[History] Synced messages to local state');
+      }
+
+      messages.forEach(msg => {
+        let role = 'unknown';
+        let content = msg.content || '';
+
+        // 映射消息类型到 UI 角色
+        if (msg.type === 'human' || msg.type === 'user') {
+          role = 'user';
+        } else if (msg.type === 'ai' || msg.type === 'assistant') {
+          role = 'assistant';
+          
+          // 如果 AI 消息包含工具调用，追加到内容中显示
+          if (msg.tool_calls && msg.tool_calls.length > 0) {
+            msg.tool_calls.forEach(tc => {
+              const toolName = tc.name;
+              const args = JSON.stringify(tc.args, null, 2);
+              // 使用特殊的格式标记工具调用，以便 formatMessageContent 处理
+              content += `\n\nTool Call: ${tc.id}\nname: ${toolName}\ntype: tool_call\ninput: ${args}`;
+            });
+          }
+        } else if (msg.type === 'tool') {
+          // 工具执行结果通常不直接作为独立消息显示，或者作为系统消息
+          // 这里我们可以选择显示它，或者如果它被设计为隐藏则忽略
+          // 既然是调试/开发工具，显示出来比较好
+          role = 'assistant tool-output'; // 使用特殊样式类
+          const toolName = msg.name || 'unknown';
+          content = `🔧 Tool Output (${toolName}):\n${content}`;
+        }
+
+        if (role !== 'unknown' && content.trim()) {
+          // 使用 addMessage 但不保存到本地历史（避免重复）
+          // 创建一个新的 renderMessage 函数只负责渲染
+          renderMessageToUI(role, content);
+        }
+      });
+      
+      // 滚动到底部
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+  } catch (error) {
+    console.error('[History] Failed to load history:', error);
+    if (messagesDiv) {
+      messagesDiv.innerHTML += `<div class="error-message">加载历史记录失败: ${error.message}</div>`;
+    }
+  }
+}
+
+function renderMessageToUI(role, content) {
+  const div = document.createElement('div');
+  div.className = `message ${role}`;
+  div.innerHTML = formatMessageContent(content);
+  messagesDiv.appendChild(div);
 }
 
 // 删除对话（使用后端 API）
