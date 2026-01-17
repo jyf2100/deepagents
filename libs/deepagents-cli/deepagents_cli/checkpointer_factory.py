@@ -51,6 +51,12 @@ class ConversationCheckpointerFactory:
             import aiosqlite
             # Create async connection
             conn = await aiosqlite.connect(str(db_path), check_same_thread=False)
+            
+            # Monkey-patch is_alive method if it doesn't exist (required by langgraph AsyncSqliteSaver)
+            if not hasattr(conn, "is_alive"):
+                # aiosqlite connection has _running attribute indicating if the thread is alive
+                conn.is_alive = lambda: getattr(conn, "_running", True)
+                
             return AsyncSqliteSaver(conn)
         else:
             return AsyncSqliteSaver()
