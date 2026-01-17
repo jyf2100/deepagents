@@ -8,10 +8,10 @@ from pathlib import Path
 
 # Try to import SqliteSaver for persistent storage, fall back to MemorySaver
 try:
-    from langgraph.checkpoint.sqlite import SqliteSaver
+    from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
     SQLITE_AVAILABLE = True
 except ImportError:
-    from langgraph.checkpoint.memory import MemorySaver as SqliteSaver
+    from langgraph.checkpoint.memory import MemorySaver as AsyncSqliteSaver
     SQLITE_AVAILABLE = False
 
 # Base directory for conversation databases
@@ -37,14 +37,14 @@ class ConversationCheckpointerFactory:
         self.base_path = base_path
         self.base_path.mkdir(parents=True, exist_ok=True)
 
-    def get_checkpointer(self, conversation_id: str) -> SqliteSaver:
+    def get_checkpointer(self, conversation_id: str) -> AsyncSqliteSaver:
         """Get or create a checkpointer for the specified conversation.
 
         Args:
             conversation_id: Unique identifier for the conversation
 
         Returns:
-            A checkpointer instance (SqliteSaver if available, otherwise MemorySaver)
+            A checkpointer instance (AsyncSqliteSaver if available, otherwise MemorySaver)
         """
         import sys
         print(f"[checkpointer_factory] get_checkpointer called for {conversation_id}", file=sys.stderr)
@@ -58,9 +58,9 @@ class ConversationCheckpointerFactory:
                 import sqlite3
                 # check_same_thread=False is needed for asyncio/threaded environments
                 conn = sqlite3.connect(str(db_path), check_same_thread=False)
-                return SqliteSaver(conn)
+                return AsyncSqliteSaver(conn)
             except Exception as e:
-                print(f"[checkpointer_factory] Error initializing SqliteSaver: {e}", file=sys.stderr)
+                print(f"[checkpointer_factory] Error initializing AsyncSqliteSaver: {e}", file=sys.stderr)
                 # Fallback to MemorySaver if SQLite fails
                 from langgraph.checkpoint.memory import MemorySaver
                 return MemorySaver()
@@ -68,7 +68,7 @@ class ConversationCheckpointerFactory:
             # Fall back to in-memory storage
             # Note: MemorySaver doesn't use db_path, conversation state will not persist
             print(f"[checkpointer_factory] SQLite not available, using MemorySaver (NO PERSISTENCE)", file=sys.stderr)
-            return SqliteSaver()
+            return AsyncSqliteSaver()
 
     def list_conversations(self) -> list[str]:
         """List all conversation IDs that have existing databases.
