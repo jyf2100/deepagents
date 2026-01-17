@@ -46,13 +46,28 @@ class ConversationCheckpointerFactory:
         Returns:
             A checkpointer instance (SqliteSaver if available, otherwise MemorySaver)
         """
+        import sys
+        print(f"[checkpointer_factory] get_checkpointer called for {conversation_id}", file=sys.stderr)
+        print(f"[checkpointer_factory] SQLITE_AVAILABLE: {SQLITE_AVAILABLE}", file=sys.stderr)
+
         if SQLITE_AVAILABLE:
             # Use persistent SQLite storage
             db_path = self.base_path / f"{conversation_id}.db"
-            return SqliteSaver(str(db_path))
+            print(f"[checkpointer_factory] Using SQLite DB: {db_path}", file=sys.stderr)
+            try:
+                import sqlite3
+                # check_same_thread=False is needed for asyncio/threaded environments
+                conn = sqlite3.connect(str(db_path), check_same_thread=False)
+                return SqliteSaver(conn)
+            except Exception as e:
+                print(f"[checkpointer_factory] Error initializing SqliteSaver: {e}", file=sys.stderr)
+                # Fallback to MemorySaver if SQLite fails
+                from langgraph.checkpoint.memory import MemorySaver
+                return MemorySaver()
         else:
             # Fall back to in-memory storage
             # Note: MemorySaver doesn't use db_path, conversation state will not persist
+            print(f"[checkpointer_factory] SQLite not available, using MemorySaver (NO PERSISTENCE)", file=sys.stderr)
             return SqliteSaver()
 
     def list_conversations(self) -> list[str]:
