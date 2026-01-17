@@ -2,6 +2,7 @@
 
 import os
 import shutil
+from typing import Any
 from pathlib import Path
 
 from deepagents import create_deep_agent
@@ -342,6 +343,7 @@ def create_cli_agent(
     workspace_id: str | None = None,
     conversation_id: str | None = None,
     interrupt_on: list[str] | None = None,
+    checkpointer: Any | None = None,
 ) -> tuple[Pregel, CompositeBackend]:
     """Create a CLI-configured agent with flexible options.
 
@@ -369,6 +371,8 @@ def create_cli_agent(
                         If provided, uses SQLite-based checkpointer for session persistence.
         interrupt_on: Optional list of events to interrupt on (e.g. ["tool_call"]).
                      If provided, adds InterruptOnConfig middleware.
+        checkpointer: Optional pre-configured checkpointer instance. If provided, overrides
+                     conversation_id based checkpointer creation.
 
     Returns:
         2-tuple of (agent_graph, composite_backend)
@@ -379,11 +383,13 @@ def create_cli_agent(
         tools = []
 
     # Determine checkpointer: persistent if conversation_id provided, otherwise in-memory
-    if conversation_id is not None:
-        from deepagents_cli.checkpointer_factory import get_checkpointer_factory
-        checkpointer = get_checkpointer_factory().get_checkpointer(conversation_id)
-    else:
-        checkpointer = InMemorySaver()
+    # If explicit checkpointer is provided, use it
+    if checkpointer is None:
+        if conversation_id is not None:
+            from deepagents_cli.checkpointer_factory import get_checkpointer_factory
+            checkpointer = get_checkpointer_factory().get_checkpointer(conversation_id)
+        else:
+            checkpointer = InMemorySaver()
 
     # Workspace configuration (if specified)
     workspace_root = None

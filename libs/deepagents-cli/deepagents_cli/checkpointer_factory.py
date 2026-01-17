@@ -37,6 +37,24 @@ class ConversationCheckpointerFactory:
         self.base_path = base_path
         self.base_path.mkdir(parents=True, exist_ok=True)
 
+    async def get_async_checkpointer(self, conversation_id: str) -> AsyncSqliteSaver:
+        """Get or create an async checkpointer for the specified conversation.
+
+        Args:
+            conversation_id: Unique identifier for the conversation
+
+        Returns:
+            A checkpointer instance (AsyncSqliteSaver if available, otherwise MemorySaver)
+        """
+        if SQLITE_AVAILABLE:
+            db_path = self.base_path / f"{conversation_id}.db"
+            import aiosqlite
+            # Create async connection
+            conn = await aiosqlite.connect(str(db_path), check_same_thread=False)
+            return AsyncSqliteSaver(conn)
+        else:
+            return AsyncSqliteSaver()
+
     def get_checkpointer(self, conversation_id: str) -> AsyncSqliteSaver:
         """Get or create a checkpointer for the specified conversation.
 

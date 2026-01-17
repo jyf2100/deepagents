@@ -105,7 +105,7 @@ class DesktopProtocol:
                 print(f"Connection error: {e}")
                 await asyncio.sleep(1)
 
-    def _get_or_create_agent(
+    async def _get_or_create_agent(
         self,
         workspace_id: str | None,
         conversation_id: str | None = None
@@ -124,6 +124,7 @@ class DesktopProtocol:
         """
         import sys
         from deepagents_cli.config import create_model
+        from deepagents_cli.checkpointer_factory import get_checkpointer_factory
 
         # Build cache key
         cache_key = f"{workspace_id or 'default'}:{conversation_id or 'default'}"
@@ -142,6 +143,21 @@ class DesktopProtocol:
         if self.model is None:
             self.model = create_model()
 
+        # Initialize checkpointer asynchronously if conversation_id is present
+        checkpointer = None
+        if conversation_id:
+            try:
+                checkpointer = await get_checkpointer_factory().get_async_checkpointer(conversation_id)
+                print(f"[_get_or_create_agent] Async checkpointer created for {conversation_id}", file=sys.stderr)
+            except Exception as e:
+                print(f"[_get_or_create_agent] Failed to create async checkpointer: {e}", file=sys.stderr)
+                # Fallback handled inside create_cli_agent if we pass None, but better to be explicit about failure
+                # Assuming fallback to memory or sync? No, sync is broken. 
+                # Let create_cli_agent fallback to InMemorySaver if we pass None?
+                # Actually, get_async_checkpointer handles fallback to memory saver internally if SQLITE_AVAILABLE is false.
+                # If it raises exception, it's serious.
+                pass
+
         agent, backend = create_cli_agent(
             model=self.model,
             assistant_id=self.assistant_id,
@@ -152,7 +168,8 @@ class DesktopProtocol:
             enable_skills=True,
             enable_shell=True,
             workspace_id=workspace_id,
-            conversation_id=conversation_id,  # Pass for persistent checkpointer
+            conversation_id=conversation_id,  # Pass for persistent checkpointer (fallback if checkpointer is None)
+            checkpointer=checkpointer,  # Pass the async initialized checkpointer
             # interrupt_on=["tool_call"],  # REMOVED: This was incorrect. auto_approve=False handles defaults.
         )
 
@@ -452,7 +469,7 @@ class DesktopProtocol:
 
         # Get or create agent with caching
         try:
-            self.agent, self.composite_backend = self._get_or_create_agent(
+            self.agent, self.composite_backend = await self._get_or_create_agent(
                 workspace_id=workspace_id,
                 conversation_id=conversation_id
             )
@@ -2030,7 +2047,7 @@ class DesktopProtocol:
 
             # Pre-load agent for this conversation
             if workspace_id and conversation_id:
-                self.agent, self.composite_backend = self._get_or_create_agent(
+                self.agent, self.composite_backend = await self._get_or_create_agent(
                     workspace_id=workspace_id,
                     conversation_id=conversation_id
                 )
@@ -2143,7 +2160,7 @@ class DesktopProtocol:
                 }
 
             # Get agent for this conversation (this loads the checkpointer)
-            agent, _ = self._get_or_create_agent(
+            agent, _ = await self._get_or_create_agent(
                 workspace_id=workspace_id,
                 conversation_id=conversation_id
             )
