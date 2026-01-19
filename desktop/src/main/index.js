@@ -680,7 +680,8 @@ ipcMain.handle('updateWorkspace', async (event, workspaceId, updates) => {
       workspace_id: String(workspaceId || ''),
       name: updates.name || null,
       category: updates.category || null,
-      icon: updates.icon || null
+      icon: updates.icon || null,
+      system_prompt: updates.system_prompt || null
     }
   });
 
@@ -708,6 +709,58 @@ ipcMain.handle('setWorkspaceSkills', async (event, workspaceId, enabledSkills) =
     params: {
       workspace_id: String(workspaceId || ''),
       enabled_skills: Array.isArray(enabledSkills) ? enabledSkills : []
+    }
+  });
+
+  return promise;
+});
+
+// === Prompt Template Management ===
+
+// 获取提示词模板列表
+ipcMain.handle('listPromptTemplates', async (event) => {
+  console.log('[listPromptTemplates] Called');
+
+  const requestId = randomUUID();
+  const promise = new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      pendingRequests.delete(requestId);
+      reject(new Error('Request timeout'));
+    }, 10000);
+
+    pendingRequests.set(requestId, { resolve, reject, timeout });
+  });
+
+  await sendToSocket({
+    request_id: requestId,
+    method: 'list_prompt_templates',
+    params: {}
+  });
+
+  return promise;
+});
+
+// AI 生成工作空间提示词
+ipcMain.handle('generateWorkspacePrompt', async (event, name, category, description) => {
+  console.log('[generateWorkspacePrompt] Called with:', name, category, description);
+
+  const requestId = randomUUID();
+  const promise = new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      pendingRequests.delete(requestId);
+      reject(new Error('Request timeout'));
+    }, 30000); // 30 second timeout for AI generation
+
+    pendingRequests.set(requestId, { resolve, reject, timeout });
+  });
+
+  await sendToSocket({
+    request_id: requestId,
+    method: 'generate_workspace_prompt',
+    params: {
+      name: String(name || ''),
+      category: String(category || '通用'),
+      description: String(description || '')
     }
   });
 

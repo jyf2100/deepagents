@@ -1292,6 +1292,57 @@
           </div>
         </div>
 
+        <!-- 系统提示词配置 -->
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; font-size: 12px; font-weight: 500; color: #1d1d1f; margin-bottom: 12px;">系统提示词</label>
+
+          <!-- 提示词配置方式选择 -->
+          <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+            <button type="button" id="prompt-mode-template" class="prompt-mode-btn secondary" style="flex: 1; padding: 6px 12px; font-size: 12px;">
+              📋 使用模板
+            </button>
+            <button type="button" id="prompt-mode-generate" class="prompt-mode-btn secondary" style="flex: 1; padding: 6px 12px; font-size: 12px;">
+              🤖 AI 生成
+            </button>
+            <button type="button" id="prompt-mode-custom" class="prompt-mode-btn secondary" style="flex: 1; padding: 6px 12px; font-size: 12px;">
+              ✏️ 自定义
+            </button>
+          </div>
+
+          <!-- 模板选择模式 -->
+          <div id="prompt-template-mode" style="display: none;">
+            <select id="prompt-template-select" style="width: 100%; padding: 8px; border: 1px solid #d2d2d7; border-radius: 6px; font-size: 13px; background: #ffffff;">
+              <option value="">选择一个模板...</option>
+            </select>
+            <div id="template-preview" style="margin-top: 8px; padding: 12px; background: #f5f5f7; border-radius: 6px; font-size: 12px; color: #6e6e73; min-height: 60px; max-height: 150px; overflow-y: auto;">
+              选择模板后显示预览...
+            </div>
+          </div>
+
+          <!-- AI 生成模式 -->
+          <div id="prompt-generate-mode" style="display: none;">
+            <input type="text" id="generate-prompt-name" placeholder="工作空间用途（如：React 开发助手）" style="width: 100%; padding: 8px; border: 1px solid #d2d2d7; border-radius: 6px; font-size: 13px; margin-bottom: 8px;">
+            <input type="text" id="generate-prompt-category" placeholder="分类（如：开发、写作、分析）" style="width: 100%; padding: 8px; border: 1px solid #d2d2d7; border-radius: 6px; font-size: 13px; margin-bottom: 8px;">
+            <textarea id="generate-prompt-description" placeholder="额外描述（可选）" style="width: 100%; padding: 8px; border: 1px solid #d2d2d7; border-radius: 6px; font-size: 13px; min-height: 60px; resize: vertical; margin-bottom: 8px;"></textarea>
+            <button type="button" id="generate-prompt-btn" style="width: 100%; padding: 8px 16px; font-size: 13px;">
+              🤖 生成提示词
+            </button>
+            <div id="generated-prompt-result" style="margin-top: 8px; padding: 12px; background: #f5f5f7; border-radius: 6px; font-size: 12px; color: #6e6e73; min-height: 60px; display: none;"></div>
+          </div>
+
+          <!-- 自定义编辑模式 -->
+          <div id="prompt-custom-mode" style="display: none;">
+            <textarea id="custom-prompt-textarea" placeholder="输入自定义的系统提示词..." style="width: 100%; padding: 8px; border: 1px solid #d2d2d7; border-radius: 6px; font-size: 13px; min-height: 120px; resize: vertical;"></textarea>
+            <div style="font-size: 11px; color: #86868b; margin-top: 4px;">提示：留空则使用默认系统提示词</div>
+          </div>
+
+          <!-- 当前提示词预览 -->
+          <div id="current-prompt-preview" style="margin-top: 12px; padding: 12px; background: #e8f4fd; border-radius: 6px; border-left: 3px solid #007aff;">
+            <div style="font-size: 11px; font-weight: 500; color: #007aff; margin-bottom: 4px;">当前提示词预览</div>
+            <div id="current-prompt-text" style="font-size: 12px; color: #1d1d1f; line-height: 1.5; max-height: 100px; overflow-y: auto;">使用默认提示词</div>
+          </div>
+        </div>
+
         <!-- 操作按钮 -->
         <div style="display: flex; gap: 8px; justify-content: space-between; padding-top: 16px; border-top: 1px solid #e5e5ea;">
           <button type="button" id="delete-workspace-btn" class="secondary" style="padding: 8px 16px; color: #ff3b30; border-color: #ff3b30;">删除工作空间</button>

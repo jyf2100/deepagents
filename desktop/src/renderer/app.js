@@ -2209,7 +2209,17 @@ function setupWorkspaceSettingsDialog() {
   // 保存按钮
   saveBtn.addEventListener('click', async () => {
     try {
+      // 保存技能配置
       await window.deepagents.setWorkspaceSkills(currentWorkspaceId, editingWorkspaceSkills);
+
+      // 保存系统提示词
+      if (editingSystemPrompt !== undefined) {
+        await window.deepagents.updateWorkspace(currentWorkspaceId, {
+          system_prompt: editingSystemPrompt
+        });
+        console.log('[Workspace] Saved system prompt:', editingSystemPrompt.substring(0, 50) + '...');
+      }
+
       dialog.style.display = 'none';
       await loadWorkspaces();
       alert('工作空间设置已保存！');
@@ -2253,6 +2263,9 @@ function setupWorkspaceSettingsDialog() {
       dialog.style.display = 'none';
     }
   });
+
+  // === 系统提示词配置 ===
+  setupPromptConfigUI();
 }
 
 async function showWorkspaceSettings() {
@@ -2267,6 +2280,13 @@ async function showWorkspaceSettings() {
   // 更新当前工作空间信息
   document.getElementById('current-workspace-name').textContent = currentWorkspace.name;
   document.getElementById('current-workspace-category').textContent = currentWorkspace.category;
+
+  // 加载当前系统提示词
+  editingSystemPrompt = currentWorkspace.system_prompt || '';
+  updatePromptPreview();
+
+  // 重置提示词配置模式
+  switchPromptMode('template');
 
   // 加载技能列表
   const skillsListDiv = document.getElementById('workspace-skills-list');
@@ -2353,6 +2373,164 @@ async function showWorkspaceSettings() {
     console.error('[Workspace] Failed to load skills:', error);
     skillsListDiv.innerHTML = '<div style="text-align: center; color: #ff3b30; font-size: 12px; padding: 20px;">加载技能列表失败</div>';
     dialog.style.display = 'flex';
+  }
+}
+
+// === 系统提示词配置 ===
+let editingSystemPrompt = '';
+let promptTemplates = [];
+let currentPromptMode = 'template'; // 'template', 'generate', 'custom'
+
+// 初始化系统提示词配置 UI
+function setupPromptConfigUI() {
+  // 模式切换按钮
+  const templateBtn = document.getElementById('prompt-mode-template');
+  const generateBtn = document.getElementById('prompt-mode-generate');
+  const customBtn = document.getElementById('prompt-mode-custom');
+
+  templateBtn.addEventListener('click', () => switchPromptMode('template'));
+  generateBtn.addEventListener('click', () => switchPromptMode('generate'));
+  customBtn.addEventListener('click', () => switchPromptMode('custom'));
+
+  // 模板选择
+  const templateSelect = document.getElementById('prompt-template-select');
+  templateSelect.addEventListener('change', (e) => {
+    const templateId = e.target.value;
+    const template = promptTemplates.find(t => t.id === templateId);
+    if (template) {
+      editingSystemPrompt = template.prompt;
+      updatePromptPreview();
+      document.getElementById('template-preview').innerHTML = escapeHtml(template.prompt.replace(/\n/g, '<br>'));
+    }
+  });
+
+  // AI 生成按钮
+  const generateBtnAction = document.getElementById('generate-prompt-btn');
+  generateBtnAction.addEventListener('click', generatePromptWithAI);
+
+  // 自定义文本框
+  const customTextarea = document.getElementById('custom-prompt-textarea');
+  customTextarea.addEventListener('input', (e) => {
+    editingSystemPrompt = e.target.value;
+    updatePromptPreview();
+  });
+
+  // 默认显示模板模式
+  switchPromptMode('template');
+}
+
+// 切换提示词配置模式
+function switchPromptMode(mode) {
+  currentPromptMode = mode;
+
+  // 隐藏所有模式
+  document.getElementById('prompt-template-mode').style.display = 'none';
+  document.getElementById('prompt-generate-mode').style.display = 'none';
+  document.getElementById('prompt-custom-mode').style.display = 'none';
+
+  // 重置按钮样式
+  document.querySelectorAll('.prompt-mode-btn').forEach(btn => {
+    btn.style.background = '#ffffff';
+    btn.style.color = '#1d1d1f';
+    btn.style.border = '1px solid #d2d2d7';
+  });
+
+  // 显示选中的模式
+  if (mode === 'template') {
+    document.getElementById('prompt-template-mode').style.display = 'block';
+    document.getElementById('prompt-mode-template').style.background = '#007aff';
+    document.getElementById('prompt-mode-template').style.color = '#ffffff';
+    document.getElementById('prompt-mode-template').style.border = '1px solid #007aff';
+    loadPromptTemplates();
+  } else if (mode === 'generate') {
+    document.getElementById('prompt-generate-mode').style.display = 'block';
+    document.getElementById('prompt-mode-generate').style.background = '#007aff';
+    document.getElementById('prompt-mode-generate').style.color = '#ffffff';
+    document.getElementById('prompt-mode-generate').style.border = '1px solid #007aff';
+  } else if (mode === 'custom') {
+    document.getElementById('prompt-custom-mode').style.display = 'block';
+    document.getElementById('prompt-mode-custom').style.background = '#007aff';
+    document.getElementById('prompt-mode-custom').style.color = '#ffffff';
+    document.getElementById('prompt-mode-custom').style.border = '1px solid #007aff';
+    document.getElementById('custom-prompt-textarea').value = editingSystemPrompt;
+  }
+}
+
+// 加载提示词模板
+async function loadPromptTemplates() {
+  try {
+    const result = await window.deepagents.listPromptTemplates();
+    promptTemplates = result.data?.templates || [];
+
+    const select = document.getElementById('prompt-template-select');
+    select.innerHTML = '<option value="">选择一个模板...</option>';
+
+    promptTemplates.forEach(template => {
+      const option = document.createElement('option');
+      option.value = template.id;
+      option.textContent = template.name;
+      select.appendChild(option);
+    });
+
+    console.log('[Prompt] Loaded templates:', promptTemplates.length);
+  } catch (error) {
+    console.error('[Prompt] Failed to load templates:', error);
+  }
+}
+
+// AI 生成提示词
+async function generatePromptWithAI() {
+  const currentWorkspace = workspaces.find(w => w.id === currentWorkspaceId);
+  const nameInput = document.getElementById('generate-prompt-name');
+  const categoryInput = document.getElementById('generate-prompt-category');
+  const descInput = document.getElementById('generate-prompt-description');
+  const resultDiv = document.getElementById('generated-prompt-result');
+  const generateBtn = document.getElementById('generate-prompt-btn');
+
+  const name = nameInput.value.trim() || currentWorkspace?.name || '';
+  const category = categoryInput.value.trim() || currentWorkspace?.category || '通用';
+  const description = descInput.value.trim();
+
+  if (!name) {
+    alert('请输入工作空间用途');
+    return;
+  }
+
+  // 显示加载状态
+  generateBtn.disabled = true;
+  generateBtn.textContent = '🔄 生成中...';
+  resultDiv.style.display = 'block';
+  resultDiv.innerHTML = '<span style="color: #86868b;">正在生成提示词，请稍候...</span>';
+
+  try {
+    const result = await window.deepagents.generateWorkspacePrompt(name, category, description);
+    const generatedPrompt = result.data?.prompt || '';
+
+    if (generatedPrompt) {
+      editingSystemPrompt = generatedPrompt;
+      updatePromptPreview();
+      resultDiv.innerHTML = escapeHtml(generatedPrompt.replace(/\n/g, '<br>'));
+      console.log('[Prompt] Generated prompt:', generatedPrompt.substring(0, 50) + '...');
+    } else {
+      resultDiv.innerHTML = '<span style="color: #ff3b30;">生成失败，请重试</span>';
+    }
+  } catch (error) {
+    console.error('[Prompt] Failed to generate:', error);
+    resultDiv.innerHTML = '<span style="color: #ff3b30;">生成失败: ' + error.message + '</span>';
+  } finally {
+    generateBtn.disabled = false;
+    generateBtn.textContent = '🤖 生成提示词';
+  }
+}
+
+// 更新提示词预览
+function updatePromptPreview() {
+  const previewDiv = document.getElementById('current-prompt-text');
+  if (editingSystemPrompt && editingSystemPrompt.trim()) {
+    previewDiv.textContent = editingSystemPrompt;
+    previewDiv.parentElement.style.display = 'block';
+  } else {
+    previewDiv.textContent = '使用默认提示词';
   }
 }
 

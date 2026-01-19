@@ -49,6 +49,10 @@ contextBridge.exposeInMainWorld('deepagents', {
   updateWorkspace: (workspaceId, updates) => ipcRenderer.invoke('updateWorkspace', workspaceId, updates),
   setWorkspaceSkills: (workspaceId, enabledSkills) => ipcRenderer.invoke('setWorkspaceSkills', workspaceId, enabledSkills),
 
+  // 提示词模板管理
+  listPromptTemplates: () => ipcRenderer.invoke('listPromptTemplates'),
+  generateWorkspacePrompt: (name, category, description) => ipcRenderer.invoke('generateWorkspacePrompt', name, category, description),
+
   // 对话管理
   createConversation: (workspaceId, title = null) => ipcRenderer.invoke('createConversation', workspaceId, title),
   listConversations: (workspaceId) => ipcRenderer.invoke('listConversations', workspaceId),
