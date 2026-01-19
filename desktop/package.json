@@ -1,5 +1,6 @@
 {
-  "name": "deepagents-desktop",
+  "name": "Cowork",
+  "productName": "Cowork",
   "version": "0.0.1",
   "description": "DeepAgents Desktop Client",
   "main": "src/main/index.js",
@@ -13,10 +14,15 @@
     "build:mac": "electron-builder --mac",
     "build:win": "electron-builder --win"
   },
-  "keywords": ["deepagents", "desktop", "electron"],
+  "keywords": [
+    "deepagents",
+    "desktop",
+    "electron"
+  ],
   "author": "DeepAgents Team",
   "license": "MIT",
   "dependencies": {
+    "electron-log": "^5.4.3",
     "msgpackr": "^1.10.1"
   },
   "devDependencies": {

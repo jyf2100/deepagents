@@ -1,5 +1,5 @@
-appId: com.deepagents.desktop
-productName: DeepAgents
+appId: com.deepagents.cowork
+productName: Cowork
 directories:
   output: release
   buildResources: build

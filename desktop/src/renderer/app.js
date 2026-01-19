@@ -1494,6 +1494,7 @@ let hitlCallbackRegistered = false;  // 防止重复注册回调
 let isProcessingDecision = false;  // 防止重复提交决定
 let currentToolInfo = null;  // 保存当前工具信息用于日志显示
 let autoApproveAll = false;  // 自动批准全部模式
+let processedToolCallIds = new Set(); // 已处理的工具调用 ID (防止重复弹窗)
 
 function setupHITL() {
   console.log('[HITL] Setting up Human-in-the-Loop support');
@@ -1556,6 +1557,13 @@ function showToolApprovalDialog(data) {
   console.log('[HITL] showToolApprovalDialog called with:', data);
   console.log('[HITL] autoApproveAll:', autoApproveAll);
 
+  // 检查是否处理过此 tool_call_id (防止重复弹窗)
+  const toolCallId = data.data?.tool_call_id;
+  if (toolCallId && processedToolCallIds.has(toolCallId)) {
+    console.log('[HITL] Already processed tool call ID, ignoring duplicate:', toolCallId);
+    return;
+  }
+
   // 检查是否开启自动批准模式
   if (autoApproveAll) {
     console.log('[HITL] Auto-approve mode enabled, automatically approving:', data.request_id);
@@ -1563,9 +1571,10 @@ function showToolApprovalDialog(data) {
     const toolName = data.data.tool_name || 'unknown';
     const toolInput = data.data.tool_input || {};
     const agentThinking = data.data.agent_thinking || '';
+    const toolCallId = data.data.tool_call_id;
 
     // 保存工具信息
-    currentToolInfo = { toolName, toolInput };
+    currentToolInfo = { toolName, toolInput, toolCallId };
     currentRequestId = data.request_id;
 
     // 显示 Agent 思考内容
@@ -1588,21 +1597,26 @@ function showToolApprovalDialog(data) {
     return;
   }
 
+  // 立即更新 currentRequestId 防止重复处理
+  currentRequestId = data.request_id;
+  console.log('[HITL] Processing request:', currentRequestId);
+
   // 隐藏当前对话框（如果已显示）
   const dialog = document.getElementById('tool-approval-dialog');
   dialog.style.display = 'none';
 
   // 等待一下确保 DOM 更新
   setTimeout(() => {
-    currentRequestId = data.request_id;
-    console.log('[HITL] Set currentRequestId to:', currentRequestId);
-
+    // currentRequestId 已经在外面更新了，这里不需要再次更新
+    // currentRequestId = data.request_id; 
+    
     const toolName = data.data.tool_name || 'unknown';
     const toolInput = data.data.tool_input || {};
     const agentThinking = data.data.agent_thinking || '';
+    const toolCallId = data.data.tool_call_id;
 
     // 保存工具信息用于后续日志显示
-    currentToolInfo = { toolName, toolInput };
+    currentToolInfo = { toolName, toolInput, toolCallId };
 
     // 更新对话框内容
     document.getElementById('tool-name-display').textContent = toolName;
@@ -1681,8 +1695,8 @@ async function handleToolDecision(action) {
   const dialog = document.getElementById('tool-approval-dialog');
   dialog.style.display = 'none';
 
-  // 清除当前请求 ID（在发送之前，以防止重复点击）
-  currentRequestId = null;
+  // 保持 currentRequestId 直到请求完成，以防止处理重复的事件
+  // currentRequestId = null;
 
   // 获取工具信息用于显示记录
   const actionText = action === 'approve' ? '✅ 已批准' : '❌ 已拒绝';
@@ -1691,6 +1705,13 @@ async function handleToolDecision(action) {
   if (currentToolInfo) {
     const inputSummary = formatToolInput(currentToolInfo.toolName, currentToolInfo.toolInput);
     logMessage = `${actionText}: ${currentToolInfo.toolName}\n${inputSummary}`;
+    
+    // 记录已处理的 ID
+    if (currentToolInfo.toolCallId) {
+      processedToolCallIds.add(currentToolInfo.toolCallId);
+      console.log('[HITL] Added processed tool call ID:', currentToolInfo.toolCallId);
+    }
+    
     currentToolInfo = null;  // 清除保存的工具信息
   } else {
     const toolName = document.getElementById('tool-name-display').textContent;
@@ -1705,11 +1726,15 @@ async function handleToolDecision(action) {
     // 发送用户决定到后端
     await window.deepagents.sendToolApproval(requestIdToSend, action);
     console.log('[HITL] Approval sent successfully');
+    
+    // 成功后清除 ID
+    currentRequestId = null;
   } catch (error) {
     console.error('[HITL] Failed to send decision:', error);
     alert('操作失败: ' + error.message);
-    // 发送失败时恢复请求 ID
-    currentRequestId = requestIdToSend;
+    // 发送失败时恢复显示对话框，允许用户重试
+    const dialog = document.getElementById('tool-approval-dialog');
+    dialog.style.display = 'flex';
   } finally {
     // 无论成功或失败，都重置处理标志
     isProcessingDecision = false;

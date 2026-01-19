@@ -1,4 +1,10 @@
 const { app, BrowserWindow, ipcMain, session } = require('electron');
+const log = require('electron-log/main');
+
+// Initialize logger
+log.initialize();
+log.info('App starting...');
+
 const { spawn, execSync } = require('child_process');
 const { randomUUID } = require('crypto');
 const net = require('net');
@@ -260,14 +266,18 @@ function startPythonAgent() {
 
   pythonProcess.stdout.on('data', (data) => {
     try {
-      console.log(`Python: ${data}`);
+      const msg = `Python: ${data}`;
+      console.log(msg);
+      log.info(msg);
     } catch (e) {
       // Ignore EPIPE errors when stdout is closed
     }
   });
   pythonProcess.stderr.on('data', (data) => {
     try {
-      console.error(`Python Error: ${data}`);
+      const msg = `Python Error: ${data}`;
+      console.error(msg);
+      log.error(msg);
     } catch (e) {
       // Ignore EPIPE errors when stderr is closed
     }

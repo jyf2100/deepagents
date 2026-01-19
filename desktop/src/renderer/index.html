@@ -13,8 +13,8 @@
       font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', Helvetica, Arial, sans-serif;
       margin: 0;
       padding: 0;
-      background: #f5f5f7;
-      color: #1d1d1f;
+      background: #ececec; /* 经典 Mac 灰色背景 */
+      color: #333333;
       height: 100vh;
       overflow: hidden;
       -webkit-font-smoothing: antialiased;
@@ -26,13 +26,13 @@
     }
     /* 左侧面板 - Mac 风格 */
     #side-panel {
-      width: 280px;
+      width: 260px;
       height: 100%;
-      background: linear-gradient(to bottom, #ffffff, #fafafa);
-      border-right: 1px solid #d1d1d6;
+      background: #e8e8e8; /* 更深的侧边栏背景 */
+      border-right: 1px solid #c6c6c6;
       display: flex;
       flex-direction: column;
-      box-shadow: 1px 0 3px rgba(0,0,0,0.04);
+      /* box-shadow: 1px 0 3px rgba(0,0,0,0.04); 去掉阴影，使用更扁平的风格 */
       transition: width 0.3s ease;
     }
 
@@ -56,55 +56,59 @@
     /* 标签页 - Mac Segmented Control */
     #tabs {
       display: flex;
-      margin: 16px;
+      margin: 10px;
       margin-bottom: 8px;
-      background: #e3e3e8;
-      border-radius: 8px;
-      padding: 2px;
-      box-shadow: inset 0 1px 2px rgba(0,0,0,0.08);
+      background: #dcdcdc; /* 更深的背景 */
+      border-radius: 6px;
+      padding: 3px;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+      border: 1px solid #c0c0c0;
     }
     .tab {
       flex: 1;
-      padding: 6px 12px;
+      padding: 4px 12px;
       text-align: center;
-      font-size: 12px;
-      font-weight: 500;
-      color: #6e6e73;
+      font-size: 13px;
+      font-weight: 400;
+      color: #555555;
       cursor: pointer;
-      border-radius: 6px;
-      transition: all 0.2s ease;
+      border-radius: 4px;
+      transition: all 0.1s ease;
     }
     .tab:hover {
-      color: #1d1d1f;
+      color: #000000;
     }
     .tab.active {
       background: #ffffff;
-      color: #007aff;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1), inset 0 -1px 0 rgba(0,0,0,0.05);
+      color: #000000;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+      font-weight: 500;
     }
     #settings-btn {
       flex: 0 0 auto;
-      width: 32px;
+      width: 28px;
       padding: 0;
       background: transparent;
       border: none;
-      border-radius: 6px;
+      border-radius: 4px;
       font-size: 14px;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: all 0.1s ease;
       display: flex;
       align-items: center;
       justify-content: center;
+      color: #555;
     }
     #settings-btn:hover {
-      background: rgba(0,0,0,0.05);
+      background: rgba(0,0,0,0.08);
+      color: #000;
     }
     /* 面板内容 */
     #panel-content {
       flex: 1;
       min-height: 0; /* 允许 flex 子元素正确收缩 */
       overflow-y: auto;
-      padding: 0 12px 12px 12px;
+      padding: 0 10px 10px 10px;
       display: flex;
       flex-direction: column;
     }
@@ -118,34 +122,37 @@
     .history-item {
       display: flex;
       align-items: center;
-      padding: 10px 12px;
-      margin-bottom: 2px;
-      border-radius: 8px;
+      padding: 6px 10px;
+      margin-bottom: 0; /* 紧凑列表 */
+      border-radius: 4px;
       cursor: pointer;
       font-size: 13px;
-      color: #1d1d1f;
-      transition: all 0.2s ease;
+      color: #333;
+      transition: all 0.1s ease;
     }
+    /* 隔行变色 (可选，经典 Mac 特性，这里先不用，保持现代简洁) */
+    /* .history-item:nth-child(even) { background: rgba(0,0,0,0.02); } */
+
     .history-item:hover {
-      background: #f5f5f7;
+      background: #dcdcdc;
     }
     .history-item.active {
-      background: #007aff;
+      background: #0063e1; /* 经典 Mac 蓝色选区 */
       color: #ffffff;
-      box-shadow: 0 2px 4px rgba(0,122,255,0.25);
+      box-shadow: none;
     }
     .history-item.active .history-time {
-      color: rgba(255,255,255,0.75);
+      color: rgba(255,255,255,0.8);
     }
     .history-title {
-      font-weight: 500;
+      font-weight: 400;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
     .history-time {
-      font-size: 10px;
-      color: #86868b;
+      font-size: 11px;
+      color: #888;
       margin-top: 2px;
     }
     /* 历史记录内容区域 */
@@ -156,47 +163,48 @@
     /* 删除按钮 */
     .history-delete-btn {
       flex-shrink: 0;
-      width: 20px;
-      height: 20px;
+      width: 16px;
+      height: 16px;
       border: none;
       background: transparent;
-      color: #86868b;
-      font-size: 18px;
+      color: #888;
+      font-size: 14px;
       line-height: 1;
       padding: 0;
-      margin-left: 8px;
+      margin-left: 6px;
       cursor: pointer;
-      border-radius: 4px;
-      transition: all 0.15s ease;
+      border-radius: 3px;
+      transition: all 0.1s ease;
       display: flex;
       align-items: center;
       justify-content: center;
+      visibility: hidden; /* 默认隐藏，hover 显示 */
+    }
+    .history-item:hover .history-delete-btn {
+      visibility: visible;
     }
     .history-delete-btn:hover {
-      background: rgba(0,0,0,0.05);
-      color: #ff3b30;
+      background: rgba(0,0,0,0.1);
+      color: #cc3300;
     }
     .history-item.active .history-delete-btn {
       color: rgba(255,255,255,0.7);
     }
     .history-item.active .history-delete-btn:hover {
-      background: rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.2);
       color: #ffffff;
     }
     /* 技能列表项 - Mac card style */
     .skill-item {
-      padding: 12px;
+      padding: 10px;
       margin-bottom: 8px;
-      border-radius: 10px;
-      background: linear-gradient(to bottom, #ffffff, #fafafa);
-      border: 1px solid #e5e5ea;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+      border-radius: 6px;
+      background: #ffffff;
+      border: 1px solid #c6c6c6;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     }
     .skill-item:hover {
-      border-color: #d1d1d6;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-      transform: translateY(-1px);
+      border-color: #a0a0a0;
     }
     .skill-header {
       display: flex;
@@ -205,60 +213,60 @@
       margin-bottom: 4px;
     }
     .skill-name {
-      font-weight: 500;
+      font-weight: 600;
       font-size: 13px;
-      color: #1d1d1f;
+      color: #333;
       flex: 1;
       padding-right: 8px;
-      letter-spacing: -0.01em;
     }
     .skill-source {
-      font-size: 9px;
-      padding: 3px 8px;
-      border-radius: 4px;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 3px;
       text-transform: uppercase;
-      font-weight: 600;
+      font-weight: 500;
       letter-spacing: 0.3px;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
     }
     .skill-source.user {
-      background: #34c759;
-      color: #ffffff;
+      background: #e6f7e6;
+      color: #2e7d32;
+      border: 1px solid #c8e6c9;
     }
     .skill-source.project {
-      background: #5856d6;
-      color: #ffffff;
+      background: #e8eaf6;
+      color: #283593;
+      border: 1px solid #c5cae9;
     }
     .skill-description {
-      font-size: 11px;
-      color: #6e6e73;
-      line-height: 1.4;
+      font-size: 12px;
+      color: #666;
+      line-height: 1.3;
       margin-bottom: 6px;
     }
     /* 技能卡片底部 */
     .skill-footer {
       display: flex;
       justify-content: flex-end;
-      margin-top: 8px;
+      margin-top: 6px;
     }
     /* 删除按钮 */
     .delete-skill-btn {
-      padding: 6px 12px;
+      padding: 4px 10px;
       font-size: 11px;
-      font-weight: 500;
-      color: #ff3b30;
-      background: transparent;
-      border: 1px solid #ff3b30;
-      border-radius: 6px;
+      font-weight: 400;
+      color: #cc3300;
+      background: #ffffff;
+      border: 1px solid #cc3300;
+      border-radius: 4px;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: all 0.1s ease;
     }
     .delete-skill-btn:hover {
-      background: #ff3b30;
+      background: #cc3300;
       color: #ffffff;
     }
     .delete-skill-btn:active {
-      transform: scale(0.98);
+      transform: translateY(1px);
     }
     .delete-skill-btn:disabled {
       opacity: 0.5;
@@ -267,14 +275,14 @@
     /* 加载状态 */
     .loading {
       text-align: center;
-      padding: 30px;
-      color: #86868b;
+      padding: 20px;
+      color: #888;
       font-size: 12px;
     }
     .empty-state {
       text-align: center;
-      padding: 30px 16px;
-      color: #86868b;
+      padding: 20px 10px;
+      color: #888;
       font-size: 12px;
     }
     /* 右侧聊天区域 */
@@ -290,27 +298,28 @@
       flex: 1;
       display: flex;
       flex-direction: column;
-      padding: 16px;
+      padding: 0; /* 移除 padding，让顶部栏贴边 */
       background: #ffffff;
     }
     #messages {
       flex: 1;
       overflow-y: auto;
-      margin-bottom: 12px;
+      padding: 16px;
+      padding-bottom: 0;
     }
     /* 消息气泡 - Mac iMessage 风格 */
     .message {
-      margin-bottom: 12px;
-      padding: 10px 14px;
-      border-radius: 18px;
+      margin-bottom: 10px;
+      padding: 8px 12px;
+      border-radius: 12px;
       white-space: pre-wrap;
       word-wrap: break-word;
-      max-width: 75%;
-      max-height: 400px;
+      max-width: 80%;
+      max-height: 500px;
       overflow-y: auto;
-      font-size: 14px;
+      font-size: 13px;
       line-height: 1.4;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+      box-shadow: none; /* 移除阴影，更扁平 */
     }
     /* 自定义滚动条样式 */
     .message::-webkit-scrollbar {
@@ -327,57 +336,56 @@
       background: rgba(0,0,0,0.3);
     }
     .user {
-      background: linear-gradient(135deg, #007aff 0%, #0051d5 100%);
+      background: #007aff; /* 经典蓝色 */
       color: #ffffff;
       margin-left: auto;
-      border-bottom-right-radius: 4px;
+      border-bottom-right-radius: 2px;
     }
     .assistant {
-      background: #e5e5ea;
-      color: #1d1d1f;
-      border-bottom-left-radius: 4px;
+      background: #e5e5ea; /* 经典灰色 */
+      color: #000000;
+      border-bottom-left-radius: 2px;
     }
     /* 操作日志样式 */
     .operation-log {
       display: flex;
       align-items: flex-start;
       gap: 8px;
-      padding: 10px 12px;
-      margin: 8px 0;
-      background: linear-gradient(135deg, #f5f5f7 0%, #e8e8ed 100%);
-      border-radius: 10px;
-      border: 1px solid #d1d1d6;
+      padding: 8px 10px;
+      margin: 6px 0;
+      background: #f9f9f9;
+      border-radius: 6px;
+      border: 1px solid #e0e0e0;
       font-size: 12px;
-      color: #6e6e73;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+      color: #555;
+      font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
     }
     .operation-log .log-icon {
-      font-size: 14px;
+      font-size: 12px;
       flex-shrink: 0;
-      margin-top: 1px;
+      margin-top: 2px;
     }
     .operation-log .log-text {
       flex: 1;
-      font-weight: 500;
-      line-height: 1.5;
+      font-weight: 400;
+      line-height: 1.4;
       white-space: pre-wrap;
       word-wrap: break-word;
     }
     .operation-log .log-time {
       font-size: 10px;
-      color: #86868b;
+      color: #999;
       font-weight: 400;
       flex-shrink: 0;
       margin-top: 2px;
     }
     /* 思考过程组件 */
     .thinking-process {
-      margin: 12px 0;
-      border-radius: 12px;
-      background: linear-gradient(to bottom, #f9f9fb, #f5f5f7);
-      border: 1px solid #e5e5ea;
+      margin: 10px 0;
+      border-radius: 6px;
+      background: #fcfcfc;
+      border: 1px solid #dcdcdc;
       overflow: hidden;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
     .thinking-process.collapsed .thinking-log {
       display: none;
@@ -386,36 +394,40 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 10px 14px;
-      border-bottom: 1px solid #e5e5ea;
-      background: linear-gradient(to right, rgba(0,122,255,0.05), transparent);
+      padding: 6px 10px;
+      border-bottom: 1px solid #ebebeb;
+      background: #f5f5f5;
     }
     .thinking-title {
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 600;
-      color: #6e6e73;
+      color: #666;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
     .thinking-toggle {
-      padding: 4px 10px;
-      font-size: 11px;
-      background: transparent;
-      border: 1px solid #d1d1d6;
-      border-radius: 4px;
-      color: #6e6e73;
+      padding: 2px 8px;
+      font-size: 10px;
+      background: #ffffff;
+      border: 1px solid #c0c0c0;
+      border-radius: 3px;
+      color: #555;
       cursor: pointer;
-      transition: all 0.15s ease;
+      transition: all 0.1s ease;
     }
     .thinking-toggle:hover {
-      background: #e5e5ea;
-      color: #1d1d1f;
+      background: #f0f0f0;
+      border-color: #999;
+      color: #333;
     }
     .thinking-log {
       max-height: 200px;
       overflow-y: auto;
-      padding: 12px;
+      padding: 10px;
       background: #ffffff;
+      font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
+      font-size: 11px;
+      color: #444;
     }
     .thinking-log::-webkit-scrollbar {
       width: 6px;
@@ -429,71 +441,79 @@
     }
     #input-area {
       display: flex;
-      gap: 8px;
+      gap: 10px;
+      padding: 12px 16px;
+      background: #f5f5f7; /* 输入区域灰色背景 */
+      border-top: 1px solid #d1d1d6;
     }
     #message-input {
       flex: 1;
-      padding: 10px 14px;
-      border-radius: 10px;
-      border: 1px solid #d1d1d6;
+      padding: 8px 12px;
+      border-radius: 4px;
+      border: 1px solid #c6c6c6;
       background: #ffffff;
-      color: #1d1d1f;
-      font-size: 14px;
-      transition: all 0.2s ease;
-      box-shadow: inset 0 1px 2px rgba(0,0,0,0.04);
+      color: #333;
+      font-size: 13px;
+      transition: all 0.1s ease;
+      box-shadow: inset 0 1px 1px rgba(0,0,0,0.05);
     }
     #message-input:focus {
       outline: none;
       border-color: #007aff;
-      box-shadow: 0 0 0 3px rgba(0,122,255,0.15), inset 0 1px 2px rgba(0,0,0,0.04);
+      box-shadow: 0 0 0 2px rgba(0,122,255,0.2);
     }
     #message-input::placeholder {
-      color: #86868b;
+      color: #999;
     }
     /* Mac 经典按钮样式 */
     button {
-      padding: 8px 18px;
-      border-radius: 8px;
-      border: none;
-      background: linear-gradient(to bottom, #007aff, #005ecb);
-      color: #ffffff;
+      padding: 6px 16px;
+      border-radius: 4px;
+      border: 1px solid #acacac; /* 描边 */
+      background: linear-gradient(to bottom, #ffffff, #f0f0f0); /* 渐变 */
+      color: #333;
       cursor: pointer;
-      font-weight: 500;
+      font-weight: 400;
       font-size: 13px;
-      letter-spacing: 0.01em;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 1px rgba(0,0,0,0.08);
+      letter-spacing: 0;
+      transition: all 0.1s;
+      box-shadow: 0 1px 1px rgba(0,0,0,0.05);
     }
+    /* 发送按钮特例 - 蓝色 */
+    #send-btn {
+      background: linear-gradient(to bottom, #4da0f0, #007aff);
+      border: 1px solid #005ecb;
+      color: white;
+      box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+    }
+    #send-btn:hover {
+      background: linear-gradient(to bottom, #5db0ff, #1a8bff);
+    }
+    #send-btn:active {
+      background: #0063e1;
+      transform: translateY(1px);
+    }
+
     button:hover {
-      background: linear-gradient(to bottom, #0063d1, #004db8);
-      box-shadow: 0 2px 6px rgba(0,0,0,0.18), 0 1px 2px rgba(0,0,0,0.12);
-      transform: translateY(-1px);
+      background: linear-gradient(to bottom, #f8f8f8, #e8e8e8);
+      border-color: #999;
     }
     button:active {
-      background: linear-gradient(to bottom, #0051d5, #003d91);
-      box-shadow: 0 1px 2px rgba(0,0,0,0.12);
-      transform: translateY(0);
+      background: #e0e0e0;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+      transform: translateY(1px);
     }
     button:disabled {
-      opacity: 0.5;
+      opacity: 0.6;
       cursor: not-allowed;
-      background: linear-gradient(to bottom, #e5e5ea, #d1d1d6);
+      background: #f5f5f5;
+      color: #aaa;
       box-shadow: none;
       transform: none;
     }
-    /* 次要按钮样式 - Mac 取消按钮 */
+    /* 次要按钮样式 */
     button.secondary {
-      background: linear-gradient(to bottom, #f5f5f7, #e8e8ed);
-      color: #1d1d1f;
-      border: 1px solid #d1d1d6;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.5);
-    }
-    button.secondary:hover {
-      background: linear-gradient(to bottom, #e8e8ed, #d8d8dd);
-      box-shadow: 0 2px 4px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.5);
-    }
-    button.secondary:active {
-      background: linear-gradient(to bottom, #d8d8dd, #c8c8cd);
+      /* 使用默认按钮样式即可，已足够经典 */
     }
     /* Mac 滚动条样式 */
     ::-webkit-scrollbar {
@@ -507,7 +527,7 @@
       border-radius: 4px;
     }
     ::-webkit-scrollbar-thumb:hover {
-      background: rgba(0,0,0,0.3);
+      background: rgba(0,0,0,0.35);
     }
 
     /* 工作空间切换器样式 */
@@ -515,47 +535,56 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 8px 16px;
-      background: linear-gradient(to bottom, #f5f5f7, #e8e8ed);
+      padding: 8px 12px;
+      background: #f8f8f8; /* 浅灰背景 */
       border-bottom: 1px solid #d1d1d6;
+      height: 44px;
     }
     #workspace-selector {
       flex: 1;
-      padding: 8px 12px;
-      border-radius: 6px;
-      border: 1px solid #d1d1d6;
+      padding: 4px 10px;
+      border-radius: 4px;
+      border: 1px solid #c6c6c6;
       background: #ffffff;
-      color: #1d1d1f;
+      color: #333;
       font-size: 13px;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: all 0.1s ease;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 1px 1px rgba(0,0,0,0.05);
     }
     #workspace-selector:hover {
-      border-color: #007aff;
+      border-color: #999;
     }
     #workspace-settings-btn {
-      padding: 8px 12px;
-      font-size: 12px;
-      background: transparent;
-      border: 1px solid #d1d1d6;
-      color: #1d1d1f;
+      padding: 4px 8px;
+      font-size: 14px;
+      background: #ffffff;
+      border: 1px solid #c6c6c6;
+      border-radius: 4px;
+      color: #555;
+      box-shadow: 0 1px 1px rgba(0,0,0,0.05);
     }
     #workspace-settings-btn:hover {
-      background: #e5e5ea;
+      background: #f0f0f0;
+      border-color: #999;
     }
     /* 工作空间菜单 */
     #workspace-menu {
       display: none;
       position: absolute;
       top: 100%;
-      left: 16px;
-      margin-top: 4px;
+      left: 12px;
+      margin-top: 2px;
       background: #ffffff;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      border: 1px solid #e5e5ea;
+      border-radius: 4px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+      border: 1px solid #c6c6c6;
       z-index: 1000;
-      min-width: 200px;
+      min-width: 220px;
       max-height: 300px;
       overflow-y: auto;
     }
@@ -563,22 +592,33 @@
       display: block;
     }
     .workspace-menu-item {
-      padding: 10px 14px;
+      padding: 6px 12px;
       font-size: 13px;
-      color: #1d1d1f;
+      color: #333;
       cursor: pointer;
       display: flex;
       align-items: center;
       gap: 8px;
-      transition: background 0.15s ease;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .workspace-menu-item:last-child {
+      border-bottom: none;
     }
     .workspace-menu-item:hover {
-      background: #f5f5f7;
+      background: #0063e1;
+      color: white;
     }
     .workspace-menu-item.active {
-      background: #e8f4fd;
-      color: #007aff;
+      background: #e6f2ff; /* 浅蓝背景 */
+      color: #000;
+      font-weight: 500;
     }
+    /* 选中项 hover 时保持文字白色 */
+    .workspace-menu-item.active:hover {
+      background: #0063e1;
+      color: white;
+    }
+    
     .workspace-menu-item .workspace-icon {
       font-size: 14px;
     }
@@ -587,34 +627,39 @@
     }
     .workspace-menu-item .workspace-category {
       font-size: 10px;
-      color: #86868b;
+      color: #888;
       text-transform: uppercase;
     }
+    .workspace-menu-item:hover .workspace-category {
+      color: rgba(255,255,255,0.8);
+    }
+    
     .workspace-menu-divider {
       height: 1px;
-      background: #e5e5ea;
-      margin: 4px 0;
+      background: #dcdcdc;
+      margin: 2px 0;
     }
     .workspace-menu-action {
-      padding: 10px 14px;
+      padding: 8px 12px;
       font-size: 12px;
-      color: #007aff;
+      color: #333;
       cursor: pointer;
       display: flex;
       align-items: center;
       gap: 8px;
+      background: #f9f9f9;
     }
     .workspace-menu-action:hover {
-      background: #f5f5f7;
+      background: #e0e0e0;
     }
-
+    
     /* 思考中动画 */
     .thinking-indicator {
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      color: #6e6e73;
-      font-size: 13px;
+      color: #888;
+      font-size: 12px;
     }
     .thinking-indicator::after {
       content: '...';
@@ -630,20 +675,21 @@
 
     /* 格式化消息内容样式 */
     .message code {
-      background: rgba(0, 0, 0, 0.06);
-      padding: 2px 6px;
-      border-radius: 4px;
+      background: rgba(0, 0, 0, 0.05);
+      padding: 2px 4px;
+      border-radius: 3px;
       font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
       font-size: 12px;
       color: #d63384;
+      border: 1px solid rgba(0,0,0,0.05);
     }
     .message pre {
-      background: #f8f5f0;
-      color: #000000;
-      padding: 12px;
-      border-radius: 8px;
-      border: 1px solid #e5e5ea;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      background: #f5f5f5;
+      color: #333;
+      padding: 10px;
+      border-radius: 4px;
+      border: 1px solid #dcdcdc;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.03);
       overflow-x: auto;
       max-height: 300px;
       overflow-y: auto;
@@ -670,102 +716,90 @@
       background: transparent;
       color: inherit;
       padding: 0;
+      border: none;
     }
     .message strong {
       font-weight: 600;
     }
     .message em {
       font-style: italic;
-      color: #6e6e73;
+      color: #666;
     }
     /* 用户消息中的代码样式 */
     .user.message code {
       background: rgba(255, 255, 255, 0.2);
       color: #ffffff;
+      border: none;
     }
     .user.message pre {
-      background: rgba(0, 0, 0, 0.3);
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: white;
     }
     /* JSON 语法高亮 - 浅色主题 */
-    .json-key {
-      color: #0066cc;
-    }
-    .json-string {
-      color: #d63384;
-    }
-    .json-boolean {
-      color: #0066cc;
-    }
-    .json-number {
-      color: #008800;
-    }
+    .json-key { color: #003366; }
+    .json-string { color: #a31515; }
+    .json-boolean { color: #0000ff; }
+    .json-number { color: #098658; }
+    
     /* 工具调用紧凑卡片 */
     .tool-call-compact {
-      margin: 8px 0;
-      border-radius: 8px;
-      background: linear-gradient(135deg, #f0f8ff 0%, #e8f4f8 100%);
-      border: 1px solid #d1d1d6;
+      margin: 6px 0;
+      border-radius: 4px;
+      background: #f0f8ff;
+      border: 1px solid #cceeff;
       overflow: hidden;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
     .tool-call-header {
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 8px 12px;
-      background: linear-gradient(to right, rgba(0,122,255,0.08), transparent);
-      border-bottom: 1px solid #e5e5ea;
+      padding: 6px 10px;
+      background: #e6f2ff;
+      border-bottom: 1px solid #cceeff;
     }
     .tool-icon {
-      font-size: 14px;
+      font-size: 12px;
     }
     .tool-name {
       font-weight: 600;
-      font-size: 13px;
-      color: #007aff;
+      font-size: 12px;
+      color: #0055aa;
     }
     .tool-type {
-      font-size: 11px;
-      color: #6e6e73;
-      padding: 2px 6px;
-      background: #e5e5ea;
-      border-radius: 4px;
+      font-size: 10px;
+      color: #666;
+      padding: 1px 4px;
+      background: #ffffff;
+      border: 1px solid #dcdcdc;
+      border-radius: 3px;
       text-transform: capitalize;
     }
     /* 工具输入参数区域 */
     .tool-input-section {
-      padding: 10px 12px;
+      padding: 8px 10px;
       background: #ffffff;
     }
     .section-label {
       font-size: 10px;
       font-weight: 600;
-      color: #6e6e73;
+      color: #888;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
     .tool-input-json {
-      background: #f8f5f0;
-      padding: 8px 10px;
-      border-radius: 6px;
+      background: #fafafa;
+      padding: 6px 8px;
+      border-radius: 3px;
+      border: 1px solid #eee;
       font-size: 11px;
       line-height: 1.4;
       max-height: 150px;
       overflow: auto;
       margin: 0;
       word-break: break-all;
-    }
-    .tool-input-json::-webkit-scrollbar {
-      width: 4px;
-      height: 4px;
-    }
-    .tool-input-json::-webkit-scrollbar-track {
-      background: #f0f0f0;
-    }
-    .tool-input-json::-webkit-scrollbar-thumb {
-      background: #c0c0c0;
-      border-radius: 2px;
+      font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
     }
     /* 文件路径样式 */
     .file-path {
@@ -1103,19 +1137,19 @@
 
     <!-- 工具确认对话框 (HITL) -->
     <div id="tool-approval-dialog" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 2000; align-items: center; justify-content: center;">
-      <div style="background: #ffffff; border-radius: 12px; padding: 24px; width: 480px; max-width: 90%; box-shadow: 0 12px 40px rgba(0,0,0,0.15);">
-        <h3 style="margin: 0 0 8px 0; font-size: 17px; font-weight: 600; color: #1d1d1f; letter-spacing: -0.3px;">工具执行确认</h3>
-        <p style="margin: 0 0 20px 0; font-size: 13px; color: #6e6e73; line-height: 1.4;">Agent 即将执行以下操作</p>
+      <div style="background: #ffffff; border-radius: 12px; padding: 24px; width: 480px; max-width: 90%; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 12px 40px rgba(0,0,0,0.15);">
+        <h3 style="margin: 0 0 8px 0; font-size: 17px; font-weight: 600; color: #1d1d1f; letter-spacing: -0.3px; flex-shrink: 0;">工具执行确认</h3>
+        <p style="margin: 0 0 20px 0; font-size: 13px; color: #6e6e73; line-height: 1.4; flex-shrink: 0;">Agent 即将执行以下操作</p>
 
-        <div style="margin-bottom: 20px; padding: 16px; background: #f5f5f7; border-radius: 8px;">
+        <div style="margin-bottom: 20px; padding: 16px; background: #f5f5f7; border-radius: 8px; overflow-y: auto; flex: 1; min-height: 0;">
           <div style="font-size: 11px; font-weight: 500; color: #6e6e73; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">工具名称</div>
           <div id="tool-name-display" style="font-size: 15px; font-weight: 600; color: #007aff; margin-bottom: 12px;">-</div>
 
           <div style="font-size: 11px; font-weight: 500; color: #6e6e73; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">工具参数</div>
-          <pre id="tool-input-display" style="font-size: 12px; color: #1d1d1f; background: #ffffff; padding: 10px; border-radius: 6px; overflow-x: auto; white-space: pre-wrap;">-</pre>
+          <pre id="tool-input-display" style="font-size: 12px; color: #1d1d1f; background: #ffffff; padding: 10px; border-radius: 6px; overflow-x: auto; white-space: pre-wrap; max-width: 100%;">-</pre>
         </div>
 
-        <div style="display: flex; gap: 8px; justify-content: flex-end; padding-top: 8px; border-top: 1px solid #e5e5ea;">
+        <div style="display: flex; gap: 8px; justify-content: flex-end; padding-top: 8px; border-top: 1px solid #e5e5ea; flex-shrink: 0;">
           <button id="reject-tool-btn" class="secondary" style="padding: 8px 16px;">取消</button>
           <button id="auto-approve-btn" class="secondary" style="padding: 8px 16px;">自动批准全部</button>
           <button id="approve-tool-btn" style="padding: 8px 16px;">允许执行</button>
