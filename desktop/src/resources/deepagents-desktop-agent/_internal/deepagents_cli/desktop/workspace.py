@@ -43,6 +43,7 @@ class WorkspaceConfig:
         created_at: ISO timestamp of workspace creation
         icon: Icon name for UI display
         conversation_ids: List of conversation IDs belonging to this workspace
+        system_prompt: Custom system prompt for this workspace. If empty, uses default prompt.
     """
     id: str
     name: str
@@ -53,6 +54,7 @@ class WorkspaceConfig:
     created_at: str = ""
     icon: str = "folder"
     conversation_ids: list[str] = field(default_factory=list)
+    system_prompt: str = ""
 
     def __post_init__(self):
         """Initialize derived fields after creation."""
@@ -327,7 +329,8 @@ class WorkspaceManager:
         category: str | None = None,
         enabled_skills: list[str] | None = None,
         icon: str | None = None,
-        custom_path: str | None = None
+        custom_path: str | None = None,
+        system_prompt: str | None = None
     ) -> WorkspaceConfig | None:
         """Update workspace configuration.
 
@@ -338,6 +341,7 @@ class WorkspaceManager:
             enabled_skills: New enabled skills list (optional)
             icon: New icon (optional)
             custom_path: New custom path (optional)
+            system_prompt: New system prompt (optional)
 
         Returns:
             Updated workspace configuration or None if not found
@@ -358,6 +362,8 @@ class WorkspaceManager:
             workspace.custom_path = custom_path
             # Re-create directory structure if path changed
             self._ensure_workspace_directory(workspace)
+        if system_prompt is not None:
+            workspace.system_prompt = system_prompt
 
         # Update config
         config = self._load_config()
@@ -479,3 +485,209 @@ def get_workspace_manager() -> WorkspaceManager:
     if _global_workspace_manager is None:
         _global_workspace_manager = WorkspaceManager()
     return _global_workspace_manager
+
+
+# ============================================================================
+# Prompt Templates Management
+# ============================================================================
+
+PROMPT_TEMPLATES_PATH = Path.home() / ".deepagents" / "prompt_templates.json"
+
+
+def get_default_templates() -> list[dict[str, Any]]:
+    """Return built-in default prompt templates.
+
+    Returns:
+        List of default prompt template dictionaries
+    """
+    return [
+        {
+            "id": "code-review",
+            "name": "代码审查助手",
+            "category": "开发",
+            "prompt": """你是一个专业的代码审查助手。重点关注：
+
+1. **代码质量和可读性**：变量命名、代码结构、注释完整性
+2. **潜在的 bug 和边界情况**：空值处理、并发问题、资源泄漏
+3. **性能优化建议**：算法复杂度、内存使用、缓存策略
+4. **安全最佳实践**：输入验证、敏感数据处理、权限检查
+
+请提供具体、可操作的建议，并给出改进示例。"""
+        },
+        {
+            "id": "writer",
+            "name": "写作助手",
+            "category": "创作",
+            "prompt": """你是一个专业的写作助手，擅长帮助用户：
+
+1. **润色和改进文本表达**：提升文字的流畅度和感染力
+2. **调整文章结构和逻辑**：优化段落组织，增强论证力度
+3. **提供创意和建议**：拓展思路，丰富内容
+4. **检查语法和拼写错误**：确保文字规范准确
+
+请保持原文的核心观点和风格，只做必要的优化。"""
+        },
+        {
+            "id": "data-analyst",
+            "name": "数据分析专家",
+            "category": "分析",
+            "prompt": """你是一个数据分析专家，擅长：
+
+1. **数据清洗和预处理**：处理缺失值、异常值和数据格式
+2. **统计分析和可视化**：描述性统计、相关性分析、趋势识别
+3. **洞察发现和解释**：从数据中提取有价值的商业洞察
+4. **预测和建议**：基于数据趋势提供决策支持建议
+
+分析时请注重数据的业务意义，而不仅仅是技术指标。"""
+        },
+        {
+            "id": "general-assistant",
+            "name": "通用助手",
+            "category": "通用",
+            "prompt": """你是一个专业的 AI 助手，能够帮助用户完成各种任务。
+
+请：
+- 准确理解用户的需求
+- 提供清晰、有条理的回答
+- 在不确定时主动询问澄清
+- 保持专业和友好的态度
+
+根据具体任务调整你的回答风格和深度。"""
+        },
+        {
+            "id": "translation",
+            "name": "翻译助手",
+            "category": "语言",
+            "prompt": """你是一个专业的翻译助手，擅长中英互译。
+
+翻译原则：
+1. **准确性**：忠实传达原文含义，不添加或删除信息
+2. **流畅性**：符合目标语言的表达习惯
+3. **风格一致性**：保持原文的语气和风格
+4. **专业性**：准确翻译专业术语
+
+对于技术文档、商务邮件等正式文本，请使用规范的表达。"""
+        },
+        {
+            "id": "learning-coach",
+            "name": "学习辅导",
+            "category": "教育",
+            "prompt": """你是一个专业的学习辅导老师，擅长：
+
+1. **知识讲解**：用清晰易懂的语言解释复杂概念
+2. **学习规划**：帮助学生制定合理的学习计划
+3. **问题解答**：耐心回答学生的疑问
+4. **练习推荐**：提供有针对性的练习题目
+
+请根据学生的水平和进度调整讲解深度，鼓励学生独立思考。"""
+        }
+    ]
+
+
+def get_prompt_templates() -> list[dict[str, Any]]:
+    """Get all available prompt templates.
+
+    Loads templates from the user's template file if it exists,
+    otherwise returns the default built-in templates.
+
+    Returns:
+        List of prompt template dictionaries
+    """
+    if PROMPT_TEMPLATES_PATH.exists():
+        try:
+            content = PROMPT_TEMPLATES_PATH.read_text(encoding="utf-8")
+            data = json.loads(content)
+            templates = data.get("templates", [])
+            if templates:
+                logger.debug(f"Loaded {len(templates)} templates from {PROMPT_TEMPLATES_PATH}")
+                return templates
+        except (json.JSONDecodeError, OSError) as e:
+            logger.warning(f"Failed to load templates from {PROMPT_TEMPLATES_PATH}: {e}")
+
+    # Return default templates
+    return get_default_templates()
+
+
+def save_prompt_templates(templates: list[dict[str, Any]]) -> bool:
+    """Save prompt templates to the user's template file.
+
+    Args:
+        templates: List of template dictionaries to save
+
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        PROMPT_TEMPLATES_PATH.parent.mkdir(parents=True, exist_ok=True)
+        content = json.dumps({"templates": templates}, indent=2, ensure_ascii=False)
+        PROMPT_TEMPLATES_PATH.write_text(content, encoding="utf-8")
+        logger.info(f"Saved {len(templates)} templates to {PROMPT_TEMPLATES_PATH}")
+        return True
+    except OSError as e:
+        logger.error(f"Failed to save templates: {e}")
+        return False
+
+
+async def generate_workspace_prompt(
+    workspace_name: str,
+    category: str,
+    description: str = ""
+) -> str:
+    """Generate a system prompt for a workspace using AI.
+
+    Args:
+        workspace_name: Name of the workspace
+        category: Workspace category
+        description: Additional description (optional)
+
+    Returns:
+        Generated system prompt text
+    """
+    from deepagents_cli.config import create_model
+    from langchain_core.messages import HumanMessage
+
+    model = create_model()
+
+    prompt = f"""请为以下工作空间生成一个专业的系统提示词：
+
+工作空间名称：{workspace_name}
+分类：{category}
+描述：{description or "无"}
+
+要求：
+1. 提示词应该简洁明确，不超过 200 字
+2. 侧重于该工作空间的核心功能和目标
+3. 使用专业的语气
+4. 直接返回提示词内容，不需要其他解释
+
+生成的提示词："""
+
+    try:
+        response = await model.ainvoke([HumanMessage(content=prompt)])
+        generated = response.content.strip()
+        logger.info(f"Generated prompt for workspace '{workspace_name}'")
+        return generated
+    except Exception as e:
+        logger.error(f"Failed to generate prompt: {e}")
+        return get_default_prompt_for_category(category)
+
+
+def get_default_prompt_for_category(category: str) -> str:
+    """Get a default system prompt based on category.
+
+    Args:
+        category: Workspace category
+
+    Returns:
+        Default prompt for the category
+    """
+    defaults = {
+        "开发": "你是一个专业的开发助手，擅长代码编写、调试和架构设计。请提供清晰、可维护的代码示例。",
+        "写作": "你是一个专业的写作助手，擅长文本润色和内容创作。请保持原文风格，只做必要的优化。",
+        "分析": "你是一个专业的数据分析助手，擅长数据处理和洞察发现。请注重数据的业务意义。",
+        "创作": "你是一个专业的创作助手，擅长创意写作和内容策划。请提供有创意且可执行的建议。",
+        "语言": "你是一个专业的语言助手，擅长翻译和语言学习。请确保翻译准确、流畅。",
+        "教育": "你是一个专业的教育助手，擅长知识讲解和学习辅导。请用通俗易懂的方式解释概念。",
+        "商业": "你是一个专业的商业助手，擅长商业分析和决策支持。请提供基于数据和逻辑的建议。"
+    }
+    return defaults.get(category, "你是一个专业的 AI 助手，能够帮助用户完成各种任务。请准确理解需求并提供有帮助的回答。")

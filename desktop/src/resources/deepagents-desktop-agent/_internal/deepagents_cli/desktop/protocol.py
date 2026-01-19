@@ -168,6 +168,16 @@ class DesktopProtocol:
         if self.model is None:
             self.model = create_model()
 
+        # Get workspace system prompt if configured
+        workspace_system_prompt = None
+        if workspace_id:
+            from deepagents_cli.desktop.workspace import get_workspace_manager
+            workspace_manager = get_workspace_manager()
+            workspace = workspace_manager.get_workspace(workspace_id)
+            if workspace and workspace.system_prompt:
+                workspace_system_prompt = workspace.system_prompt
+                print(f"[_get_or_create_agent] Using workspace system prompt for {workspace_id}", file=sys.stderr)
+
         # Initialize checkpointer asynchronously if conversation_id is present
         checkpointer = None
         if conversation_id:
@@ -177,7 +187,7 @@ class DesktopProtocol:
             except Exception as e:
                 print(f"[_get_or_create_agent] Failed to create async checkpointer: {e}", file=sys.stderr)
                 # Fallback handled inside create_cli_agent if we pass None, but better to be explicit about failure
-                # Assuming fallback to memory or sync? No, sync is broken. 
+                # Assuming fallback to memory or sync? No, sync is broken.
                 # Let create_cli_agent fallback to InMemorySaver if we pass None?
                 # Actually, get_async_checkpointer handles fallback to memory saver internally if SQLITE_AVAILABLE is false.
                 # If it raises exception, it's serious.
@@ -188,6 +198,7 @@ class DesktopProtocol:
             assistant_id=self.assistant_id,
             tools=[],
             sandbox=None,
+            system_prompt=workspace_system_prompt,  # Use workspace system prompt if configured
             auto_approve=False,  # Require user approval for destructive operations
             enable_memory=True,
             enable_skills=True,
@@ -430,6 +441,13 @@ class DesktopProtocol:
 
         if request_type == "set_workspace_skills":
             return await self._handle_set_workspace_skills(message.get('request_id'), message.get('params', {}))
+
+        # Handle prompt template requests
+        if request_type == "list_prompt_templates":
+            return await self._handle_list_prompt_templates(message.get('request_id'))
+
+        if request_type == "generate_workspace_prompt":
+            return await self._handle_generate_workspace_prompt(message.get('request_id'), message.get('params', {}))
 
         # Handle conversation management requests
         if request_type == "create_conversation":
@@ -1207,6 +1225,7 @@ class DesktopProtocol:
             name = params.get('name')
             category = params.get('category')
             icon = params.get('icon')
+            system_prompt = params.get('system_prompt')
 
             if not workspace_id:
                 return {
@@ -1223,7 +1242,8 @@ class DesktopProtocol:
                 workspace_id,
                 name=name,
                 category=category,
-                icon=icon
+                icon=icon,
+                system_prompt=system_prompt
             )
 
             if workspace is None:
@@ -1307,6 +1327,72 @@ class DesktopProtocol:
                 'error': {
                     'code': 'SET_WORKSPACE_SKILLS_FAILED',
                     'message': f'Failed to set workspace skills: {str(e)}'
+                }
+            }
+
+    # === Prompt Template Methods ===
+
+    async def _handle_list_prompt_templates(self, request_id: str) -> dict[str, Any]:
+        """Handle list_prompt_templates request."""
+        from deepagents_cli.desktop.workspace import get_prompt_templates
+
+        try:
+            templates = get_prompt_templates()
+            return {
+                'request_id': request_id,
+                'status': 'success',
+                'data': {'templates': templates}
+            }
+        except Exception as e:
+            return {
+                'request_id': request_id,
+                'status': 'error',
+                'error': {
+                    'code': 'LIST_TEMPLATES_FAILED',
+                    'message': f'Failed to list prompt templates: {str(e)}'
+                }
+            }
+
+    async def _handle_generate_workspace_prompt(
+        self,
+        request_id: str,
+        params: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Handle generate_workspace_prompt request."""
+        from deepagents_cli.desktop.workspace import generate_workspace_prompt
+
+        try:
+            workspace_name = params.get('name', '')
+            category = params.get('category', '通用')
+            description = params.get('description', '')
+
+            if not workspace_name:
+                return {
+                    'request_id': request_id,
+                    'status': 'error',
+                    'error': {
+                        'code': 'INVALID_PARAMS',
+                        'message': 'name is required'
+                    }
+                }
+
+            # Generate prompt using AI
+            generated_prompt = await generate_workspace_prompt(
+                workspace_name, category, description
+            )
+
+            return {
+                'request_id': request_id,
+                'status': 'success',
+                'data': {'prompt': generated_prompt}
+            }
+        except Exception as e:
+            return {
+                'request_id': request_id,
+                'status': 'error',
+                'error': {
+                    'code': 'GENERATE_PROMPT_FAILED',
+                    'message': f'Failed to generate workspace prompt: {str(e)}'
                 }
             }
 

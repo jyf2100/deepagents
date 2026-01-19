@@ -283,3 +283,121 @@ tavily_api_key=tvly-xxx
 ```
 
 **注意**：环境变量名称支持小写格式（如 `openai_api_key`），会自动映射到标准格式（如 `OPENAI_API_KEY`）。
+
+### 工作空间系统提示词配置
+
+每个工作空间可以配置独立的系统提示词，支持三种配置方式：
+
+#### 配置方式
+
+1. **预设模板**：从 6 个内置模板中选择
+   - 代码审查助手
+   - 写作助手
+   - 数据分析专家
+   - 通用助手
+   - 翻译助手
+   - 学习辅导
+
+2. **AI 生成**：根据工作空间名称/分类/描述自动生成提示词
+
+3. **手动编辑**：完全自定义提示词内容
+
+#### 数据结构
+
+提示词存储在 `WorkspaceConfig` 中：
+
+```python
+@dataclass
+class WorkspaceConfig:
+    # ... 其他字段 ...
+    system_prompt: str = ""  # 用户自定义的系统提示词
+```
+
+#### 注入机制
+
+创建会话时，`DesktopProtocol._get_or_create_agent()` 自动读取并注入工作空间的 `system_prompt`：
+
+```python
+# protocol.py
+workspace_system_prompt = None
+if workspace_id:
+    workspace = workspace_manager.get_workspace(workspace_id)
+    if workspace and workspace.system_prompt:
+        workspace_system_prompt = workspace.system_prompt
+
+agent, backend = create_cli_agent(
+    system_prompt=workspace_system_prompt,  # 使用工作空间提示词
+    ...
+)
+```
+
+#### API 接口
+
+- `list_prompt_templates`: 获取可用模板列表
+- `generate_workspace_prompt`: AI 生成提示词
+- `update_workspace`: 更新工作空间配置（支持 `system_prompt` 参数）
+
+#### 前端使用
+
+在工作空间设置对话框（⚙️ 按钮）中配置系统提示词。
+
+### 快速构建脚本
+
+桌面应用提供了三个构建脚本，位于 `desktop/` 目录：
+
+#### 1. `build.sh` - 完整构建
+```bash
+cd desktop
+./build.sh
+```
+
+**用途**：从头开始完整构建（清理 → 安装 → 打包 → 构建 → 启动）
+**耗时**：3-5 分钟
+**场景**：首次构建、依赖变化
+
+#### 2. `rebuild-agent.sh` - 快速重新打包 Python Agent
+```bash
+cd desktop
+./rebuild-agent.sh && ./rebuild-electron.sh
+```
+
+**用途**：仅重新打包 Python 后端
+**耗时**：1-2 分钟
+**场景**：修改了 `workspace.py`, `protocol.py` 等 Python 代码
+
+#### 3. `rebuild-electron.sh` - 仅重新构建 Electron
+```bash
+cd desktop
+./rebuild-electron.sh
+```
+
+**用途**：仅重新构建前端
+**耗时**：30-60 秒
+**场景**：修改了 `index.html`, `app.js`, `preload.js` 等前端代码
+
+#### 使用代理
+
+```bash
+HTTP_PROXY=http://127.0.0.1:7890 HTTPS_PROXY=http://127.0.0.1:7890 ./build.sh
+```
+
+详细说明见 `desktop/BUILD_SCRIPTS.md`。
+
+### 文件结构说明
+
+```
+desktop/
+├── src/
+│   ├── main/index.js          # Electron 主进程，IPC 处理器
+│   ├── preload/index.js       # 预加载脚本，API 暴露给渲染进程
+│   └── renderer/
+│       ├── index.html         # 前端 HTML
+│       └── app.js             # 前端 JavaScript 逻辑
+├── src/resources/
+│   └── deepagents-desktop-agent/  # Python Agent（PyInstaller 打包产物）
+├── electron-builder.yaml       # Electron Builder 配置
+├── build.sh                   # 完整构建脚本
+├── rebuild-agent.sh           # 重新打包 Python Agent
+├── rebuild-electron.sh        # 重新构建 Electron
+└── BUILD_SCRIPTS.md           # 脚本使用说明
+```
