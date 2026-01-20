@@ -74,49 +74,15 @@ class DesktopProtocol:
         await self._normal_mode_handler()
 
     async def _normal_mode_handler(self) -> None:
-        """Normal mode handler with full agent capabilities."""
-        # Initialize model (this sets settings.model_name based on available API keys)
-        from deepagents_cli.config import create_model
-        model = create_model()
+        """Normal mode handler with full agent capabilities.
 
-        # Create the agent
-        self.agent, self.composite_backend = create_cli_agent(
-            model=model,
-            assistant_id=self.assistant_id,
-            tools=[],  # No extra tools for desktop mode
-            sandbox=None,  # Local filesystem mode
-            auto_approve=False,  # Require user approval for destructive operations
-            enable_memory=True,
-            enable_skills=True,
-            enable_shell=True,  # Enable shell execution
-        )
-
-        # Debug: Check if agent has interrupt_on configured
+        In desktop mode, we defer agent creation until the first request comes in.
+        This allows the application to start even without API key configuration.
+        """
+        # Don't create agent at startup - defer to first request
+        # This allows the app to show configuration wizard when no API key is set
         import sys
-        print(f"[DEBUG] Agent created with auto_approve=False", file=sys.stderr)
-        print(f"[DEBUG] Agent graph name: {self.agent.name}", file=sys.stderr)
-
-        # Debug: Print all available tools
-        print(f"[DEBUG] ========== TOOLS DEBUG ==========", file=sys.stderr)
-        try:
-            graph = self.agent.get_graph()
-            print(f"[DEBUG] Graph nodes: {list(graph.nodes.keys())}", file=sys.stderr)
-
-            # Collect tools from all nodes
-            all_tools = []
-            for node_name, node in graph.nodes.items():
-                if hasattr(node, 'data') and node.data:
-                    # Try to get tools from the node
-                    if hasattr(node.data, '__self__') and hasattr(node.data.__self__, 'tools'):
-                        for t in node.data.__self__.tools:
-                            tool_name = t.name if hasattr(t, 'name') else str(t)
-                            all_tools.append(f"{node_name}.{tool_name}")
-
-            print(f"[DEBUG] All tools found: {all_tools}", file=sys.stderr)
-            print(f"[DEBUG] Total tool count: {len(all_tools)}", file=sys.stderr)
-        except Exception as e:
-            print(f"[DEBUG] Error getting tools: {e}", file=sys.stderr)
-        print(f"[DEBUG] ==================================", file=sys.stderr)
+        print("[Desktop] Starting in lazy mode - agent will be created on first request", file=sys.stderr)
 
         self.running = True
         while self.running:
@@ -166,7 +132,12 @@ class DesktopProtocol:
         print(f"[_get_or_create_agent] Creating new agent (caching temporarily disabled for HITL fix)", file=sys.stderr)
 
         if self.model is None:
-            self.model = create_model()
+            try:
+                self.model = create_model()
+            except SystemExit:
+                # create_model() calls sys.exit(1) when no API key is configured
+                # In desktop mode, we want to catch this and raise a proper error instead
+                raise RuntimeError("No API key configured. Please configure your API key in the application settings.")
 
         # Get workspace system prompt if configured
         workspace_system_prompt = None
@@ -232,7 +203,11 @@ class DesktopProtocol:
         try:
             # Initialize model (this sets settings.model_name based on available API keys)
             from deepagents_cli.config import create_model
-            model = create_model()
+            try:
+                model = create_model()
+            except SystemExit:
+                # No API key configured
+                raise RuntimeError("No API key configured. Please configure your API key in the application settings.")
 
             self.agent, self.composite_backend = create_cli_agent(
                 model=model,
@@ -425,6 +400,9 @@ class DesktopProtocol:
 
         if request_type == "reload_config":
             return await self._handle_reload_config(message.get('request_id'))
+
+        if request_type == "check_config_status":
+            return await self._handle_check_config_status(message.get('request_id'))
 
         # Handle workspace management requests
         if request_type == "list_workspaces":
@@ -1666,19 +1644,38 @@ class DesktopProtocol:
             }
 
     async def _handle_reload_config(self, request_id: str) -> dict[str, Any]:
-        """Handle reload_config request - reload configuration from file."""
+        """Handle reload_config request - reload configuration from file and update os.environ."""
+        import os
         from pathlib import Path
+        import dotenv
 
         try:
             config_file = Path.home() / '.deepagents' / '.env'
             config = {}
 
             if config_file.exists():
+                # Reload into os.environ using dotenv
+                dotenv.load_dotenv(config_file, override=True)
+
+                # Normalize environment aliases (e.g., openai_api_key -> OPENAI_API_KEY)
+                from deepagents_cli.config import _normalize_env_aliases
+                _normalize_env_aliases()
+
+                # Read config for response
                 for line in config_file.read_text().splitlines():
                     line = line.strip()
                     if line and not line.startswith('#') and '=' in line:
                         key, value = line.split('=', 1)
                         config[key.strip()] = value.strip()
+
+            # Clear cached model so it will be recreated with new config
+            self.model = None
+
+            # Clear agent cache to force recreation with new config
+            self.agents.clear()
+
+            import sys
+            print("[Desktop] Configuration reloaded and model cache cleared", file=sys.stderr, flush=True)
 
             return {
                 'request_id': request_id,
@@ -1689,12 +1686,57 @@ class DesktopProtocol:
                 }
             }
         except Exception as e:
+            import sys
+            print(f"[Desktop] Error reloading config: {e}", file=sys.stderr, flush=True)
             return {
                 'request_id': request_id,
                 'status': 'error',
                 'error': {
                     'code': 'RELOAD_CONFIG_FAILED',
                     'message': f'Failed to reload configuration: {str(e)}'
+                }
+            }
+
+    async def _handle_check_config_status(self, request_id: str) -> dict[str, Any]:
+        """Handle check_config_status request - check if any API key is configured."""
+        from pathlib import Path
+
+        try:
+            config_file = Path.home() / '.deepagents' / '.env'
+            has_any_config = False
+            providers = {'openai': False, 'anthropic': False, 'google': False}
+
+            if config_file.exists():
+                for line in config_file.read_text().splitlines():
+                    line = line.strip()
+                    if line and not line.startswith('#') and '=' in line:
+                        key, _ = line.split('=', 1)
+                        key = key.strip().upper()
+                        if key == 'OPENAI_API_KEY':
+                            providers['openai'] = True
+                            has_any_config = True
+                        elif key == 'ANTHROPIC_API_KEY':
+                            providers['anthropic'] = True
+                            has_any_config = True
+                        elif key == 'GOOGLE_API_KEY':
+                            providers['google'] = True
+                            has_any_config = True
+
+            return {
+                'request_id': request_id,
+                'status': 'success',
+                'data': {
+                    'has_config': has_any_config,
+                    'providers': providers
+                }
+            }
+        except Exception as e:
+            return {
+                'request_id': request_id,
+                'status': 'error',
+                'error': {
+                    'code': 'CHECK_CONFIG_STATUS_FAILED',
+                    'message': f'Failed to check config: {str(e)}'
                 }
             }
 
@@ -2182,10 +2224,20 @@ class DesktopProtocol:
 
             # Pre-load agent for this conversation
             if workspace_id and conversation_id:
-                self.agent, self.composite_backend = await self._get_or_create_agent(
-                    workspace_id=workspace_id,
-                    conversation_id=conversation_id
-                )
+                try:
+                    self.agent, self.composite_backend = await self._get_or_create_agent(
+                        workspace_id=workspace_id,
+                        conversation_id=conversation_id
+                    )
+                except RuntimeError as e:
+                    return {
+                        'request_id': request_id,
+                        'status': 'error',
+                        'error': {
+                            'code': 'NO_API_KEY',
+                            'message': str(e)
+                        }
+                    }
 
             return {
                 'request_id': request_id,
@@ -2295,10 +2347,20 @@ class DesktopProtocol:
                 }
 
             # Get agent for this conversation (this loads the checkpointer)
-            agent, _ = await self._get_or_create_agent(
-                workspace_id=workspace_id,
-                conversation_id=conversation_id
-            )
+            try:
+                agent, _ = await self._get_or_create_agent(
+                    workspace_id=workspace_id,
+                    conversation_id=conversation_id
+                )
+            except RuntimeError as e:
+                return {
+                    'request_id': request_id,
+                    'status': 'error',
+                    'error': {
+                        'code': 'NO_API_KEY',
+                        'message': str(e)
+                    }
+                }
 
             # Determine thread_id
             thread_id = conversation_id if conversation_id else (workspace_id if workspace_id else "default")

@@ -41,6 +41,7 @@ contextBridge.exposeInMainWorld('deepagents', {
   getConfig: () => ipcRenderer.invoke('getConfig'),
   setConfig: (config) => ipcRenderer.invoke('setConfig', config),
   reloadConfig: () => ipcRenderer.invoke('reloadConfig'),
+  checkConfigStatus: () => ipcRenderer.invoke('checkConfigStatus'),
 
   // 工作空间管理
   listWorkspaces: () => ipcRenderer.invoke('listWorkspaces'),

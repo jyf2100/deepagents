@@ -39,6 +39,7 @@ async def main(socket_path: str, assistant_id: str = "desktop") -> None:
         print(f"[Desktop] Loaded configuration from {config_file}", flush=True)
     else:
         print(f"[Desktop] No configuration file found at {config_file}", flush=True)
+        print(f"[Desktop] Please configure API keys through the application interface", flush=True)
 
     # Debug logging
     print(f"[Desktop] Starting with socket_path: {socket_path}", flush=True)

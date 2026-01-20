@@ -1451,7 +1451,7 @@ function setupGithubImportButton() {
 }
 
 // 在 DOM 加载完成后设置
-function initializeApp() {
+async function initializeApp() {
   console.log('[INIT] Initializing app, readyState:', document.readyState);
 
   // 初始化 DOM 元素引用
@@ -1464,12 +1464,28 @@ function initializeApp() {
   console.log('[INIT] DOM elements initialized');
   console.log('[INIT] add-skill-btn exists:', !!document.getElementById('add-skill-btn'));
 
+  // 检查是否首次启动（无配置）
+  const configStatus = await checkConfigStatus();
+  if (!configStatus.has_config) {
+    console.log('[INIT] No config found, showing first launch wizard');
+    showFirstLaunchWizard();
+    return; // 暂停其他初始化
+  }
+
+  // 正常初始化流程
   setupTabs();
   loadConversations();
   setupAddSkillButton();
   setupGithubImportButton();
   setupHITL(); // 初始化 HITL 功能
   setupWorkspaceManager(); // 初始化工作空间管理
+  initConfigMenu(); // 初始化配置菜单
+  setupThemeDialog(); // 初始化主题对话框
+
+  // 初始化主题管理器
+  if (window.themeManager) {
+    await window.themeManager.init();
+  }
 
   // 设置消息发送事件监听器
   sendBtn.addEventListener('click', sendMessage);
@@ -1753,6 +1769,49 @@ async function handleToolDecision(action) {
   }
 }
 
+// === 配置状态检测 ===
+
+// 检查配置状态
+async function checkConfigStatus() {
+  try {
+    const status = await window.deepagents.checkConfigStatus();
+    return status;
+  } catch (error) {
+    console.error('[Config] Failed to check config status:', error);
+    return { has_config: false, providers: { openai: false, anthropic: false, google: false } };
+  }
+}
+
+// 显示首次启动向导
+function showFirstLaunchWizard() {
+  const dialog = document.getElementById('config-dialog');
+  const title = dialog.querySelector('h3');
+  const cancelBtn = document.getElementById('cancel-config-btn');
+
+  // 修改标题和样式
+  title.textContent = '欢迎使用 Cowork - 请配置 API Key';
+  cancelBtn.style.display = 'none'; // 隐藏取消按钮
+
+  // 添加首次启动提示（插入到表单前面）
+  const hint = document.createElement('div');
+  hint.id = 'first-launch-hint';
+  hint.style.cssText = 'background: #e3f2fd; color: #1565c0; padding: 12px; border-radius: 6px; margin-bottom: 16px;';
+  hint.innerHTML = `
+    <p><strong>欢迎使用 Cowork！</strong></p>
+    <p>请选择一个 API 提供商并配置您的 API Key 以开始使用：</p>
+    <ul style="margin: 8px 0; padding-left: 20px;">
+      <li>OpenAI: 支持 GPT-4、GPT-3.5 等模型</li>
+      <li>Anthropic: 支持 Claude 系列模型</li>
+      <li>Google: 支持 Gemini 系列模型</li>
+    </ul>
+  `;
+  const form = document.getElementById('config-form');
+  form.insertBefore(hint, form.firstChild);
+
+  // 显示对话框
+  dialog.style.display = 'flex';
+}
+
 // === 配置菜单 ===
 
 // 打开配置对话框
@@ -1771,6 +1830,7 @@ async function openConfigDialog() {
     document.getElementById('tavily-api-key').value = config.tavily_api_key || '';
     document.getElementById('http-proxy').value = config.http_proxy || '';
     document.getElementById('https-proxy').value = config.https_proxy || '';
+    document.getElementById('no-proxy').value = config.no_proxy || '';
 
     // 隐藏状态消息
     statusDiv.style.display = 'none';
@@ -1820,7 +1880,6 @@ function showConfigStatus(message, type = 'info') {
 async function saveConfig(event) {
   event.preventDefault();
 
-  const form = event.target;
   const statusDiv = document.getElementById('config-status');
 
   try {
@@ -1833,22 +1892,45 @@ async function saveConfig(event) {
       openai_base_url: document.getElementById('openai-base-url').value,
       tavily_api_key: document.getElementById('tavily-api-key').value,
       http_proxy: document.getElementById('http-proxy').value,
-      https_proxy: document.getElementById('https-proxy').value
+      https_proxy: document.getElementById('https-proxy').value,
+      no_proxy: document.getElementById('no-proxy').value
     };
 
     // 保存配置（后端会自动恢复脱敏的 API 密钥）
     await window.deepagents.setConfig(newConfig);
 
-    // 重新加载配置
-    await window.deepagents.reloadConfig();
+    // 移除首次启动提示（如果存在）
+    const hint = document.getElementById('first-launch-hint');
+    if (hint) hint.remove();
 
     console.log('[Config] Configuration saved successfully');
-    showConfigStatus('配置已保存！将在下次对话时生效', 'success');
+    showConfigStatus('配置已保存', 'success');
 
-    // 2秒后关闭对话框
+    // 1.5秒后关闭对话框
     setTimeout(() => {
       closeConfigDialog();
-    }, 2000);
+
+      // 如果是首次启动，重新初始化应用
+      if (!window.appInitialized) {
+        window.appInitialized = true;
+        console.log('[Config] First launch setup complete, initializing app...');
+        setupTabs();
+        loadConversations();
+        setupAddSkillButton();
+        setupGithubImportButton();
+        setupHITL();
+        setupWorkspaceManager();
+        initConfigMenu();
+
+        // 设置消息发送事件监听器
+        sendBtn.addEventListener('click', sendMessage);
+        input.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') sendMessage();
+        });
+
+        console.log('[INIT] App initialized after first launch setup');
+      }
+    }, 1500);
 
   } catch (error) {
     console.error('[Config] Failed to save configuration:', error);
@@ -1953,10 +2035,103 @@ function setupWorkspaceManager() {
   // 工作空间设置对话框
   setupWorkspaceSettingsDialog();
 
-  // 初始加载工作空间
-  loadWorkspaces();
+  // 加载工作空间列表
+  loadWorkspaces().then(() => {
+    // 初始加载工作空间列表到菜单
+    loadWorkspacesList();
+  });
 
   console.log('[Workspace] Workspace manager initialized');
+}
+
+// === 主题对话框 ===
+
+function setupThemeDialog() {
+  console.log('[Theme] Initializing theme dialog...');
+
+  const themeToggleBtn = document.getElementById('theme-toggle-btn');
+  const themeDialog = document.getElementById('theme-dialog');
+  const closeThemeDialogBtn = document.getElementById('close-theme-dialog');
+
+  if (!themeToggleBtn || !themeDialog || !closeThemeDialogBtn) {
+    console.error('[Theme] Required elements not found');
+    return;
+  }
+
+  // 打开主题对话框
+  themeToggleBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    themeDialog.style.display = 'block';
+    updateThemeDialogState();
+  });
+
+  // 关闭主题对话框
+  closeThemeDialogBtn.addEventListener('click', () => {
+    themeDialog.style.display = 'none';
+  });
+
+  // 点击对话框外部关闭
+  themeDialog.addEventListener('click', (e) => {
+    if (e.target === themeDialog) {
+      themeDialog.style.display = 'none';
+    }
+  });
+
+  // 主题模式按钮
+  document.querySelectorAll('.theme-mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const mode = btn.getAttribute('data-mode');
+      if (window.themeManager) {
+        window.themeManager.setTheme(mode);
+        updateThemeDialogState();
+      }
+    });
+  });
+
+  // 强调色按钮
+  document.querySelectorAll('.accent-color-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const color = btn.getAttribute('data-color');
+      if (window.themeManager) {
+        window.themeManager.setAccentColor(color);
+        updateThemeDialogState();
+      }
+    });
+  });
+
+  console.log('[Theme] Theme dialog initialized');
+}
+
+// 更新主题对话框状态
+function updateThemeDialogState() {
+  if (!window.themeManager) return;
+
+  const currentTheme = window.themeManager.currentTheme;
+  const currentAccent = window.themeManager.accentColor;
+
+  // 更新主题模式按钮状态
+  document.querySelectorAll('.theme-mode-btn').forEach(btn => {
+    const mode = btn.getAttribute('data-mode');
+    if (mode === currentTheme) {
+      btn.style.background = 'var(--accent-color)';
+      btn.style.color = 'var(--text-inverse)';
+    } else {
+      btn.style.background = 'var(--bg-secondary)';
+      btn.style.color = 'var(--text-primary)';
+    }
+  });
+
+  // 更新强调色按钮状态
+  document.querySelectorAll('.accent-color-btn').forEach(btn => {
+    const color = btn.getAttribute('data-color');
+    if (color === currentAccent) {
+      btn.style.border = '2px solid var(--text-primary)';
+      btn.style.boxShadow = '0 0 0 2px var(--accent-color)';
+    } else {
+      btn.style.border = '2px solid transparent';
+      btn.style.boxShadow = 'none';
+    }
+  });
 }
 
 // 加载工作空间列表

@@ -577,6 +577,9 @@ def create_model(model_name_override: str | None = None) -> BaseChatModel:
 
     Uses the global settings instance to determine which model to create.
 
+    NOTE: This function reloads .env file on every call to ensure configuration
+    changes take effect immediately without requiring manual reload.
+
     Args:
         model_name_override: Optional model name to use instead of environment variable
 
@@ -586,6 +589,14 @@ def create_model(model_name_override: str | None = None) -> BaseChatModel:
     Raises:
         SystemExit if no API key is configured or model provider can't be determined
     """
+    # Reload .env file on every call to get latest configuration
+    # This ensures configuration changes take effect immediately
+    user_env_path = Path.home() / ".deepagents" / ".env"
+    if user_env_path.exists():
+        dotenv.load_dotenv(user_env_path, override=True)
+        _normalize_env_aliases()
+        _configure_proxy_bypass()
+
     # Determine provider and model
     if model_name_override:
         # Use provided model, auto-detect provider

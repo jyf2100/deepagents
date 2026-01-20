@@ -580,6 +580,38 @@ ipcMain.handle('reloadConfig', async () => {
   return { success: true, message: 'Configuration saved' };
 });
 
+// 检查配置状态
+ipcMain.handle('checkConfigStatus', async () => {
+  const requestId = randomUUID();
+
+  const promise = new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      pendingRequests.delete(requestId);
+      reject(new Error('Request timeout'));
+    }, 10000);
+
+    pendingRequests.set(requestId, {
+      resolve: (response) => {
+        if (response.status === 'success' && response.data) {
+          resolve(response.data);
+        } else {
+          reject(new Error('Failed to check config status'));
+        }
+      },
+      reject,
+      timeout
+    });
+  });
+
+  await sendToSocket({
+    request_id: requestId,
+    method: 'check_config_status',
+    params: {}
+  });
+
+  return promise;
+});
+
 // === 主题管理 IPC Handlers ===
 
 // 获取当前主题
