@@ -337,14 +337,7 @@ function renderHistory() {
   conversationHeader.innerHTML = '<span class="section-label">💬 对话列表</span>';
   historyList.appendChild(conversationHeader);
 
-  // 新对话按钮
-  const newChatBtn = document.createElement('div');
-  newChatBtn.className = 'history-item';
-  newChatBtn.innerHTML = '<div class="history-title">+ 新对话</div>';
-  newChatBtn.onclick = () => {
-    createNewConversation();
-  };
-  historyList.appendChild(newChatBtn);
+  // 移除了"+ 新对话"按钮，因为发送消息时会自动创建对话
 
   // 渲染对话列表
   conversations.forEach(conv => {
