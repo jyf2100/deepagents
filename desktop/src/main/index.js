@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, session } = require('electron');
+const { app, BrowserWindow, ipcMain, session, nativeTheme } = require('electron');
 const log = require('electron-log/main');
 
 // Initialize logger
@@ -21,6 +21,10 @@ const SOCKET_PATH = path.join(os.tmpdir(), 'deepagents-desktop.sock');
 const pendingRequests = new Map();
 const connectedClients = []; // 手动跟踪连接的客户端
 let connectionTimeout = null; // Python agent 连接超时检测
+
+// === 主题管理 ===
+let currentTheme = 'auto'; // 'light', 'dark', 或 'auto'
+let currentAccentColor = 'blue'; // 强调色名称
 
 // === 代理配置 ===
 // 配置代理函数
@@ -576,6 +580,68 @@ ipcMain.handle('reloadConfig', async () => {
   return { success: true, message: 'Configuration saved' };
 });
 
+// === 主题管理 IPC Handlers ===
+
+// 获取当前主题
+ipcMain.handle('getTheme', () => {
+  return {
+    theme: currentTheme, // 'light', 'dark', 或 'auto'
+    accentColor: currentAccentColor,
+    systemTheme: nativeTheme.shouldUseDarkColors ? 'dark' : 'light'
+  };
+});
+
+// 设置主题
+ipcMain.handle('setTheme', async (event, theme) => {
+  console.log('[setTheme] Called with:', theme);
+  currentTheme = theme;
+
+  if (theme === 'auto') {
+    nativeTheme.themeSource = 'system';
+  } else {
+    nativeTheme.themeSource = theme;
+  }
+
+  // 保存到配置
+  await sendToSocket({
+    request_id: randomUUID(),
+    method: 'setConfig',
+    params: { config: { theme } }
+  });
+
+  return { success: true };
+});
+
+// 设置强调色
+ipcMain.handle('setAccentColor', async (event, colorName) => {
+  console.log('[setAccentColor] Called with:', colorName);
+  currentAccentColor = colorName;
+
+  // 保存到配置
+  await sendToSocket({
+    request_id: randomUUID(),
+    method: 'setConfig',
+    params: { config: { accentColor: colorName } }
+  });
+
+  // 通知渲染进程更新强调色
+  if (mainWindow) {
+    mainWindow.webContents.send('accent-color-changed', { colorName });
+  }
+
+  return { success: true };
+});
+
+// 监听系统主题变化
+nativeTheme.on('updated', () => {
+  console.log('[nativeTheme] System theme changed:', nativeTheme.shouldUseDarkColors ? 'dark' : 'light');
+  if (currentTheme === 'auto' && mainWindow) {
+    mainWindow.webContents.send('theme-changed', {
+      theme: nativeTheme.shouldUseDarkColors ? 'dark' : 'light'
+    });
+  }
+});
+
 // === Workspace Management IPC Handlers ===
 
 // 列出所有工作空间
@@ -749,7 +815,7 @@ ipcMain.handle('generateWorkspacePrompt', async (event, name, category, descript
     const timeout = setTimeout(() => {
       pendingRequests.delete(requestId);
       reject(new Error('Request timeout'));
-    }, 30000); // 30 second timeout for AI generation
+    }, 120000); // 120 second timeout for AI generation
 
     pendingRequests.set(requestId, { resolve, reject, timeout });
   });
@@ -965,6 +1031,46 @@ app.whenReady().then(async () => {
   await new Promise(resolve => setTimeout(resolve, 500));
 
   startPythonAgent();
+
+  // 初始化主题设置（在 Python agent 连接后）
+  setTimeout(async () => {
+    try {
+      const requestId = randomUUID();
+      const promise = new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          pendingRequests.delete(requestId);
+          reject(new Error('Request timeout'));
+        }, 5000);
+        pendingRequests.set(requestId, { resolve, reject, timeout });
+      });
+
+      await sendToSocket({
+        request_id: requestId,
+        method: 'getConfig',
+        params: {}
+      });
+
+      const response = await promise;
+      if (response.status === 'success' && response.data?.config) {
+        const config = response.data.config;
+        if (config.theme) {
+          currentTheme = config.theme;
+          if (currentTheme === 'auto') {
+            nativeTheme.themeSource = 'system';
+          } else {
+            nativeTheme.themeSource = currentTheme;
+          }
+          console.log('[Theme] Loaded theme from config:', currentTheme);
+        }
+        if (config.accentColor) {
+          currentAccentColor = config.accentColor;
+          console.log('[Theme] Loaded accent color from config:', currentAccentColor);
+        }
+      }
+    } catch (e) {
+      console.log('[Theme] Failed to load theme config:', e.message);
+    }
+  }, 2000);
 
   // 设置连接超时检测（5 秒超时）
   connectionTimeout = setTimeout(() => {

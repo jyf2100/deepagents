@@ -952,7 +952,7 @@ class DesktopProtocol:
                 msg_type = getattr(msg, 'type', None)
                 if not msg_type and isinstance(msg, dict):
                     msg_type = msg.get('type')
-                
+
                 # Also check role if type is not clear
                 msg_role = getattr(msg, 'role', None)
                 if not msg_role and isinstance(msg, dict):
@@ -964,11 +964,23 @@ class DesktopProtocol:
                     print(f"[_handle_tool_approval] Skipping HumanMessage to prevent echo", file=sys.stderr)
                     continue
 
-                # Handle AIMessage content
+                # Handle AIMessage content - add newline between messages
                 if hasattr(msg, 'content') and msg.content and isinstance(msg.content, str) and msg.content.strip():
-                    content += msg.content
+                    msg_content = msg.content
+                    # Debug log to check if content contains HTML
+                    if '<' in msg_content or '>' in msg_content or '&' in msg_content:
+                        print(f"[_handle_tool_approval] AIMessage contains HTML-like chars, preview: {msg_content[:200]}", file=sys.stderr)
+                    if content:  # If content already exists, add newline first
+                        content += "\n\n"
+                    content += msg_content
                 elif isinstance(msg, dict) and 'content' in msg and msg['content'] and isinstance(msg['content'], str) and msg['content'].strip():
-                    content += msg['content']
+                    msg_content = msg['content']
+                    # Debug log to check if content contains HTML
+                    if '<' in msg_content or '>' in msg_content or '&' in msg_content:
+                        print(f"[_handle_tool_approval] Dict message contains HTML-like chars, preview: {msg_content[:200]}", file=sys.stderr)
+                    if content:  # If content already exists, add newline first
+                        content += "\n\n"
+                    content += msg_content
                 
                 # Handle ToolMessage content (if it's the last message and no AI response yet)
                 # We often want to show tool output if the agent stopped there

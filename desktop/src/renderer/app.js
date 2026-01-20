@@ -600,6 +600,10 @@ function formatMessageContent(content) {
 
   let formatted = content;
 
+  // Debug: log all calls
+  console.log('[formatMessageContent] === START ===');
+  console.log('[formatMessageContent] Original content:', formatted);
+
   // 使用 Map 存储解析后的 JSON 对象和代码块
   const jsonMap = new Map();
   const blockMap = new Map();
@@ -686,10 +690,14 @@ function formatMessageContent(content) {
   });
 
   // 现在安全地处理行内代码
+  console.log('[formatMessageContent] Before inline code replace:', formatted.substring(0, 200));
   formatted = formatted.replace(/`([^`]+)`/g, '<code>$1</code>');
+  console.log('[formatMessageContent] After inline code replace:', formatted.substring(0, 200));
 
   // 7. 检测粗体 (**text**)
+  console.log('[formatMessageContent] Before bold replace, has **:', formatted.includes('**'));
   formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  console.log('[formatMessageContent] After bold replace, has <strong>:', formatted.includes('<strong>'));
 
   // 8. 检测斜体 (*text*)
   formatted = formatted.replace(/\*([^*]+)\*/g, '<em>$1</em>');
@@ -702,11 +710,22 @@ function formatMessageContent(content) {
     return protectedBlocks[parseInt(index)];
   });
 
-  // 新增：工具调用格式化
-  formatted = formatToolCalls(formatted);
+  // Debug: log before formatFilePaths
+  console.log('[formatMessageContent] Before formatFilePaths:', formatted.substring(0, 200));
 
-  // 新增：文件路径格式化
-  formatted = formatFilePaths(formatted);
+  // 暂时禁用以测试
+  // // 新增：工具调用格式化
+  // formatted = formatToolCalls(formatted);
+
+  // Debug: log after formatToolCalls
+  console.log('[formatMessageContent] After formatToolCalls (SKIPPED):', formatted.substring(0, 200));
+
+  // 暂时禁用以测试
+  // // 新增：文件路径格式化
+  // formatted = formatFilePaths(formatted);
+
+  // Debug: log after formatFilePaths
+  console.log('[formatMessageContent] After formatFilePaths (SKIPPED):', formatted.substring(0, 200));
 
   return formatted;
 }

@@ -53,6 +53,13 @@ contextBridge.exposeInMainWorld('deepagents', {
   listPromptTemplates: () => ipcRenderer.invoke('listPromptTemplates'),
   generateWorkspacePrompt: (name, category, description) => ipcRenderer.invoke('generateWorkspacePrompt', name, category, description),
 
+  // 主题管理
+  getTheme: () => ipcRenderer.invoke('getTheme'),
+  setTheme: (theme) => ipcRenderer.invoke('setTheme', theme),
+  setAccentColor: (colorName) => ipcRenderer.invoke('setAccentColor', colorName),
+  onThemeChanged: (callback) => ipcRenderer.on('theme-changed', (event, data) => callback(data)),
+  onAccentColorChanged: (callback) => ipcRenderer.on('accent-color-changed', (event, data) => callback(data)),
+
   // 对话管理
   createConversation: (workspaceId, title = null) => ipcRenderer.invoke('createConversation', workspaceId, title),
   listConversations: (workspaceId) => ipcRenderer.invoke('listConversations', workspaceId),

@@ -217,5 +217,7 @@ __marimo__/
 desktop/release/
 desktop/node_modules/
 .deepagents/
+# PyInstaller 打包的桌面 agent
+desktop/src/resources/deepagents-desktop-agent/
 dist/
 plans/

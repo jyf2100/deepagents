@@ -643,10 +643,28 @@ async def generate_workspace_prompt(
     Returns:
         Generated system prompt text
     """
-    from deepagents_cli.config import create_model
+    import os
+    from deepagents_cli.config import create_model, settings
     from langchain_core.messages import HumanMessage
+    from langchain_openai import ChatOpenAI
+    from langchain_anthropic import ChatAnthropic
 
+    # 创建模型时添加更长的超时时间
     model = create_model()
+
+    # 如果是 OpenAI 模型，需要重新创建并设置超时
+    if settings.model_provider == "openai":
+        kwargs = {"model": settings.model_name, "timeout": 120}
+        if base_url := os.environ.get("OPENAI_BASE_URL"):
+            kwargs["base_url"] = base_url
+        model = ChatOpenAI(**kwargs)
+    elif settings.model_provider == "anthropic":
+        # Anthropic 也支持超时设置
+        model = ChatAnthropic(
+            model_name=settings.model_name,
+            max_tokens=20_000,
+            timeout=120
+        )
 
     prompt = f"""请为以下工作空间生成一个专业的系统提示词：
 

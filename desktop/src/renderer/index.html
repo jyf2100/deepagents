@@ -5,6 +5,80 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://skillslm.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://skillslm.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://skillslm.com;">
   <title>Cowork</title>
   <style>
+    /* === CSS 变量系统 === */
+    :root {
+      /* 背景色 */
+      --bg-primary: #ececec;
+      --bg-secondary: #e8e8e8;
+      --bg-tertiary: #ffffff;
+      --bg-elevated: #f5f5f5;
+
+      /* 文字色 */
+      --text-primary: #333333;
+      --text-secondary: #555555;
+      --text-tertiary: #888888;
+      --text-inverse: #ffffff;
+
+      /* 边框和分隔线 */
+      --border-color: #c6c6c6;
+      --divider-color: #dcdcdc;
+      --shadow-color: rgba(0, 0, 0, 0.1);
+
+      /* 强调色 */
+      --accent-color: #007aff;
+      --accent-hover: #0063e1;
+
+      /* macOS 风格圆角 */
+      --radius-sm: 4px;
+      --radius-md: 6px;
+      --radius-lg: 8px;
+      --radius-xl: 10px;
+      --radius-2xl: 12px;
+      --radius-full: 9999px;
+
+      /* macOS 风格阴影 */
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+      --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.15);
+      --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.25);
+
+      /* 过渡动画 */
+      --transition-fast: 0.1s ease;
+      --transition-normal: 0.15s ease;
+      --transition-slow: 0.3s ease;
+    }
+
+    /* 暗色主题 */
+    .theme-dark {
+      --bg-primary: #1c1c1e;
+      --bg-secondary: #2c2c2e;
+      --bg-tertiary: #3a3a3c;
+      --bg-elevated: #252527;
+
+      --text-primary: #ffffff;
+      --text-secondary: #d1d1d6;
+      --text-tertiary: #98989d;
+      --text-inverse: #000000;
+
+      --border-color: #48484a;
+      --divider-color: #38383a;
+      --shadow-color: rgba(0, 0, 0, 0.3);
+
+      --accent-color: #0a84ff;
+      --accent-hover: #409cff;
+
+      /* 暗色主题阴影更重 */
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+      --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.4);
+      --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+
+    /* 主题过渡动画 */
+    body {
+      transition: background-color var(--transition-slow), color var(--transition-slow);
+    }
+
     /* Mac Classic Style - 增强版 */
     * {
       box-sizing: border-box;
@@ -13,8 +87,8 @@
       font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', Helvetica, Arial, sans-serif;
       margin: 0;
       padding: 0;
-      background: #ececec; /* 经典 Mac 灰色背景 */
-      color: #333333;
+      background: var(--bg-primary); /* 经典 Mac 灰色背景 */
+      color: var(--text-primary);
       height: 100vh;
       overflow: hidden;
       -webkit-font-smoothing: antialiased;
@@ -28,8 +102,8 @@
     #side-panel {
       width: 260px;
       height: 100%;
-      background: #e8e8e8; /* 更深的侧边栏背景 */
-      border-right: 1px solid #c6c6c6;
+      background: var(--bg-secondary); /* 更深的侧边栏背景 */
+      border-right: 1px solid var(--border-color);
       display: flex;
       flex-direction: column;
       /* box-shadow: 1px 0 3px rgba(0,0,0,0.04); 去掉阴影，使用更扁平的风格 */
@@ -53,35 +127,34 @@
     #side-panel.skills-active ~ #tool-approval-dialog {
       z-index: 3000;
     }
-    /* 标签页 - Mac Segmented Control */
+    /* 标签页 - macOS Segmented Control */
     #tabs {
       display: flex;
       margin: 10px;
       margin-bottom: 8px;
-      background: #dcdcdc; /* 更深的背景 */
-      border-radius: 6px;
-      padding: 3px;
-      box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
-      border: 1px solid #c0c0c0;
+      background: var(--divider-color);
+      border-radius: 7px;
+      padding: 2px;
+      box-shadow: inset 0 1px 2px var(--shadow-color);
     }
     .tab {
       flex: 1;
-      padding: 4px 12px;
+      padding: 5px 12px;
       text-align: center;
       font-size: 13px;
       font-weight: 400;
-      color: #555555;
+      color: var(--text-secondary);
       cursor: pointer;
-      border-radius: 4px;
-      transition: all 0.1s ease;
+      border-radius: 5px;
+      transition: all var(--transition-fast);
     }
     .tab:hover {
-      color: #000000;
+      color: var(--text-primary);
     }
     .tab.active {
-      background: #ffffff;
-      color: #000000;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      box-shadow: var(--shadow-sm);
       font-weight: 500;
     }
     #settings-btn {
@@ -90,18 +163,18 @@
       padding: 0;
       background: transparent;
       border: none;
-      border-radius: 4px;
+      border-radius: var(--radius-sm);
       font-size: 14px;
       cursor: pointer;
-      transition: all 0.1s ease;
+      transition: all var(--transition-fast);
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #555;
+      color: var(--text-secondary);
     }
     #settings-btn:hover {
-      background: rgba(0,0,0,0.08);
-      color: #000;
+      background: var(--bg-elevated);
+      color: var(--text-primary);
     }
     /* 面板内容 */
     #panel-content {
@@ -122,24 +195,24 @@
     .history-item {
       display: flex;
       align-items: center;
-      padding: 6px 10px;
-      margin-bottom: 0; /* 紧凑列表 */
-      border-radius: 4px;
+      padding: 10px 12px;
+      margin-bottom: 4px;
+      border-radius: var(--radius-lg);
       cursor: pointer;
       font-size: 13px;
-      color: #333;
-      transition: all 0.1s ease;
+      color: var(--text-primary);
+      transition: all var(--transition-normal);
     }
     /* 隔行变色 (可选，经典 Mac 特性，这里先不用，保持现代简洁) */
     /* .history-item:nth-child(even) { background: rgba(0,0,0,0.02); } */
 
     .history-item:hover {
-      background: #dcdcdc;
+      background: var(--bg-secondary);
     }
     .history-item.active {
-      background: #0063e1; /* 经典 Mac 蓝色选区 */
-      color: #ffffff;
-      box-shadow: none;
+      background: var(--accent-color); /* 使用主题强调色 */
+      color: var(--text-inverse);
+      box-shadow: var(--shadow-sm);
     }
     .history-item.active .history-time {
       color: rgba(255,255,255,0.8);
@@ -152,7 +225,7 @@
     }
     .history-time {
       font-size: 11px;
-      color: #888;
+      color: var(--text-tertiary);
       margin-top: 2px;
     }
     /* 历史记录内容区域 */
@@ -167,14 +240,14 @@
       height: 16px;
       border: none;
       background: transparent;
-      color: #888;
+      color: var(--text-tertiary);
       font-size: 14px;
       line-height: 1;
       padding: 0;
       margin-left: 6px;
       cursor: pointer;
       border-radius: 3px;
-      transition: all 0.1s ease;
+      transition: all var(--transition-fast);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -192,19 +265,21 @@
     }
     .history-item.active .history-delete-btn:hover {
       background: rgba(255,255,255,0.2);
-      color: #ffffff;
+      color: var(--text-inverse);
     }
     /* 技能列表项 - Mac card style */
     .skill-item {
-      padding: 10px;
+      padding: 12px;
       margin-bottom: 8px;
-      border-radius: 6px;
-      background: #ffffff;
-      border: 1px solid #c6c6c6;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      border-radius: var(--radius-lg);
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+      transition: all var(--transition-normal);
     }
     .skill-item:hover {
-      border-color: #a0a0a0;
+      border-color: var(--accent-color);
+      box-shadow: var(--shadow-md);
     }
     .skill-header {
       display: flex;
@@ -215,7 +290,7 @@
     .skill-name {
       font-weight: 600;
       font-size: 13px;
-      color: #333;
+      color: var(--text-primary);
       flex: 1;
       padding-right: 8px;
     }
@@ -239,7 +314,7 @@
     }
     .skill-description {
       font-size: 12px;
-      color: #666;
+      color: var(--text-secondary);
       line-height: 1.3;
       margin-bottom: 6px;
     }
@@ -255,15 +330,15 @@
       font-size: 11px;
       font-weight: 400;
       color: #cc3300;
-      background: #ffffff;
+      background: var(--bg-tertiary);
       border: 1px solid #cc3300;
-      border-radius: 4px;
+      border-radius: var(--radius-sm);
       cursor: pointer;
-      transition: all 0.1s ease;
+      transition: all var(--transition-fast);
     }
     .delete-skill-btn:hover {
       background: #cc3300;
-      color: #ffffff;
+      color: var(--text-inverse);
     }
     .delete-skill-btn:active {
       transform: translateY(1px);
@@ -276,13 +351,13 @@
     .loading {
       text-align: center;
       padding: 20px;
-      color: #888;
+      color: var(--text-tertiary);
       font-size: 12px;
     }
     .empty-state {
       text-align: center;
       padding: 20px 10px;
-      color: #888;
+      color: var(--text-tertiary);
       font-size: 12px;
     }
     /* 右侧聊天区域 */
@@ -290,7 +365,7 @@
       flex: 1;
       display: flex;
       flex-direction: column;
-      background: #ffffff;
+      background: var(--bg-tertiary);
     }
 
     /* 主消息区域 */
@@ -299,7 +374,7 @@
       display: flex;
       flex-direction: column;
       padding: 0; /* 移除 padding，让顶部栏贴边 */
-      background: #ffffff;
+      background: var(--bg-tertiary);
     }
     #messages {
       flex: 1;
@@ -307,18 +382,18 @@
       padding: 16px;
       padding-bottom: 0;
     }
-    /* 消息气泡 - Mac iMessage 风格 */
+    /* 消息气泡 - macOS iMessage 风格 */
     .message {
-      margin-bottom: 10px;
-      padding: 8px 12px;
-      border-radius: 12px;
+      margin-bottom: 12px;
+      padding: 10px 14px;
+      border-radius: 18px;
       white-space: pre-wrap;
       word-wrap: break-word;
       max-width: 80%;
       max-height: 500px;
       overflow-y: auto;
-      font-size: 13px;
-      line-height: 1.4;
+      font-size: 14px;
+      line-height: 1.5;
       box-shadow: none; /* 移除阴影，更扁平 */
     }
     /* 自定义滚动条样式 */
@@ -336,15 +411,15 @@
       background: rgba(0,0,0,0.3);
     }
     .user {
-      background: #007aff; /* 经典蓝色 */
-      color: #ffffff;
+      background: var(--accent-color); /* 经典蓝色 */
+      color: var(--text-inverse);
       margin-left: auto;
-      border-bottom-right-radius: 2px;
+      border-radius: 18px 18px 4px 18px; /* iMessage 风格：右下角小圆角 */
     }
     .assistant {
-      background: #e5e5ea; /* 经典灰色 */
-      color: #000000;
-      border-bottom-left-radius: 2px;
+      background: var(--bg-secondary); /* 经典灰色 */
+      color: var(--text-primary);
+      border-radius: 18px 18px 18px 4px; /* iMessage 风格：左下角小圆角 */
     }
     /* 操作日志样式 */
     .operation-log {
@@ -353,11 +428,11 @@
       gap: 8px;
       padding: 8px 10px;
       margin: 6px 0;
-      background: #f9f9f9;
-      border-radius: 6px;
-      border: 1px solid #e0e0e0;
+      background: var(--bg-elevated);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
       font-size: 12px;
-      color: #555;
+      color: var(--text-secondary);
       font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
     }
     .operation-log .log-icon {
@@ -374,7 +449,7 @@
     }
     .operation-log .log-time {
       font-size: 10px;
-      color: #999;
+      color: var(--text-tertiary);
       font-weight: 400;
       flex-shrink: 0;
       margin-top: 2px;
@@ -382,9 +457,9 @@
     /* 思考过程组件 */
     .thinking-process {
       margin: 10px 0;
-      border-radius: 6px;
-      background: #fcfcfc;
-      border: 1px solid #dcdcdc;
+      border-radius: var(--radius-md);
+      background: var(--bg-tertiary);
+      border: 1px solid var(--divider-color);
       overflow: hidden;
     }
     .thinking-process.collapsed .thinking-log {
@@ -395,39 +470,39 @@
       align-items: center;
       justify-content: space-between;
       padding: 6px 10px;
-      border-bottom: 1px solid #ebebeb;
-      background: #f5f5f5;
+      border-bottom: 1px solid var(--divider-color);
+      background: var(--bg-secondary);
     }
     .thinking-title {
       font-size: 11px;
       font-weight: 600;
-      color: #666;
+      color: var(--text-secondary);
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
     .thinking-toggle {
       padding: 2px 8px;
       font-size: 10px;
-      background: #ffffff;
-      border: 1px solid #c0c0c0;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
       border-radius: 3px;
-      color: #555;
+      color: var(--text-secondary);
       cursor: pointer;
-      transition: all 0.1s ease;
+      transition: all var(--transition-fast);
     }
     .thinking-toggle:hover {
-      background: #f0f0f0;
-      border-color: #999;
-      color: #333;
+      background: var(--bg-elevated);
+      border-color: var(--text-tertiary);
+      color: var(--text-primary);
     }
     .thinking-log {
       max-height: 200px;
       overflow-y: auto;
       padding: 10px;
-      background: #ffffff;
+      background: var(--bg-tertiary);
       font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
       font-size: 11px;
-      color: #444;
+      color: var(--text-secondary);
     }
     .thinking-log::-webkit-scrollbar {
       width: 6px;
@@ -443,77 +518,80 @@
       display: flex;
       gap: 10px;
       padding: 12px 16px;
-      background: #f5f5f7; /* 输入区域灰色背景 */
-      border-top: 1px solid #d1d1d6;
+      background: var(--bg-secondary); /* 输入区域灰色背景 */
+      border-top: 1px solid var(--divider-color);
     }
     #message-input {
       flex: 1;
-      padding: 8px 12px;
-      border-radius: 4px;
-      border: 1px solid #c6c6c6;
-      background: #ffffff;
-      color: #333;
+      padding: 8px 10px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
       font-size: 13px;
-      transition: all 0.1s ease;
-      box-shadow: inset 0 1px 1px rgba(0,0,0,0.05);
+      transition: border-color var(--transition-normal), box-shadow var(--transition-normal);
     }
     #message-input:focus {
       outline: none;
-      border-color: #007aff;
-      box-shadow: 0 0 0 2px rgba(0,122,255,0.2);
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15);
     }
     #message-input::placeholder {
-      color: #999;
+      color: var(--text-tertiary);
     }
-    /* Mac 经典按钮样式 */
+    /* macOS 风格按钮样式 */
     button {
-      padding: 6px 16px;
-      border-radius: 4px;
-      border: 1px solid #acacac; /* 描边 */
-      background: linear-gradient(to bottom, #ffffff, #f0f0f0); /* 渐变 */
-      color: #333;
+      padding: 6px 12px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
+      background: linear-gradient(to bottom, var(--bg-tertiary), var(--bg-secondary));
+      color: var(--text-primary);
       cursor: pointer;
       font-weight: 400;
       font-size: 13px;
       letter-spacing: 0;
-      transition: all 0.1s;
-      box-shadow: 0 1px 1px rgba(0,0,0,0.05);
+      transition: all var(--transition-normal);
+      box-shadow: var(--shadow-sm);
     }
-    /* 发送按钮特例 - 蓝色 */
+    /* 发送按钮 - 使用强调色 */
     #send-btn {
-      background: linear-gradient(to bottom, #4da0f0, #007aff);
-      border: 1px solid #005ecb;
-      color: white;
-      box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+      background: var(--accent-color);
+      border-color: var(--accent-hover);
+      color: var(--text-inverse);
+      box-shadow: var(--shadow-sm);
     }
     #send-btn:hover {
-      background: linear-gradient(to bottom, #5db0ff, #1a8bff);
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
     }
     #send-btn:active {
-      background: #0063e1;
-      transform: translateY(1px);
+      background: var(--accent-hover);
+      transform: translateY(0);
+      box-shadow: none;
     }
 
     button:hover {
-      background: linear-gradient(to bottom, #f8f8f8, #e8e8e8);
-      border-color: #999;
+      background: linear-gradient(to bottom, var(--bg-elevated), var(--bg-secondary));
+      border-color: var(--text-tertiary);
     }
     button:active {
-      background: #e0e0e0;
-      box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+      background: var(--bg-secondary);
+      box-shadow: none;
       transform: translateY(1px);
     }
     button:disabled {
-      opacity: 0.6;
+      opacity: 0.5;
       cursor: not-allowed;
-      background: #f5f5f5;
-      color: #aaa;
+      background: var(--bg-secondary);
+      color: var(--text-tertiary);
       box-shadow: none;
       transform: none;
     }
     /* 次要按钮样式 */
     button.secondary {
-      /* 使用默认按钮样式即可，已足够经典 */
+      /* 使用默认按钮样式即可 */
     }
     /* Mac 滚动条样式 */
     ::-webkit-scrollbar {
@@ -524,7 +602,7 @@
     }
     ::-webkit-scrollbar-thumb {
       background: rgba(0,0,0,0.2);
-      border-radius: 4px;
+      border-radius: var(--radius-sm);
     }
     ::-webkit-scrollbar-thumb:hover {
       background: rgba(0,0,0,0.35);
@@ -537,40 +615,57 @@
       gap: 8px;
       padding: 8px 12px;
       background: #f8f8f8; /* 浅灰背景 */
-      border-bottom: 1px solid #d1d1d6;
+      border-bottom: 1px solid var(--divider-color);
       height: 44px;
     }
     #workspace-selector {
       flex: 1;
-      padding: 4px 10px;
-      border-radius: 4px;
-      border: 1px solid #c6c6c6;
-      background: #ffffff;
-      color: #333;
+      padding: 6px 12px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
       font-size: 13px;
       cursor: pointer;
-      transition: all 0.1s ease;
+      transition: all var(--transition-normal);
       text-align: left;
       display: flex;
       align-items: center;
       gap: 6px;
-      box-shadow: 0 1px 1px rgba(0,0,0,0.05);
+      box-shadow: var(--shadow-sm);
     }
     #workspace-selector:hover {
-      border-color: #999;
+      border-color: var(--text-tertiary);
+      background: var(--bg-elevated);
     }
     #workspace-settings-btn {
-      padding: 4px 8px;
+      padding: 6px 12px;
       font-size: 14px;
-      background: #ffffff;
-      border: 1px solid #c6c6c6;
-      border-radius: 4px;
-      color: #555;
-      box-shadow: 0 1px 1px rgba(0,0,0,0.05);
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      color: var(--text-secondary);
+      box-shadow: var(--shadow-sm);
+      transition: all var(--transition-normal);
     }
     #workspace-settings-btn:hover {
-      background: #f0f0f0;
-      border-color: #999;
+      background: var(--bg-elevated);
+      border-color: var(--text-tertiary);
+    }
+    #theme-toggle-btn {
+      padding: 6px 12px;
+      font-size: 14px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all var(--transition-normal);
+      box-shadow: var(--shadow-sm);
+    }
+    #theme-toggle-btn:hover {
+      background: var(--bg-elevated);
+      border-color: var(--text-tertiary);
     }
     /* 工作空间菜单 */
     #workspace-menu {
@@ -579,10 +674,10 @@
       top: 100%;
       left: 12px;
       margin-top: 2px;
-      background: #ffffff;
-      border-radius: 4px;
+      background: var(--bg-tertiary);
+      border-radius: var(--radius-sm);
       box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-      border: 1px solid #c6c6c6;
+      border: 1px solid var(--border-color);
       z-index: 1000;
       min-width: 220px;
       max-height: 300px;
@@ -592,33 +687,35 @@
       display: block;
     }
     .workspace-menu-item {
-      padding: 6px 12px;
+      padding: 8px 12px;
       font-size: 13px;
-      color: #333;
+      color: var(--text-primary);
       cursor: pointer;
       display: flex;
       align-items: center;
       gap: 8px;
-      border-bottom: 1px solid #f0f0f0;
+      border-radius: var(--radius-sm);
+      margin: 2px 4px;
+      transition: background-color var(--transition-fast);
     }
     .workspace-menu-item:last-child {
       border-bottom: none;
     }
     .workspace-menu-item:hover {
-      background: #0063e1;
-      color: white;
+      background: var(--accent-color);
+      color: var(--text-inverse);
     }
     .workspace-menu-item.active {
-      background: #e6f2ff; /* 浅蓝背景 */
-      color: #000;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
       font-weight: 500;
     }
-    /* 选中项 hover 时保持文字白色 */
+    /* 选中项 hover 时使用强调色 */
     .workspace-menu-item.active:hover {
-      background: #0063e1;
-      color: white;
+      background: var(--accent-color);
+      color: var(--text-inverse);
     }
-    
+
     .workspace-menu-item .workspace-icon {
       font-size: 14px;
     }
@@ -627,7 +724,7 @@
     }
     .workspace-menu-item .workspace-category {
       font-size: 10px;
-      color: #888;
+      color: var(--text-tertiary);
       text-transform: uppercase;
     }
     .workspace-menu-item:hover .workspace-category {
@@ -636,21 +733,21 @@
     
     .workspace-menu-divider {
       height: 1px;
-      background: #dcdcdc;
+      background: var(--divider-color);
       margin: 2px 0;
     }
     .workspace-menu-action {
       padding: 8px 12px;
       font-size: 12px;
-      color: #333;
+      color: var(--text-primary);
       cursor: pointer;
       display: flex;
       align-items: center;
       gap: 8px;
-      background: #f9f9f9;
+      background: var(--bg-elevated);
     }
     .workspace-menu-action:hover {
-      background: #e0e0e0;
+      background: var(--bg-secondary);
     }
     
     /* 思考中动画 */
@@ -658,7 +755,7 @@
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      color: #888;
+      color: var(--text-tertiary);
       font-size: 12px;
     }
     .thinking-indicator::after {
@@ -684,12 +781,12 @@
       border: 1px solid rgba(0,0,0,0.05);
     }
     .message pre {
-      background: #f5f5f5;
-      color: #333;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
       padding: 10px;
-      border-radius: 4px;
-      border: 1px solid #dcdcdc;
-      box-shadow: inset 0 1px 2px rgba(0,0,0,0.03);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--divider-color);
+      box-shadow: inset 0 1px 2px var(--shadow-color);
       overflow-x: auto;
       max-height: 300px;
       overflow-y: auto;
@@ -703,10 +800,10 @@
       height: 6px;
     }
     .message pre::-webkit-scrollbar-track {
-      background: #f0f0f0;
+      background: var(--bg-elevated);
     }
     .message pre::-webkit-scrollbar-thumb {
-      background: #c0c0c0;
+      background: var(--border-color);
       border-radius: 3px;
     }
     .message pre::-webkit-scrollbar-thumb:hover {
@@ -723,12 +820,12 @@
     }
     .message em {
       font-style: italic;
-      color: #666;
+      color: var(--text-secondary);
     }
     /* 用户消息中的代码样式 */
     .user.message code {
       background: rgba(255, 255, 255, 0.2);
-      color: #ffffff;
+      color: var(--text-inverse);
       border: none;
     }
     .user.message pre {
@@ -745,9 +842,9 @@
     /* 工具调用紧凑卡片 */
     .tool-call-compact {
       margin: 6px 0;
-      border-radius: 4px;
-      background: #f0f8ff;
-      border: 1px solid #cceeff;
+      border-radius: var(--radius-sm);
+      background: var(--bg-secondary);
+      border: 1px solid var(--divider-color);
       overflow: hidden;
     }
     .tool-call-header {
@@ -755,7 +852,7 @@
       align-items: center;
       gap: 8px;
       padding: 6px 10px;
-      background: #e6f2ff;
+      background: var(--bg-secondary);
       border-bottom: 1px solid #cceeff;
     }
     .tool-icon {
@@ -768,28 +865,28 @@
     }
     .tool-type {
       font-size: 10px;
-      color: #666;
+      color: var(--text-secondary);
       padding: 1px 4px;
-      background: #ffffff;
-      border: 1px solid #dcdcdc;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--divider-color);
       border-radius: 3px;
       text-transform: capitalize;
     }
     /* 工具输入参数区域 */
     .tool-input-section {
       padding: 8px 10px;
-      background: #ffffff;
+      background: var(--bg-tertiary);
     }
     .section-label {
       font-size: 10px;
       font-weight: 600;
-      color: #888;
+      color: var(--text-tertiary);
       text-transform: uppercase;
       letter-spacing: 0.5px;
       margin-bottom: 4px;
     }
     .tool-input-json {
-      background: #fafafa;
+      background: var(--bg-elevated);
       padding: 6px 8px;
       border-radius: 3px;
       border: 1px solid #eee;
@@ -808,7 +905,7 @@
       color: #0066cc;
       background: rgba(0,102,204,0.08);
       padding: 2px 6px;
-      border-radius: 4px;
+      border-radius: var(--radius-sm);
       word-break: break-all;
     }
     .file-path-long {
@@ -817,7 +914,7 @@
       color: #0066cc;
       background: rgba(0,102,204,0.08);
       padding: 2px 6px;
-      border-radius: 4px;
+      border-radius: var(--radius-sm);
       display: inline-block;
       max-width: 300px;
       overflow: hidden;
@@ -849,11 +946,11 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: #ffffff;
+      background: var(--bg-tertiary);
       width: 100%;
       height: 100%;
       border: none;
-      border-radius: 8px;
+      border-radius: var(--radius-lg);
     }
 
     /* 技能面板内容区域 */
@@ -897,8 +994,8 @@
       justify-content: space-between;
       align-items: center;
       padding: 12px;
-      background: #f5f5f7;
-      border-radius: 8px;
+      background: var(--bg-secondary);
+      border-radius: var(--radius-lg);
       margin-bottom: 8px;
     }
 
@@ -909,12 +1006,12 @@
       cursor: pointer;
       flex: 1;
       padding: 4px;
-      border-radius: 6px;
+      border-radius: var(--radius-md);
       transition: background 0.2s;
     }
 
     .workspace-info:hover {
-      background: #e8e8ed;
+      background: var(--bg-secondary);
     }
 
     .workspace-icon {
@@ -924,27 +1021,27 @@
     .workspace-name {
       font-size: 13px;
       font-weight: 600;
-      color: #1d1d1f;
+      color: var(--text-primary);
     }
 
     .create-workspace-btn {
       padding: 6px 12px;
-      border: 1px solid #d1d1d6;
-      border-radius: 6px;
-      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      background: var(--bg-tertiary);
       font-size: 12px;
       cursor: pointer;
       transition: all 0.2s;
     }
 
     .create-workspace-btn:hover {
-      background: #e8e8ed;
+      background: var(--bg-secondary);
     }
 
     /* 分隔线 */
     .workspace-divider {
       height: 1px;
-      background: #e1e1e6;
+      background: var(--divider-color);
       margin: 8px 0;
     }
 
@@ -955,7 +1052,7 @@
 
     .section-label {
       font-size: 11px;
-      color: #86868b;
+      color: var(--text-tertiary);
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.5px;
@@ -1011,10 +1108,10 @@
           </div>
 
           <!-- 右侧：SkillsLM 网页 -->
-          <div id="skillslm-webview-panel" style="flex: 1; border-left: 1px solid #e5e5ea; padding-left: 12px; overflow: hidden;">
+          <div id="skillslm-webview-panel" style="flex: 1; border-left: 1px solid var(--divider-color); padding-left: 12px; overflow: hidden;">
             <iframe id="skillslm-webview"
                     src="https://skillslm.com"
-                    style="width: 100%; height: 100%; border: none; border-radius: 8px;">
+                    style="width: 100%; height: 100%; border: none; border-radius: var(--radius-lg);">
             </iframe>
           </div>
         </div>
@@ -1023,38 +1120,38 @@
 
     <!-- 添加技能对话框 -->
     <div id="add-skill-dialog" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 1000; align-items: center; justify-content: center;">
-      <div style="background: #ffffff; border-radius: 12px; padding: 24px; width: 480px; max-width: 90%; box-shadow: 0 12px 40px rgba(0,0,0,0.15);">
-        <h3 style="margin: 0 0 8px 0; font-size: 17px; font-weight: 600; color: #1d1d1f; letter-spacing: -0.3px;">上传技能文件</h3>
-        <p style="margin: 0 0 20px 0; font-size: 13px; color: #6e6e73; line-height: 1.4;">选择包含 SKILL.md 文件的技能目录</p>
+      <div style="background: var(--bg-tertiary); border-radius: var(--radius-xl); padding: 24px; width: 480px; max-width: 90%; box-shadow: 0 12px 40px rgba(0,0,0,0.15);">
+        <h3 style="margin: 0 0 8px 0; font-size: 17px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.3px;">上传技能文件</h3>
+        <p style="margin: 0 0 20px 0; font-size: 13px; color: var(--text-secondary); line-height: 1.4;">选择包含 SKILL.md 文件的技能目录</p>
 
         <div style="margin-bottom: 20px;">
-          <label style="display: block; font-size: 12px; font-weight: 500; color: #1d1d1f; margin-bottom: 8px;">技能目录</label>
+          <label style="display: block; font-size: 12px; font-weight: 500; color: var(--text-primary); margin-bottom: 8px;">技能目录</label>
           <div style="display: flex; gap: 8px;">
-            <input type="text" id="skill-path-input" placeholder="选择技能目录..." style="flex: 1; padding: 10px 12px; border: 1px solid #d1d1d6; border-radius: 6px; font-size: 13px; background: #f5f5f7; color: #1d1d1f; box-sizing: border-box;" readonly>
+            <input type="text" id="skill-path-input" placeholder="选择技能目录..." style="flex: 1; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 13px; background: var(--bg-secondary); color: var(--text-primary); box-sizing: border-box;" readonly>
             <button id="browse-skill-btn" style="padding: 10px 16px; white-space: nowrap; font-size: 13px;">选择...</button>
           </div>
           <input type="file" id="skill-file-input" webkitdirectory directory style="display: none;">
-          <div style="font-size: 11px; color: #86868b; margin-top: 8px; line-height: 1.4;">
+          <div style="font-size: 11px; color: var(--text-tertiary); margin-top: 8px; line-height: 1.4;">
             技能目录应包含 SKILL.md 文件
           </div>
         </div>
 
-        <div id="skill-preview" style="display: none; margin-bottom: 20px; padding: 12px; background: #f5f5f7; border-radius: 8px;">
-          <div style="font-size: 11px; font-weight: 500; color: #6e6e73; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">找到技能文件</div>
-          <div id="skill-preview-content" style="font-size: 13px; color: #1d1d1f; line-height: 1.4;"></div>
+        <div id="skill-preview" style="display: none; margin-bottom: 20px; padding: 12px; background: var(--bg-secondary); border-radius: var(--radius-lg);">
+          <div style="font-size: 11px; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">找到技能文件</div>
+          <div id="skill-preview-content" style="font-size: 13px; color: var(--text-primary); line-height: 1.4;"></div>
         </div>
 
         <!-- 存储位置选择 -->
         <div style="margin-bottom: 20px;">
-          <label style="display: block; font-size: 12px; font-weight: 500; color: #1d1d1f; margin-bottom: 8px;">存储位置</label>
+          <label style="display: block; font-size: 12px; font-weight: 500; color: var(--text-primary); margin-bottom: 8px;">存储位置</label>
           <div style="display: flex; gap: 12px;">
             <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
               <input type="radio" name="skill-location" value="project" checked style="margin: 0;">
-              <span style="font-size: 13px; color: #1d1d1f;">项目 (.deepagents/skills/)</span>
+              <span style="font-size: 13px; color: var(--text-primary);">项目 (.deepagents/skills/)</span>
             </label>
             <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
               <input type="radio" name="skill-location" value="user" style="margin: 0;">
-              <span style="font-size: 13px; color: #1d1d1f;">用户 (~/.deepagents/skills/)</span>
+              <span style="font-size: 13px; color: var(--text-primary);">用户 (~/.deepagents/skills/)</span>
             </label>
           </div>
         </div>
@@ -1068,28 +1165,28 @@
 
     <!-- GitHub 导入对话框 -->
     <div id="github-import-dialog" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 1000; align-items: center; justify-content: center;">
-      <div style="background: #ffffff; border-radius: 12px; padding: 24px; width: 480px; max-width: 90%; box-shadow: 0 12px 40px rgba(0,0,0,0.15);">
-        <h3 style="margin: 0 0 8px 0; font-size: 17px; font-weight: 600; color: #1d1d1f; letter-spacing: -0.3px;">从 GitHub 导入技能</h3>
-        <p style="margin: 0 0 20px 0; font-size: 13px; color: #6e6e73; line-height: 1.4;">输入 GitHub 仓库 URL，自动扫描并导入技能</p>
+      <div style="background: var(--bg-tertiary); border-radius: var(--radius-xl); padding: 24px; width: 480px; max-width: 90%; box-shadow: 0 12px 40px rgba(0,0,0,0.15);">
+        <h3 style="margin: 0 0 8px 0; font-size: 17px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.3px;">从 GitHub 导入技能</h3>
+        <p style="margin: 0 0 20px 0; font-size: 13px; color: var(--text-secondary); line-height: 1.4;">输入 GitHub 仓库 URL，自动扫描并导入技能</p>
 
         <div style="margin-bottom: 20px;">
-          <label style="display: block; font-size: 12px; font-weight: 500; color: #1d1d1f; margin-bottom: 8px;">GitHub 仓库 URL</label>
-          <input type="text" id="github-url-input" placeholder="https://github.com/user/repo" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d1d6; border-radius: 6px; font-size: 13px; background: #f5f5f7; color: #1d1d1f; box-sizing: border-box;" />
-          <div style="font-size: 11px; color: #86868b; margin-top: 8px; line-height: 1.4;">
+          <label style="display: block; font-size: 12px; font-weight: 500; color: var(--text-primary); margin-bottom: 8px;">GitHub 仓库 URL</label>
+          <input type="text" id="github-url-input" placeholder="https://github.com/user/repo" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 13px; background: var(--bg-secondary); color: var(--text-primary); box-sizing: border-box;" />
+          <div style="font-size: 11px; color: var(--text-tertiary); margin-top: 8px; line-height: 1.4;">
             仓库将被克隆到临时目录，然后自动扫描包含 SKILL.md 的技能目录
           </div>
         </div>
 
         <div style="margin-bottom: 20px;">
-          <label style="display: block; font-size: 12px; font-weight: 500; color: #1d1d1f; margin-bottom: 8px;">存储位置</label>
+          <label style="display: block; font-size: 12px; font-weight: 500; color: var(--text-primary); margin-bottom: 8px;">存储位置</label>
           <div style="display: flex; gap: 12px;">
             <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
               <input type="radio" name="github-skill-location" value="project" checked style="margin: 0;">
-              <span style="font-size: 13px; color: #1d1d1f;">项目 (.deepagents/skills/)</span>
+              <span style="font-size: 13px; color: var(--text-primary);">项目 (.deepagents/skills/)</span>
             </label>
             <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
               <input type="radio" name="github-skill-location" value="user" style="margin: 0;">
-              <span style="font-size: 13px; color: #1d1d1f;">用户 (~/.deepagents/skills/)</span>
+              <span style="font-size: 13px; color: var(--text-primary);">用户 (~/.deepagents/skills/)</span>
             </label>
           </div>
         </div>
@@ -1097,12 +1194,12 @@
         <div style="margin-bottom: 20px;">
           <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
             <input type="checkbox" id="use-proxy-checkbox" style="margin: 0;">
-            <span style="font-size: 13px; color: #1d1d1f;">使用代理 (HTTP_PROXY / HTTPS_PROXY)</span>
+            <span style="font-size: 13px; color: var(--text-primary);">使用代理 (HTTP_PROXY / HTTPS_PROXY)</span>
           </label>
         </div>
 
-        <div id="github-import-status" style="display: none; margin-bottom: 20px; padding: 12px; background: #f5f5f7; border-radius: 8px;">
-          <span id="github-import-message" style="font-size: 13px; color: #1d1d1f;"></span>
+        <div id="github-import-status" style="display: none; margin-bottom: 20px; padding: 12px; background: var(--bg-secondary); border-radius: var(--radius-lg);">
+          <span id="github-import-message" style="font-size: 13px; color: var(--text-primary);"></span>
         </div>
 
         <div style="display: flex; gap: 8px; justify-content: flex-end; padding-top: 8px; border-top: 1px solid #e5e5ea;">
@@ -1114,9 +1211,9 @@
 
     <!-- 技能选择对话框 -->
     <div id="skill-selection-dialog" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 1001; align-items: center; justify-content: center;">
-      <div style="background: #ffffff; border-radius: 12px; padding: 24px; width: 520px; max-width: 90%; max-height: 80vh; box-shadow: 0 12px 40px rgba(0,0,0,0.15); display: flex; flex-direction: column;">
-        <h3 style="margin: 0 0 8px 0; font-size: 17px; font-weight: 600; color: #1d1d1f; letter-spacing: -0.3px;">选择要导入的技能</h3>
-        <p style="margin: 0 0 16px 0; font-size: 13px; color: #6e6e73; line-height: 1.4;">
+      <div style="background: var(--bg-tertiary); border-radius: var(--radius-xl); padding: 24px; width: 520px; max-width: 90%; max-height: 80vh; box-shadow: 0 12px 40px rgba(0,0,0,0.15); display: flex; flex-direction: column;">
+        <h3 style="margin: 0 0 8px 0; font-size: 17px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.3px;">选择要导入的技能</h3>
+        <p style="margin: 0 0 16px 0; font-size: 13px; color: var(--text-secondary); line-height: 1.4;">
           找到 <span id="skills-found-count">0</span> 个技能，请勾选要导入的技能
         </p>
 
@@ -1124,8 +1221,8 @@
           <!-- 技能列表将动态插入这里 -->
         </div>
 
-        <div id="selection-import-status" style="display: none; margin-bottom: 16px; padding: 12px; background: #f5f5f7; border-radius: 8px;">
-          <span id="selection-import-message" style="font-size: 13px; color: #1d1d1f;"></span>
+        <div id="selection-import-status" style="display: none; margin-bottom: 16px; padding: 12px; background: var(--bg-secondary); border-radius: var(--radius-lg);">
+          <span id="selection-import-message" style="font-size: 13px; color: var(--text-primary);"></span>
         </div>
 
         <div style="display: flex; gap: 8px; justify-content: flex-end; padding-top: 8px; border-top: 1px solid #e5e5ea;">
@@ -1137,16 +1234,16 @@
 
     <!-- 工具确认对话框 (HITL) -->
     <div id="tool-approval-dialog" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 2000; align-items: center; justify-content: center;">
-      <div style="background: #ffffff; border-radius: 12px; padding: 24px; width: 480px; max-width: 90%; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 12px 40px rgba(0,0,0,0.15);">
-        <h3 style="margin: 0 0 8px 0; font-size: 17px; font-weight: 600; color: #1d1d1f; letter-spacing: -0.3px; flex-shrink: 0;">工具执行确认</h3>
-        <p style="margin: 0 0 20px 0; font-size: 13px; color: #6e6e73; line-height: 1.4; flex-shrink: 0;">Agent 即将执行以下操作</p>
+      <div style="background: var(--bg-tertiary); border-radius: var(--radius-xl); padding: 24px; width: 480px; max-width: 90%; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 12px 40px rgba(0,0,0,0.15);">
+        <h3 style="margin: 0 0 8px 0; font-size: 17px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.3px; flex-shrink: 0;">工具执行确认</h3>
+        <p style="margin: 0 0 20px 0; font-size: 13px; color: var(--text-secondary); line-height: 1.4; flex-shrink: 0;">Agent 即将执行以下操作</p>
 
-        <div style="margin-bottom: 20px; padding: 16px; background: #f5f5f7; border-radius: 8px; overflow-y: auto; flex: 1; min-height: 0;">
-          <div style="font-size: 11px; font-weight: 500; color: #6e6e73; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">工具名称</div>
-          <div id="tool-name-display" style="font-size: 15px; font-weight: 600; color: #007aff; margin-bottom: 12px;">-</div>
+        <div style="margin-bottom: 20px; padding: 16px; background: var(--bg-secondary); border-radius: var(--radius-lg); overflow-y: auto; flex: 1; min-height: 0;">
+          <div style="font-size: 11px; font-weight: 500; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">工具名称</div>
+          <div id="tool-name-display" style="font-size: 15px; font-weight: 600; color: var(--accent-color); margin-bottom: 12px;">-</div>
 
-          <div style="font-size: 11px; font-weight: 500; color: #6e6e73; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">工具参数</div>
-          <pre id="tool-input-display" style="font-size: 12px; color: #1d1d1f; background: #ffffff; padding: 10px; border-radius: 6px; overflow-x: auto; white-space: pre-wrap; max-width: 100%;">-</pre>
+          <div style="font-size: 11px; font-weight: 500; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">工具参数</div>
+          <pre id="tool-input-display" style="font-size: 12px; color: var(--text-primary); background: var(--bg-tertiary); padding: 10px; border-radius: var(--radius-md); overflow-x: auto; white-space: pre-wrap; max-width: 100%;">-</pre>
         </div>
 
         <div style="display: flex; gap: 8px; justify-content: flex-end; padding-top: 8px; border-top: 1px solid #e5e5ea; flex-shrink: 0;">
@@ -1159,50 +1256,50 @@
 
     <!-- 模型配置对话框 -->
     <div id="config-dialog" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 3000; align-items: center; justify-content: center;">
-      <div style="background: #ffffff; border-radius: 12px; padding: 24px; width: 560px; max-width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 12px 40px rgba(0,0,0,0.15);">
+      <div style="background: var(--bg-tertiary); border-radius: var(--radius-xl); padding: 24px; width: 560px; max-width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 12px 40px rgba(0,0,0,0.15);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-          <h3 style="margin: 0; font-size: 17px; font-weight: 600; color: #1d1d1f; letter-spacing: -0.3px;">模型配置</h3>
-          <button id="close-config-btn" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #6e6e73; padding: 4px 8px;">×</button>
+          <h3 style="margin: 0; font-size: 17px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.3px;">模型配置</h3>
+          <button id="close-config-btn" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary); padding: 4px 8px;">×</button>
         </div>
 
         <!-- 配置表单 -->
         <form id="config-form">
           <!-- OpenAI 配置 -->
-          <div style="margin-bottom: 20px; padding: 16px; background: #f5f5f7; border-radius: 8px;">
-            <div style="font-size: 13px; font-weight: 600; color: #1d1d1f; margin-bottom: 12px;">OpenAI</div>
+          <div style="margin-bottom: 20px; padding: 16px; background: var(--bg-secondary); border-radius: var(--radius-lg);">
+            <div style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px;">OpenAI</div>
             <div style="margin-bottom: 12px;">
-              <label style="display: block; font-size: 11px; font-weight: 500; color: #6e6e73; margin-bottom: 6px;">API Key</label>
-              <input type="password" id="openai-api-key" placeholder="sk-..." style="width: 100%; padding: 8px 12px; border: 1px solid #d1d1d6; border-radius: 6px; font-size: 13px; box-sizing: border-box;">
+              <label style="display: block; font-size: 11px; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px;">API Key</label>
+              <input type="password" id="openai-api-key" placeholder="sk-..." style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 13px; box-sizing: border-box;">
             </div>
             <div>
-              <label style="display: block; font-size: 11px; font-weight: 500; color: #6e6e73; margin-bottom: 6px;">Model</label>
-              <input type="text" id="openai-model" placeholder="gpt-4o-mini" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d1d6; border-radius: 6px; font-size: 13px; box-sizing: border-box;">
+              <label style="display: block; font-size: 11px; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px;">Model</label>
+              <input type="text" id="openai-model" placeholder="gpt-4o-mini" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 13px; box-sizing: border-box;">
             </div>
             <div>
-              <label style="display: block; font-size: 11px; font-weight: 500; color: #6e6e73; margin-bottom: 6px;">Base URL</label>
-              <input type="text" id="openai-base-url" placeholder="https://api.openai.com/v1" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d1d6; border-radius: 6px; font-size: 13px; box-sizing: border-box;">
+              <label style="display: block; font-size: 11px; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px;">Base URL</label>
+              <input type="text" id="openai-base-url" placeholder="https://api.openai.com/v1" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 13px; box-sizing: border-box;">
             </div>
           </div>
 
           <!-- Tavily 配置 -->
-          <div style="margin-bottom: 20px; padding: 16px; background: #f5f5f7; border-radius: 8px;">
-            <div style="font-size: 13px; font-weight: 600; color: #1d1d1f; margin-bottom: 12px;">Tavily 搜索</div>
+          <div style="margin-bottom: 20px; padding: 16px; background: var(--bg-secondary); border-radius: var(--radius-lg);">
+            <div style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px;">Tavily 搜索</div>
             <div>
-              <label style="display: block; font-size: 11px; font-weight: 500; color: #6e6e73; margin-bottom: 6px;">API Key</label>
-              <input type="password" id="tavily-api-key" placeholder="tvly-..." style="width: 100%; padding: 8px 12px; border: 1px solid #d1d1d6; border-radius: 6px; font-size: 13px; box-sizing: border-box;">
+              <label style="display: block; font-size: 11px; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px;">API Key</label>
+              <input type="password" id="tavily-api-key" placeholder="tvly-..." style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 13px; box-sizing: border-box;">
             </div>
           </div>
 
           <!-- 代理配置 -->
-          <div style="margin-bottom: 20px; padding: 16px; background: #f5f5f7; border-radius: 8px;">
-            <div style="font-size: 13px; font-weight: 600; color: #1d1d1f; margin-bottom: 12px;">代理设置</div>
+          <div style="margin-bottom: 20px; padding: 16px; background: var(--bg-secondary); border-radius: var(--radius-lg);">
+            <div style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px;">代理设置</div>
             <div style="margin-bottom: 12px;">
-              <label style="display: block; font-size: 11px; font-weight: 500; color: #6e6e73; margin-bottom: 6px;">HTTP Proxy</label>
-              <input type="text" id="http-proxy" placeholder="http://proxy.example.com:8080" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d1d6; border-radius: 6px; font-size: 13px; box-sizing: border-box;">
+              <label style="display: block; font-size: 11px; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px;">HTTP Proxy</label>
+              <input type="text" id="http-proxy" placeholder="http://proxy.example.com:8080" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 13px; box-sizing: border-box;">
             </div>
             <div>
-              <label style="display: block; font-size: 11px; font-weight: 500; color: #6e6e73; margin-bottom: 6px;">HTTPS Proxy</label>
-              <input type="text" id="https-proxy" placeholder="http://proxy.example.com:8080" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d1d6; border-radius: 6px; font-size: 13px; box-sizing: border-box;">
+              <label style="display: block; font-size: 11px; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px;">HTTPS Proxy</label>
+              <input type="text" id="https-proxy" placeholder="http://proxy.example.com:8080" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 13px; box-sizing: border-box;">
             </div>
           </div>
 
@@ -1214,25 +1311,25 @@
         </form>
 
         <!-- 状态消息 -->
-        <div id="config-status" style="display: none; margin-top: 12px; padding: 8px 12px; border-radius: 6px; font-size: 12px; text-align: center;"></div>
+        <div id="config-status" style="display: none; margin-top: 12px; padding: 8px 12px; border-radius: var(--radius-md); font-size: 12px; text-align: center;"></div>
       </div>
     </div>
 
     <!-- 创建工作空间对话框 -->
     <div id="create-workspace-dialog" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 3000; align-items: center; justify-content: center;">
-      <div style="background: #ffffff; border-radius: 12px; padding: 24px; width: 480px; max-width: 90%; box-shadow: 0 12px 40px rgba(0,0,0,0.15);">
-        <h3 style="margin: 0 0 8px 0; font-size: 17px; font-weight: 600; color: #1d1d1f; letter-spacing: -0.3px;">创建新工作空间</h3>
-        <p style="margin: 0 0 20px 0; font-size: 13px; color: #6e6e73; line-height: 1.4;">创建一个独立的工作空间，文件操作将限制在该工作空间目录内</p>
+      <div style="background: var(--bg-tertiary); border-radius: var(--radius-xl); padding: 24px; width: 480px; max-width: 90%; box-shadow: 0 12px 40px rgba(0,0,0,0.15);">
+        <h3 style="margin: 0 0 8px 0; font-size: 17px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.3px;">创建新工作空间</h3>
+        <p style="margin: 0 0 20px 0; font-size: 13px; color: var(--text-secondary); line-height: 1.4;">创建一个独立的工作空间，文件操作将限制在该工作空间目录内</p>
 
         <form id="create-workspace-form">
           <div style="margin-bottom: 16px;">
-            <label style="display: block; font-size: 12px; font-weight: 500; color: #1d1d1f; margin-bottom: 8px;">工作空间名称</label>
-            <input type="text" id="new-workspace-name" placeholder="例如：开发工作空间" required style="width: 100%; padding: 10px 12px; border: 1px solid #d1d1d6; border-radius: 6px; font-size: 13px; box-sizing: border-box;">
+            <label style="display: block; font-size: 12px; font-weight: 500; color: var(--text-primary); margin-bottom: 8px;">工作空间名称</label>
+            <input type="text" id="new-workspace-name" placeholder="例如：开发工作空间" required style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 13px; box-sizing: border-box;">
           </div>
 
           <div style="margin-bottom: 16px;">
-            <label style="display: block; font-size: 12px; font-weight: 500; color: #1d1d1f; margin-bottom: 8px;">分类</label>
-            <select id="new-workspace-category" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d1d6; border-radius: 6px; font-size: 13px; box-sizing: border-box; background: #ffffff;">
+            <label style="display: block; font-size: 12px; font-weight: 500; color: var(--text-primary); margin-bottom: 8px;">分类</label>
+            <select id="new-workspace-category" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 13px; box-sizing: border-box; background: var(--bg-tertiary);">
               <option value="通用">通用</option>
               <option value="开发">开发</option>
               <option value="写作">写作</option>
@@ -1242,17 +1339,17 @@
           </div>
 
           <div style="margin-bottom: 16px;">
-            <label style="display: block; font-size: 12px; font-weight: 500; color: #1d1d1f; margin-bottom: 8px;">工作目录（可选）</label>
+            <label style="display: block; font-size: 12px; font-weight: 500; color: var(--text-primary); margin-bottom: 8px;">工作目录（可选）</label>
             <div style="display: flex; gap: 8px;">
-              <input type="text" id="new-workspace-path" placeholder="默认: ~/.deepagents/workspaces/{id}/files" style="flex: 1; padding: 10px 12px; border: 1px solid #d1d1d6; border-radius: 6px; font-size: 13px; box-sizing: border-box;" readonly>
-              <button type="button" id="browse-workspace-path" style="padding: 10px 16px; border: 1px solid #d1d1d6; border-radius: 6px; font-size: 13px; background: #f5f5f7; cursor: pointer; white-space: nowrap;">浏览...</button>
+              <input type="text" id="new-workspace-path" placeholder="默认: ~/.deepagents/workspaces/{id}/files" style="flex: 1; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 13px; box-sizing: border-box;" readonly>
+              <button type="button" id="browse-workspace-path" style="padding: 10px 16px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 13px; background: var(--bg-secondary); cursor: pointer; white-space: nowrap;">浏览...</button>
             </div>
-            <small style="display: block; margin-top: 4px; font-size: 11px; color: #6e6e73;">留空使用默认路径</small>
+            <small style="display: block; margin-top: 4px; font-size: 11px; color: var(--text-secondary);">留空使用默认路径</small>
           </div>
 
           <div style="margin-bottom: 20px;">
-            <label style="display: block; font-size: 12px; font-weight: 500; color: #1d1d1f; margin-bottom: 8px;">图标</label>
-            <select id="new-workspace-icon" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d1d6; border-radius: 6px; font-size: 13px; box-sizing: border-box; background: #ffffff;">
+            <label style="display: block; font-size: 12px; font-weight: 500; color: var(--text-primary); margin-bottom: 8px;">图标</label>
+            <select id="new-workspace-icon" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 13px; box-sizing: border-box; background: var(--bg-tertiary);">
               <option value="folder">📁 文件夹</option>
               <option value="code">💻 代码</option>
               <option value="book">📚 书籍</option>
@@ -1271,30 +1368,30 @@
 
     <!-- 工作空间设置对话框 -->
     <div id="workspace-settings-dialog" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 3000; align-items: center; justify-content: center;">
-      <div style="background: #ffffff; border-radius: 12px; padding: 24px; width: 520px; max-width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 12px 40px rgba(0,0,0,0.15);">
+      <div style="background: var(--bg-tertiary); border-radius: var(--radius-xl); padding: 24px; width: 520px; max-width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 12px 40px rgba(0,0,0,0.15);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-          <h3 style="margin: 0; font-size: 17px; font-weight: 600; color: #1d1d1f; letter-spacing: -0.3px;">工作空间设置</h3>
-          <button id="close-workspace-settings" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #6e6e73; padding: 4px 8px;">×</button>
+          <h3 style="margin: 0; font-size: 17px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.3px;">工作空间设置</h3>
+          <button id="close-workspace-settings" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary); padding: 4px 8px;">×</button>
         </div>
 
         <!-- 当前工作空间信息 -->
-        <div style="margin-bottom: 20px; padding: 16px; background: #f5f5f7; border-radius: 8px;">
-          <div style="font-size: 11px; font-weight: 500; color: #6e6e73; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">当前工作空间</div>
-          <div id="current-workspace-name" style="font-size: 16px; font-weight: 600; color: #1d1d1f;">默认工作空间</div>
-          <div id="current-workspace-category" style="font-size: 12px; color: #86868b; margin-top: 4px;">通用</div>
+        <div style="margin-bottom: 20px; padding: 16px; background: var(--bg-secondary); border-radius: var(--radius-lg);">
+          <div style="font-size: 11px; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">当前工作空间</div>
+          <div id="current-workspace-name" style="font-size: 16px; font-weight: 600; color: var(--text-primary);">默认工作空间</div>
+          <div id="current-workspace-category" style="font-size: 12px; color: var(--text-tertiary); margin-top: 4px;">通用</div>
         </div>
 
         <!-- 技能选择 -->
         <div style="margin-bottom: 20px;">
-          <label style="display: block; font-size: 12px; font-weight: 500; color: #1d1d1f; margin-bottom: 12px;">启用的技能</label>
-          <div id="workspace-skills-list" style="max-height: 200px; overflow-y: auto; padding: 12px; background: #f5f5f7; border-radius: 8px;">
-            <div style="text-align: center; color: #86868b; font-size: 12px; padding: 20px;">加载技能列表中...</div>
+          <label style="display: block; font-size: 12px; font-weight: 500; color: var(--text-primary); margin-bottom: 12px;">启用的技能</label>
+          <div id="workspace-skills-list" style="max-height: 200px; overflow-y: auto; padding: 12px; background: var(--bg-secondary); border-radius: var(--radius-lg);">
+            <div style="text-align: center; color: var(--text-tertiary); font-size: 12px; padding: 20px;">加载技能列表中...</div>
           </div>
         </div>
 
         <!-- 系统提示词配置 -->
         <div style="margin-bottom: 20px;">
-          <label style="display: block; font-size: 12px; font-weight: 500; color: #1d1d1f; margin-bottom: 12px;">系统提示词</label>
+          <label style="display: block; font-size: 12px; font-weight: 500; color: var(--text-primary); margin-bottom: 12px;">系统提示词</label>
 
           <!-- 提示词配置方式选择 -->
           <div style="display: flex; gap: 8px; margin-bottom: 12px;">
@@ -1311,35 +1408,35 @@
 
           <!-- 模板选择模式 -->
           <div id="prompt-template-mode" style="display: none;">
-            <select id="prompt-template-select" style="width: 100%; padding: 8px; border: 1px solid #d2d2d7; border-radius: 6px; font-size: 13px; background: #ffffff;">
+            <select id="prompt-template-select" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 13px; background: var(--bg-tertiary);">
               <option value="">选择一个模板...</option>
             </select>
-            <div id="template-preview" style="margin-top: 8px; padding: 12px; background: #f5f5f7; border-radius: 6px; font-size: 12px; color: #6e6e73; min-height: 60px; max-height: 150px; overflow-y: auto;">
+            <div id="template-preview" style="margin-top: 8px; padding: 12px; background: var(--bg-secondary); border-radius: var(--radius-md); font-size: 12px; color: var(--text-secondary); min-height: 60px; max-height: 150px; overflow-y: auto;">
               选择模板后显示预览...
             </div>
           </div>
 
           <!-- AI 生成模式 -->
           <div id="prompt-generate-mode" style="display: none;">
-            <input type="text" id="generate-prompt-name" placeholder="工作空间用途（如：React 开发助手）" style="width: 100%; padding: 8px; border: 1px solid #d2d2d7; border-radius: 6px; font-size: 13px; margin-bottom: 8px;">
-            <input type="text" id="generate-prompt-category" placeholder="分类（如：开发、写作、分析）" style="width: 100%; padding: 8px; border: 1px solid #d2d2d7; border-radius: 6px; font-size: 13px; margin-bottom: 8px;">
-            <textarea id="generate-prompt-description" placeholder="额外描述（可选）" style="width: 100%; padding: 8px; border: 1px solid #d2d2d7; border-radius: 6px; font-size: 13px; min-height: 60px; resize: vertical; margin-bottom: 8px;"></textarea>
+            <input type="text" id="generate-prompt-name" placeholder="工作空间用途（如：React 开发助手）" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 13px; margin-bottom: 8px;">
+            <input type="text" id="generate-prompt-category" placeholder="分类（如：开发、写作、分析）" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 13px; margin-bottom: 8px;">
+            <textarea id="generate-prompt-description" placeholder="额外描述（可选）" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 13px; min-height: 60px; resize: vertical; margin-bottom: 8px;"></textarea>
             <button type="button" id="generate-prompt-btn" style="width: 100%; padding: 8px 16px; font-size: 13px;">
               🤖 生成提示词
             </button>
-            <div id="generated-prompt-result" style="margin-top: 8px; padding: 12px; background: #f5f5f7; border-radius: 6px; font-size: 12px; color: #6e6e73; min-height: 60px; display: none;"></div>
+            <div id="generated-prompt-result" style="margin-top: 8px; padding: 12px; background: var(--bg-secondary); border-radius: var(--radius-md); font-size: 12px; color: var(--text-secondary); min-height: 60px; display: none;"></div>
           </div>
 
           <!-- 自定义编辑模式 -->
           <div id="prompt-custom-mode" style="display: none;">
-            <textarea id="custom-prompt-textarea" placeholder="输入自定义的系统提示词..." style="width: 100%; padding: 8px; border: 1px solid #d2d2d7; border-radius: 6px; font-size: 13px; min-height: 120px; resize: vertical;"></textarea>
-            <div style="font-size: 11px; color: #86868b; margin-top: 4px;">提示：留空则使用默认系统提示词</div>
+            <textarea id="custom-prompt-textarea" placeholder="输入自定义的系统提示词..." style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 13px; min-height: 120px; resize: vertical;"></textarea>
+            <div style="font-size: 11px; color: var(--text-tertiary); margin-top: 4px;">提示：留空则使用默认系统提示词</div>
           </div>
 
           <!-- 当前提示词预览 -->
-          <div id="current-prompt-preview" style="margin-top: 12px; padding: 12px; background: #e8f4fd; border-radius: 6px; border-left: 3px solid #007aff;">
-            <div style="font-size: 11px; font-weight: 500; color: #007aff; margin-bottom: 4px;">当前提示词预览</div>
-            <div id="current-prompt-text" style="font-size: 12px; color: #1d1d1f; line-height: 1.5; max-height: 100px; overflow-y: auto;">使用默认提示词</div>
+          <div id="current-prompt-preview" style="margin-top: 12px; padding: 12px; background: var(--bg-secondary); border-radius: var(--radius-md); border-left: 3px solid var(--accent-color);">
+            <div style="font-size: 11px; font-weight: 500; color: var(--accent-color); margin-bottom: 4px;">当前提示词预览</div>
+            <div id="current-prompt-text" style="font-size: 12px; color: var(--text-primary); line-height: 1.5; max-height: 100px; overflow-y: auto;">使用默认提示词</div>
           </div>
         </div>
 
@@ -1354,12 +1451,46 @@
       </div>
     </div>
 
+    <!-- 主题设置对话框 -->
+    <div id="theme-dialog" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--bg-tertiary); border-radius: var(--radius-xl); box-shadow: var(--shadow-modal); z-index: 2000; min-width: 320px; padding: 20px;">
+      <h3 style="margin: 0 0 16px 0; color: var(--text-primary);">主题设置</h3>
+
+      <!-- 主题模式选择 -->
+      <div style="margin-bottom: 20px;">
+        <label style="display: block; margin-bottom: 8px; color: var(--text-secondary); font-size: 13px;">主题模式</label>
+        <div style="display: flex; gap: 8px;">
+          <button class="theme-mode-btn" data-mode="light" style="flex: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--bg-secondary); color: var(--text-primary); cursor: pointer;">☀️ 浅色</button>
+          <button class="theme-mode-btn" data-mode="dark" style="flex: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--bg-secondary); color: var(--text-primary); cursor: pointer;">🌙 深色</button>
+          <button class="theme-mode-btn" data-mode="auto" style="flex: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--bg-secondary); color: var(--text-primary); cursor: pointer;">🔄 自动</button>
+        </div>
+      </div>
+
+      <!-- 强调色选择 -->
+      <div style="margin-bottom: 20px;">
+        <label style="display: block; margin-bottom: 8px; color: var(--text-secondary); font-size: 13px;">强调色</label>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button class="accent-color-btn" data-color="blue" style="width: 36px; height: 36px; border-radius: 50%; border: 2px solid transparent; background: #007aff; cursor: pointer;" title="蓝色"></button>
+          <button class="accent-color-btn" data-color="purple" style="width: 36px; height: 36px; border-radius: 50%; border: 2px solid transparent; background: #5856d6; cursor: pointer;" title="紫色"></button>
+          <button class="accent-color-btn" data-color="pink" style="width: 36px; height: 36px; border-radius: 50%; border: 2px solid transparent; background: #ff2d55; cursor: pointer;" title="粉色"></button>
+          <button class="accent-color-btn" data-color="orange" style="width: 36px; height: 36px; border-radius: 50%; border: 2px solid transparent; background: #ff9500; cursor: pointer;" title="橙色"></button>
+          <button class="accent-color-btn" data-color="green" style="width: 36px; height: 36px; border-radius: 50%; border: 2px solid transparent; background: #34c759; cursor: pointer;" title="绿色"></button>
+          <button class="accent-color-btn" data-color="teal" style="width: 36px; height: 36px; border-radius: 50%; border: 2px solid transparent; background: #5ac8fa; cursor: pointer;" title="青色"></button>
+        </div>
+      </div>
+
+      <!-- 关闭按钮 -->
+      <div style="display: flex; justify-content: flex-end;">
+        <button id="close-theme-dialog" style="padding: 8px 16px; background: var(--accent-color); color: var(--text-inverse); border: none; border-radius: var(--radius-md); cursor: pointer; font-size: 13px;">完成</button>
+      </div>
+    </div>
+
     <!-- 右侧聊天区域 -->
     <div id="chat-panel">
       <!-- 工作空间切换器 -->
       <div id="workspace-switcher" style="position: relative;">
         <button id="workspace-selector">📁 默认工作空间</button>
         <button id="workspace-settings-btn">⚙️</button>
+        <button id="theme-toggle-btn" title="切换主题">🌓</button>
         <!-- 工作空间下拉菜单 -->
         <div id="workspace-menu">
           <!-- 工作空间列表将动态插入这里 -->
@@ -1388,6 +1519,7 @@
       }
     };
   </script>
+  <script src="theme.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
