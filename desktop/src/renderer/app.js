@@ -1114,15 +1114,13 @@ function setupAddSkillButton() {
       uploadBtn.disabled = true;
       uploadBtn.textContent = '上传中...';
 
-      // 获取选中的存储位置
-      const locationInput = document.querySelector('input[name="skill-location"]:checked');
-      const location = locationInput ? locationInput.value : 'project';
+      // 固定使用用户目录存储
+      const location = 'user';
 
       const result = await window.deepagents.uploadSkill(selectedSkillName, selectedSkillFiles, location);
 
-      // 根据结果显示不同的路径信息
-      const locationText = location === 'user' ? '~/.deepagents/skills/' : '.deepagents/skills/';
-      alert(`技能 "${selectedSkillName}" 上传成功！\n\n已安装到: ${locationText}${selectedSkillName}/`);
+      // 显示固定的路径信息
+      alert(`技能 "${selectedSkillName}" 上传成功！\n\n已安装到: ~/.deepagents/skills/${selectedSkillName}/`);
 
       hideAddSkillDialog();
       loadSkills();
@@ -1355,7 +1353,8 @@ function setupGithubImportButton() {
 
   // 阶段3: 导入选中的技能
   confirmSelectedImport.addEventListener('click', async () => {
-    const location = document.querySelector('input[name="github-skill-location"]:checked').value;
+    // 固定使用用户目录存储
+    const location = 'user';
 
     // 获取选中的技能（包含 dir_name 和 relative_path）
     const checkedBoxes = skillsListContainer.querySelectorAll('input[type="checkbox"]:checked');

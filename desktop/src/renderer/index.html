@@ -1206,22 +1206,7 @@
           <div id="skill-preview-content" style="font-size: 13px; color: var(--text-primary); line-height: 1.4;"></div>
         </div>
 
-        <!-- 存储位置选择 -->
-        <div style="margin-bottom: 20px;">
-          <label style="display: block; font-size: 12px; font-weight: 500; color: var(--text-primary); margin-bottom: 8px;">存储位置</label>
-          <div style="display: flex; gap: 12px;">
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="radio" name="skill-location" value="project" checked style="margin: 0;">
-              <span style="font-size: 13px; color: var(--text-primary);">项目 (.deepagents/skills/)</span>
-            </label>
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="radio" name="skill-location" value="user" style="margin: 0;">
-              <span style="font-size: 13px; color: var(--text-primary);">用户 (~/.deepagents/skills/)</span>
-            </label>
-          </div>
-        </div>
-
-        <div style="display: flex; gap: 8px; justify-content: flex-end; padding-top: 8px; border-top: 1px solid #e5e5ea;">
+        <div style="display: flex; gap: 8px; justify-content: flex-end; padding-top: 8px; border-top: 1px solid var(--border-color);">
           <button id="cancel-skill-btn" class="secondary" style="padding: 8px 16px;">取消</button>
           <button id="upload-skill-btn" style="padding: 8px 16px;" disabled>上传</button>
         </div>
@@ -1239,20 +1224,6 @@
           <input type="text" id="github-url-input" placeholder="https://github.com/user/repo" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 13px; background: var(--bg-secondary); color: var(--text-primary); box-sizing: border-box;" />
           <div style="font-size: 11px; color: var(--text-tertiary); margin-top: 8px; line-height: 1.4;">
             仓库将被克隆到临时目录，然后自动扫描包含 SKILL.md 的技能目录
-          </div>
-        </div>
-
-        <div style="margin-bottom: 20px;">
-          <label style="display: block; font-size: 12px; font-weight: 500; color: var(--text-primary); margin-bottom: 8px;">存储位置</label>
-          <div style="display: flex; gap: 12px;">
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="radio" name="github-skill-location" value="project" checked style="margin: 0;">
-              <span style="font-size: 13px; color: var(--text-primary);">项目 (.deepagents/skills/)</span>
-            </label>
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="radio" name="github-skill-location" value="user" style="margin: 0;">
-              <span style="font-size: 13px; color: var(--text-primary);">用户 (~/.deepagents/skills/)</span>
-            </label>
           </div>
         </div>
 
