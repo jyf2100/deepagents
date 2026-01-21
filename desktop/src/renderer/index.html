@@ -874,6 +874,21 @@
     .message pre::-webkit-scrollbar-thumb:hover {
       background: var(--text-tertiary);
     }
+    /* 配置对话框滚动条样式 */
+    #config-dialog > div::-webkit-scrollbar {
+      width: 8px;
+    }
+    #config-dialog > div::-webkit-scrollbar-track {
+      background: var(--bg-secondary);
+      border-radius: 4px;
+    }
+    #config-dialog > div::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 4px;
+    }
+    #config-dialog > div::-webkit-scrollbar-thumb:hover {
+      background: var(--text-tertiary);
+    }
     .message pre code {
       background: transparent;
       color: inherit;
@@ -1292,7 +1307,7 @@
 
     <!-- 模型配置对话框 -->
     <div id="config-dialog" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); z-index: 3000; align-items: center; justify-content: center;">
-      <div style="background: var(--bg-tertiary); border-radius: 16px; padding: 24px; width: 560px; max-width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: var(--shadow-modal);">
+      <div style="background: var(--bg-tertiary); border-radius: 16px; padding: 24px; width: 560px; max-width: 90%; max-height: 85vh; overflow-y: auto; box-shadow: var(--shadow-modal);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
           <h3 style="margin: 0; font-size: 17px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.3px;">模型配置</h3>
           <button id="close-config-btn" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary); padding: 4px 8px;">×</button>
