@@ -243,6 +243,13 @@ HITL（人机协作）让您在 AI 执行某些操作前进行审批，确保安
 - **HTTPS Proxy**：HTTPS 代理地址
 - **No Proxy**：代理排除地址（如 `127.0.0.1,localhost`）
 
+**SkillsLM 技能市场**
+- **SkillsLM URL**：技能市场网页地址
+  - 默认值：`https://skillslm.com`
+  - 留空使用默认值
+  - 可自定义部署的 SkillsLM 实例地址
+  - 修改后立即生效，无需重启应用
+
 ---
 
 ### 6. 主题设置
@@ -305,6 +312,9 @@ tavily_api_key=tvly-xxx
 http_proxy=http://127.0.0.1:7890
 https_proxy=http://127.0.0.1:7890
 no_proxy=127.0.0.1,localhost
+
+# SkillsLM 技能市场
+skillslm_url=https://skillslm.com
 
 # 主题配置
 theme=auto
