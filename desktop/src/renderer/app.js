@@ -111,7 +111,7 @@ async function loadSkills() {
         <div class="empty-state">
           <div>暂无可用技能</div>
           <div style="margin-top: 12px; font-size: 11px; color: #6b7280;">
-            将技能文件放在 ~/.deepagents/skills/ 或 .deepagents/skills/ 目录
+            将技能文件放在 ~/.deepagents/desktop/skills/ 目录
           </div>
         </div>
       `;
@@ -1120,7 +1120,7 @@ function setupAddSkillButton() {
       const result = await window.deepagents.uploadSkill(selectedSkillName, selectedSkillFiles, location);
 
       // 显示固定的路径信息
-      alert(`技能 "${selectedSkillName}" 上传成功！\n\n已安装到: ~/.deepagents/skills/${selectedSkillName}/`);
+      alert(`技能 "${selectedSkillName}" 上传成功！\n\n已安装到: ~/.deepagents/desktop/skills/${selectedSkillName}/`);
 
       hideAddSkillDialog();
       loadSkills();
@@ -2019,6 +2019,13 @@ const workspaceIcons = {
 };
 
 function setupWorkspaceManager() {
+  // 防止重复初始化
+  if (window.workspaceManagerInitialized) {
+    console.log('[Workspace] Already initialized, skipping...');
+    return;
+  }
+  window.workspaceManagerInitialized = true;
+
   console.log('[Workspace] Initializing workspace manager...');
 
   // 工作空间选择器按钮
