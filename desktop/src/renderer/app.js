@@ -1486,6 +1486,14 @@ async function initializeApp() {
     await window.themeManager.init();
   }
 
+  // 应用配置（包括 SkillsLM URL）
+  try {
+    const config = await window.deepagents.getConfig();
+    applySkillsLMUrl(config.skillslm_url);
+  } catch (error) {
+    console.error('[INIT] Failed to apply SkillsLM URL:', error);
+  }
+
   // 设置消息发送事件监听器
   sendBtn.addEventListener('click', sendMessage);
   input.addEventListener('keypress', (e) => {
@@ -1830,6 +1838,10 @@ async function openConfigDialog() {
     document.getElementById('http-proxy').value = config.http_proxy || '';
     document.getElementById('https-proxy').value = config.https_proxy || '';
     document.getElementById('no-proxy').value = config.no_proxy || '';
+    document.getElementById('skillslm-url').value = config.skillslm_url || '';
+
+    // 应用 SkillsLM URL 配置
+    applySkillsLMUrl(config.skillslm_url);
 
     // 隐藏状态消息
     statusDiv.style.display = 'none';
@@ -1847,6 +1859,17 @@ async function openConfigDialog() {
 function closeConfigDialog() {
   const dialog = document.getElementById('config-dialog');
   dialog.style.display = 'none';
+}
+
+// 应用 SkillsLM URL 配置
+function applySkillsLMUrl(url) {
+  const iframe = document.getElementById('skillslm-webview');
+  if (!iframe) return;
+
+  // 如果配置了 URL，使用配置的值；否则使用默认值
+  const skillsLMUrl = url && url.trim() !== '' ? url.trim() : 'https://skillslm.com';
+  iframe.src = skillsLMUrl;
+  console.log('[SkillsLM] Applied URL:', skillsLMUrl);
 }
 
 // 显示状态消息
@@ -1892,7 +1915,8 @@ async function saveConfig(event) {
       tavily_api_key: document.getElementById('tavily-api-key').value,
       http_proxy: document.getElementById('http-proxy').value,
       https_proxy: document.getElementById('https-proxy').value,
-      no_proxy: document.getElementById('no-proxy').value
+      no_proxy: document.getElementById('no-proxy').value,
+      skillslm_url: document.getElementById('skillslm-url').value
     };
 
     // 保存配置（后端会自动恢复脱敏的 API 密钥）
