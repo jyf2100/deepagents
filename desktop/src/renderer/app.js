@@ -1206,13 +1206,24 @@ function setupGithubImportButton() {
 
     console.log('[confirmGithubImport] URL:', url, 'useProxy:', useProxy);
 
-    // 验证 URL
-    if (!url.startsWith('https://github.com/')) {
-      alert('请输入有效的 GitHub URL（必须以 https://github.com/ 开头）');
+    // 验证 URL - 支持 GitHub 和自定义 git 仓库
+    if (!url) {
+      alert('请输入有效的 Git URL');
       return;
     }
 
-    // 自动移除末尾的 .git 后缀
+    // 支持 GitHub URL 或自定义 git 仓库 URL
+    const isValidUrl = url.startsWith('https://github.com/') ||
+                        url.startsWith('http://') ||
+                        url.startsWith('https://') ||
+                        url.endsWith('.git');
+
+    if (!isValidUrl) {
+      alert('请输入有效的 Git URL：\n- GitHub URL: https://github.com/xxx/xxx\n- 自定义仓库: http://172.32.153.184:29999/xxx.git\n- 或其他有效的 git 仓库地址');
+      return;
+    }
+
+    // 移除末尾的 .git 后缀（如果有）
     const cleanUrl = url.endsWith('.git') ? url.slice(0, -4) : url;
 
     // 禁用按钮，显示状态
@@ -1979,12 +1990,23 @@ function closeConfigDialog() {
 // 应用 SkillsLM URL 配置
 function applySkillsLMUrl(url) {
   const iframe = document.getElementById('skillslm-webview');
-  if (!iframe) return;
+  if (!iframe) {
+    console.error('[SkillsLM] iframe not found!');
+    return;
+  }
 
   // 如果配置了 URL，使用配置的值；否则使用默认值
   const skillsLMUrl = url && url.trim() !== '' ? url.trim() : 'https://skillslm.com';
   iframe.src = skillsLMUrl;
   console.log('[SkillsLM] Applied URL:', skillsLMUrl);
+
+  // 添加加载事件监听用于调试
+  iframe.onerror = (event) => {
+    console.error('[SkillsLM] iframe load error:', event);
+  };
+  iframe.onload = () => {
+    console.log('[SkillsLM] iframe loaded successfully');
+  };
 }
 
 // 显示状态消息
@@ -2043,6 +2065,9 @@ async function saveConfig(event) {
 
     console.log('[Config] Configuration saved successfully');
     showConfigStatus('配置已保存', 'success');
+
+    // 应用 SkillsLM URL 更新
+    applySkillsLMUrl(newConfig.skillslm_url);
 
     // 1.5秒后关闭对话框
     setTimeout(() => {

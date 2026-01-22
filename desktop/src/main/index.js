@@ -1038,6 +1038,19 @@ function createWindow() {
 
   mainWindow = new BrowserWindow(mainWindowConfig);
 
+  // 配置主窗口 session 的响应头拦截（允许 iframe 加载任何 URL）
+  mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    const responseHeaders = details.responseHeaders;
+
+    // 移除阻止 iframe 加载的响应头
+    const headersToRemove = ['X-Frame-Options', 'Content-Security-Policy', 'X-Content-Security-Policy'];
+    headersToRemove.forEach(header => {
+      delete responseHeaders[header];
+    });
+
+    callback({ cancel: false, responseHeaders });
+  }, { urls: ['<all_urls>'] });
+
   mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
 
   // Windows 窗口激活时确保输入框聚焦
@@ -1079,6 +1092,19 @@ app.whenReady().then(async () => {
   // 初始化 webview session（必须在 app.ready 之后）
   webviewSession = session.fromPartition('persist:skillslm-proxy');
   await configureWebviewProxy();  // 配置代理（只影响 webview session）
+
+  // 配置响应头拦截（允许 iframe 加载任何 URL）
+  webviewSession.webRequest.onHeadersReceived((details, callback) => {
+    const responseHeaders = details.responseHeaders;
+
+    // 移除阻止 iframe 加载的响应头
+    const headersToRemove = ['X-Frame-Options', 'Content-Security-Policy', 'X-Content-Security-Policy'];
+    headersToRemove.forEach(header => {
+      delete responseHeaders[header];
+    });
+
+    callback({ cancel: false, responseHeaders });
+  }, { urls: ['<all_urls>'] });
 
   // 启动 socket 服务器
   await startSocketServer();

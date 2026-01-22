@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://skillslm.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://skillslm.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://skillslm.com;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://skillslm.com http://172.32.153.184:* http://localhost:* https://localhost:*; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://skillslm.com http://172.32.153.184:* http://localhost:*; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://skillslm.com http://172.32.153.184:* http://localhost:*; connect-src 'self' https://skillslm.com http://172.32.153.184:* http://localhost:* https://localhost:*;">
   <title>Cowork</title>
   <style>
     /* === CSS 变量系统 - macOS Big Sur 风格 === */
@@ -1202,6 +1202,8 @@
           <div id="skillslm-webview-panel" style="flex: 1; border-left: 1px solid var(--divider-color); padding-left: 12px; overflow: hidden;">
             <iframe id="skillslm-webview"
                     src="https://skillslm.com"
+                    allow="scripts; downloads; popups; forms; same-origin; modals"
+                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"
                     style="width: 100%; height: 100%; border: none; border-radius: var(--radius-lg);">
             </iframe>
           </div>
