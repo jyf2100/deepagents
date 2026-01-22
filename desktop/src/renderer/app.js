@@ -1996,7 +1996,7 @@ function applySkillsLMUrl(url) {
   }
 
   // 如果配置了 URL，使用配置的值；否则使用默认值
-  const skillsLMUrl = url && url.trim() !== '' ? url.trim() : 'https://skillslm.com';
+  const skillsLMUrl = url && url.trim() !== '' ? url.trim() : 'http://172.32.153.184:29999/skillers';
   iframe.src = skillsLMUrl;
   console.log('[SkillsLM] Applied URL:', skillsLMUrl);
 
