@@ -1497,6 +1497,10 @@ async function initializeApp() {
   // === 焦点管理（修复 Windows 输入问题） ===
   // 将 ensureInputFocus 暴露到全局，供主进程调用
   window.ensureInputFocus = function() {
+    // 检查是否暂停（例如对话框显示时）
+    if (window.inputFocusPaused) {
+      return false;
+    }
     if (input && document.activeElement !== input) {
       console.log('[Focus] Forcing input focus');
       input.focus();
@@ -1745,6 +1749,22 @@ function showToolApprovalDialog(data) {
     console.log('[HITL] Dialog display style:', dialog.style.display);
     console.log('[HITL] Dialog visibility:', dialog.offsetParent !== null);
 
+    // Windows: 对话框显示时，禁用输入框自动焦点，防止抢占焦点
+    if (window.inputFocusPaused === undefined) {
+      window.inputFocusPaused = false;
+    }
+    window.inputFocusPaused = true;
+    console.log('[HITL] Paused input focus management for dialog');
+
+    // 将焦点设置到批准按钮
+    setTimeout(() => {
+      const approveBtn = document.getElementById('approve-tool-btn');
+      if (approveBtn) {
+        approveBtn.focus();
+        console.log('[HITL] Focus set to approve button');
+      }
+    }, 100);
+
     // 如果有 Agent 思考内容，先显示思考
     if (agentThinking && agentThinking.trim()) {
       addOperationLog(`💭 Agent 思考:\n${agentThinking.trim()}`);
@@ -1812,6 +1832,10 @@ async function handleToolDecision(action) {
   const dialog = document.getElementById('tool-approval-dialog');
   dialog.style.display = 'none';
 
+  // 恢复输入框焦点管理
+  window.inputFocusPaused = false;
+  console.log('[HITL] Resumed input focus management after dialog close');
+
   // 保持 currentRequestId 直到请求完成，以防止处理重复的事件
   // currentRequestId = null;
 
@@ -1852,6 +1876,15 @@ async function handleToolDecision(action) {
     // 发送失败时恢复显示对话框，允许用户重试
     const dialog = document.getElementById('tool-approval-dialog');
     dialog.style.display = 'flex';
+
+    // 重新暂停焦点管理并设置焦点到按钮
+    window.inputFocusPaused = true;
+    setTimeout(() => {
+      const approveBtn = document.getElementById('approve-tool-btn');
+      if (approveBtn) {
+        approveBtn.focus();
+      }
+    }, 100);
   } finally {
     // 无论成功或失败，都重置处理标志
     isProcessingDecision = false;
