@@ -1495,34 +1495,86 @@ async function initializeApp() {
   }
 
   // === 焦点管理（修复 Windows 输入问题） ===
-  function ensureInputFocus() {
+  // 将 ensureInputFocus 暴露到全局，供主进程调用
+  window.ensureInputFocus = function() {
     if (input && document.activeElement !== input) {
+      console.log('[Focus] Forcing input focus');
       input.focus();
+      return true;
     }
-  }
+    return false;
+  };
+
+  // 本地引用，避免频繁访问 window
+  const ensureInputFocus = window.ensureInputFocus;
 
   // 添加焦点事件监听
   input.addEventListener('focus', () => {
-    console.log('[Focus] Input focused');
+    console.log('[Focus] Input focused, activeElement:', document.activeElement?.tagName);
   });
 
   input.addEventListener('blur', () => {
-    console.log('[Focus] Input blurred');
+    console.log('[Focus] Input blurred, new activeElement:', document.activeElement?.tagName);
+    // Windows: 当输入框失去焦点时，延迟检查是否需要恢复焦点
+    if (navigator.platform.includes('Win')) {
+      setTimeout(() => {
+        // 如果焦点不在输入框、按钮或其他交互元素上，恢复到输入框
+        const tag = document.activeElement?.tagName?.toLowerCase();
+        if (tag !== 'input' && tag !== 'button' && tag !== 'textarea' && tag !== 'select') {
+          console.log('[Focus] Focus lost to non-interactive element, restoring');
+          ensureInputFocus();
+        }
+      }, 100);
+    }
   });
 
-  // Windows 特殊处理：点击时确保聚焦
+  // Windows 特殊处理：增强焦点管理
   if (navigator.platform.includes('Win')) {
-    console.log('[Focus] Windows detected, adding focus handlers');
+    console.log('[Focus] Windows detected, adding enhanced focus handlers');
+
+    // 点击时确保聚焦
     input.addEventListener('click', () => {
+      console.log('[Focus] Input clicked, ensuring focus');
       ensureInputFocus();
     });
 
-    // 定期检查焦点（Windows 需要）
-    setInterval(ensureInputFocus, 2000);
+    // mousedown 时也确保聚焦（比 click 更早触发）
+    input.addEventListener('mousedown', () => {
+      console.log('[Focus] Input mousedown, ensuring focus');
+      setTimeout(ensureInputFocus, 0);
+    });
+
+    // 鼠标进入输入框区域时也尝试聚焦
+    input.addEventListener('mouseenter', () => {
+      console.log('[Focus] Mouse entered input area');
+      setTimeout(ensureInputFocus, 50);
+    });
+
+    // 定期检查焦点（更频繁，从 2 秒改为 500ms）
+    let focusCheckCount = 0;
+    setInterval(() => {
+      focusCheckCount++;
+      if (ensureInputFocus()) {
+        console.log(`[Focus] Auto-restored focus (check #${focusCheckCount})`);
+      }
+    }, 500);
+
+    // 监听整个文档的点击事件
+    document.addEventListener('click', (e) => {
+      // 如果点击的是输入框容器内部，确保输入框获得焦点
+      const inputContainer = input.closest('.input-container, .message-input-area');
+      if (inputContainer && inputContainer.contains(e.target)) {
+        console.log('[Focus] Clicked inside input container');
+        setTimeout(ensureInputFocus, 0);
+      }
+    }, true);  // 使用捕获阶段
   }
 
   // 初始化时自动聚焦
-  setTimeout(ensureInputFocus, 500);
+  setTimeout(() => {
+    console.log('[Focus] Initial focus attempt');
+    ensureInputFocus();
+  }, 500);
 
   // 设置消息发送事件监听器
   sendBtn.addEventListener('click', sendMessage);
