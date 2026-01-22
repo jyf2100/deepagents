@@ -1013,7 +1013,10 @@ ipcMain.handle('selectDirectory', async () => {
 
 // === Window Management ===
 function createWindow() {
-  mainWindow = new BrowserWindow({
+  // 检测平台
+  const isWindows = process.platform === 'win32';
+
+  const mainWindowConfig = {
     width: 1200,
     height: 800,
     title: 'Cowork',
@@ -1024,9 +1027,30 @@ function createWindow() {
       webviewTag: true,  // 启用 webview 标签支持
       webSecurity: false  // 允许本地文件访问
     }
-  });
+  };
+
+  // Windows 特定优化
+  if (isWindows) {
+    console.log('[Platform] Windows detected, applying platform-specific optimizations');
+    mainWindowConfig.webPreferences.backgroundThrottling = false;
+    mainWindowConfig.backgroundColor = '#ffffff';
+  }
+
+  mainWindow = new BrowserWindow(mainWindowConfig);
 
   mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
+
+  // Windows 窗口激活时确保输入框聚焦
+  if (isWindows) {
+    mainWindow.on('focus', () => {
+      console.log('[Platform] Window focused, ensuring input focus');
+      mainWindow.webContents.executeJavaScript(`
+        if (typeof ensureInputFocus === 'function') {
+          ensureInputFocus();
+        }
+      `);
+    });
+  }
 
   if (process.env.NODE_ENV === 'development') {
     mainWindow.webContents.openDevTools();

@@ -15,6 +15,9 @@ extraResources:
   - from: "src/resources/deepagents-desktop-agent"
     to: "deepagents-desktop-agent"
     filter: ["**/*"]
+  - from: "src/resources/skills"
+    to: "skills"
+    filter: ["**/*"]
 
 mac:
   category: public.app-category.developer-tools

@@ -1,9 +1,12 @@
 """Unix Socket 通信协议 - 桌面模式."""
 
 import asyncio
+import logging
 import msgpack
 import os
+import shutil
 import sys
+from pathlib import Path
 from typing import Any
 
 from deepagents_cli.agent import create_cli_agent
@@ -38,6 +41,50 @@ class DesktopProtocol:
         self.current_workspace_id = None  # Track current workspace
         self.current_conversation_id = None  # Track current conversation
         self.pending_interrupts: dict[str, dict] = {}  # Store pending HITL interrupts
+
+        # Setup pre-installed skills for new users
+        self._setup_preinstalled_skills()
+
+    def _setup_preinstalled_skills(self):
+        """Setup pre-installed skills from app resources.
+
+        Copies pre-installed skills from the application resources to the user's
+        skills directory if it doesn't already exist.
+        """
+        # 目标目录：~/.deepagents/desktop/skills/
+        target_dir = Path.home() / ".deepagents" / "desktop" / "skills"
+
+        # 如果目录已存在且有内容，跳过复制
+        if target_dir.exists() and list(target_dir.iterdir()):
+            logging.info(f"Skills directory already exists: {target_dir}")
+            return
+
+        # 创建父目录
+        target_dir.parent.mkdir(parents=True, exist_ok=True)
+
+        # 查找应用资源中的技能目录
+        app_skills_path = None
+        if hasattr(sys, '_MEIPASS'):  # PyInstaller 打包环境
+            # 尝试多个可能的路径
+            meipass = Path(sys._MEIPASS)
+            possible_paths = [
+                meipass / "_internal" / "skills",  # COLLECT 模式
+                meipass / "skills",  # 标准路径
+                meipass.parent / "skills",  # 备选路径
+            ]
+            for p in possible_paths:
+                if p.exists():
+                    app_skills_path = p
+                    break
+        else:  # 开发环境
+            # 从 deepagents-cli/desktop/src/resources/skills
+            app_skills_path = Path(__file__).parent.parent.parent / "desktop" / "src" / "resources" / "skills"
+
+        if app_skills_path and app_skills_path.exists():
+            shutil.copytree(app_skills_path, target_dir)
+            logging.info(f"Copied pre-installed skills to {target_dir}")
+        else:
+            logging.warning(f"Pre-installed skills not found at {app_skills_path}")
 
     def _extract_tool_info(self, pending_interrupts: dict) -> dict:
         """Extract tool info from pending interrupts for frontend."""

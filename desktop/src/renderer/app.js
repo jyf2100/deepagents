@@ -1494,6 +1494,36 @@ async function initializeApp() {
     console.error('[INIT] Failed to apply SkillsLM URL:', error);
   }
 
+  // === 焦点管理（修复 Windows 输入问题） ===
+  function ensureInputFocus() {
+    if (input && document.activeElement !== input) {
+      input.focus();
+    }
+  }
+
+  // 添加焦点事件监听
+  input.addEventListener('focus', () => {
+    console.log('[Focus] Input focused');
+  });
+
+  input.addEventListener('blur', () => {
+    console.log('[Focus] Input blurred');
+  });
+
+  // Windows 特殊处理：点击时确保聚焦
+  if (navigator.platform.includes('Win')) {
+    console.log('[Focus] Windows detected, adding focus handlers');
+    input.addEventListener('click', () => {
+      ensureInputFocus();
+    });
+
+    // 定期检查焦点（Windows 需要）
+    setInterval(ensureInputFocus, 2000);
+  }
+
+  // 初始化时自动聚焦
+  setTimeout(ensureInputFocus, 500);
+
   // 设置消息发送事件监听器
   sendBtn.addEventListener('click', sendMessage);
   input.addEventListener('keypress', (e) => {

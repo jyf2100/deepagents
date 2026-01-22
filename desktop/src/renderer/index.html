@@ -568,9 +568,20 @@
       transition: all var(--transition-normal);
     }
     #message-input:focus {
-      outline: none;
+      /* Windows 需要 outline 来显示光标状态，macOS 使用 box-shadow */
       border-color: var(--accent-color);
       box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.1);
+    }
+    /* Windows 特定样式 - 确保光标可见 */
+    @media (platform: win32) {
+      #message-input {
+        -webkit-appearance: none;
+        appearance: none;
+        caret-color: var(--text-primary);
+      }
+      #message-input:focus {
+        outline: 2px solid var(--accent-color);
+      }
     }
     #message-input::placeholder {
       color: var(--text-tertiary);
