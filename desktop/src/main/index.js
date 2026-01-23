@@ -120,6 +120,35 @@ async function startSocketServer() {
 function handleSocketMessage(message) {
   const { request_id, status, data, error, type } = message;
 
+  // Handle streaming chunks
+  if (type === 'chunk') {
+    console.log('[handleSocketMessage] Received streaming chunk:', { request_id, contentLen: message.content?.length, done: message.done });
+
+    // Forward chunk to renderer immediately
+    if (mainWindow) {
+      mainWindow.webContents.send('chat-chunk', {
+        requestId: request_id,
+        content: message.content || '',
+        done: message.done || false
+      });
+    }
+
+    // Handle completion
+    if (message.done) {
+      const pending = pendingRequests.get(request_id);
+      if (pending) {
+        clearTimeout(pending.timeout);
+        // Resolve with streaming complete flag
+        pending.resolve({
+          status: 'success',
+          data: { content: '', streamed: true }
+        });
+        pendingRequests.delete(request_id);
+      }
+    }
+    return;
+  }
+
   // Handle special event types (not responses)
   if (type === 'interrupt_request') {
     console.log('[handleSocketMessage] Received interrupt_request event');
@@ -269,21 +298,39 @@ function startPythonAgent() {
   }
 
   pythonProcess.stdout.on('data', (data) => {
+    const msg = `Python: ${data}`;
+    // 尝试输出到控制台，如果管道已关闭则忽略
     try {
-      const msg = `Python: ${data}`;
       console.log(msg);
+    } catch (e) {
+      if (e.code !== 'EPIPE') {
+        // 只有非 EPIPE 错误才抛出
+        throw e;
+      }
+    }
+    // 始终记录到日志文件
+    try {
       log.info(msg);
     } catch (e) {
-      // Ignore EPIPE errors when stdout is closed
+      // 忽略日志记录错误
     }
   });
   pythonProcess.stderr.on('data', (data) => {
+    const msg = `Python Error: ${data}`;
+    // 尝试输出到控制台，如果管道已关闭则忽略
     try {
-      const msg = `Python Error: ${data}`;
       console.error(msg);
+    } catch (e) {
+      if (e.code !== 'EPIPE') {
+        // 只有非 EPIPE 错误才抛出
+        throw e;
+      }
+    }
+    // 始终记录到日志文件
+    try {
       log.error(msg);
     } catch (e) {
-      // Ignore EPIPE errors when stderr is closed
+      // 忽略日志记录错误
     }
   });
 
@@ -301,8 +348,9 @@ function startPythonAgent() {
 }
 
 // === IPC Handlers ===
-ipcMain.handle('chat', async (event, message, stream = false, workspaceId = null, conversationId = null) => {
-  const requestId = randomUUID();
+ipcMain.handle('chat', async (event, message, stream = false, workspaceId = null, conversationId = null, clientRequestId = null) => {
+  // 使用前端提供的 requestId，如果没有则生成一个新的
+  const requestId = clientRequestId || randomUUID();
 
   const promise = new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
@@ -312,6 +360,8 @@ ipcMain.handle('chat', async (event, message, stream = false, workspaceId = null
 
     pendingRequests.set(requestId, { resolve, reject, timeout });
   });
+
+  console.log('[chat IPC] Sending to Python:', { message: String(message || '').substring(0, 50), stream, workspaceId, conversationId, requestId });
 
   await sendToSocket({
     request_id: requestId,
@@ -324,7 +374,9 @@ ipcMain.handle('chat', async (event, message, stream = false, workspaceId = null
     }
   });
 
-  return promise;
+  // 包装响应，包含 requestId 供前端验证 chunk
+  const response = await promise;
+  return { ...response, requestId };
 });
 
 // 获取技能列表（从 Python 后端）

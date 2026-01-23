@@ -745,8 +745,41 @@ function formatJsonWithHighlight(jsonStr) {
 
 // 新增函数：工具调用格式化
 function formatToolCalls(text) {
-  // 检测工具调用块模式
-  const toolCallPattern = /(?:call_id|Tool Call):\s*([a-f0-9-]+)\s*\n([\s\S]*?)(?=\n\n|\n(?:call_id|已创建|已删除|✓|Error)|$)/gi;
+  // 首先处理 Tool Output 格式: 🔧 Tool Output (tool_name):\ncontent
+  const toolOutputPattern = /🔧\s*Tool Output\s*\(([^)]+)\):\s*\n([\s\S]*?)(?=\n\n|\n🔧|Message|$)/gi;
+
+  text = text.replace(toolOutputPattern, (match, toolName, output) => {
+    // 格式化工具输出
+    let result = `<div class="tool-output-compact">`;
+    result += `<div class="tool-output-header">`;
+    result += `<span class="tool-icon">✓</span>`;
+    result += `<span class="tool-name">${escapeHtml(toolName.trim())}</span>`;
+    result += `<span class="tool-type">输出</span>`;
+    result += `</div>`;
+
+    // 输出内容
+    if (output.trim()) {
+      // 尝试解析为 JSON 以美化显示
+      try {
+        const parsed = JSON.parse(output);
+        const formattedOutput = formatJsonWithHighlight(JSON.stringify(parsed, null, 2));
+        result += `<div class="tool-output-section">`;
+        result += `<pre class="tool-output-content">${formattedOutput}</pre>`;
+        result += `</div>`;
+      } catch (e) {
+        // 不是 JSON，直接显示文本
+        result += `<div class="tool-output-section">`;
+        result += `<pre class="tool-output-content">${escapeHtml(output.trim())}</pre>`;
+        result += `</div>`;
+      }
+    }
+
+    result += `</div>`;
+    return result;
+  });
+
+  // 然后处理 Tool Call 格式
+  const toolCallPattern = /(?:call_id|Tool Call):\s*([a-f0-9-]+)\s*\n([\s\S]*?)(?=\n\n|\n(?:call_id|已创建|已删除|✓|Error|🔧)|$)/gi;
 
   return text.replace(toolCallPattern, (match, callId, body) => {
     // 提取工具信息
@@ -809,6 +842,51 @@ function addMessage(role, content) {
 
 // 当前思考过程组件
 let currentThinkingLog = null;
+
+// 流式消息状态
+let currentStreamingMessage = null;  // { container, contentDiv, cursor, fullContent }
+let currentStreamRequestId = null;   // 当前流式请求的 ID
+
+// 创建流式消息容器
+function createStreamingMessage() {
+  const container = document.createElement('div');
+  container.className = 'message assistant streaming';
+
+  const contentDiv = document.createElement('div');
+  contentDiv.className = 'message-content streaming-content';
+
+  // 光标动画
+  const cursor = document.createElement('span');
+  cursor.className = 'streaming-cursor';
+  cursor.textContent = '▋';
+
+  container.appendChild(contentDiv);
+  container.appendChild(cursor);
+
+  return { container, contentDiv, cursor, fullContent: '' };
+}
+
+// 追加内容到流式消息
+function appendStreamingContent(contentDiv, newContent) {
+  // 增量追加内容（只做 HTML 转义，不做完整格式化）
+  contentDiv.insertAdjacentHTML('beforeend', escapeHtml(newContent));
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+// 完成流式消息（移除光标，重新格式化内容）
+function completeStreamingMessage(streamingMsg) {
+  if (!streamingMsg) return;
+
+  // 移除光标
+  if (streamingMsg.cursor) {
+    streamingMsg.cursor.remove();
+  }
+
+  // 重新格式化完整内容
+  const formattedContent = formatMessageContent(streamingMsg.fullContent);
+  streamingMsg.container.innerHTML = formattedContent;
+  streamingMsg.container.classList.remove('streaming');
+}
 
 // 添加操作日志记录到思考过程面板
 function addOperationLog(text) {
@@ -890,44 +968,54 @@ async function sendMessage() {
   addMessage('user', message);
   input.value = '';
 
+  // 创建流式消息容器
+  currentStreamingMessage = createStreamingMessage();
+  messagesDiv.appendChild(currentStreamingMessage.container);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+  // 生成 requestId 并在发送前设置（避免时序问题）
+  const requestId = crypto.randomUUID();
+  currentStreamRequestId = requestId;
+  console.log('[sendMessage] Generated Request ID:', requestId);
+
   try {
-    // 显示"思考中"加载状态
-    const loadingElement = document.createElement('div');
-    loadingElement.className = 'message assistant';
-    loadingElement.innerHTML = '<span class="thinking-indicator">思考中...</span>';
-    messagesDiv.appendChild(loadingElement);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-
-    // 调用后端（使用流式模式，但当前架构下仍是一次性返回）
+    // 调用后端（使用流式模式）
     // 传递简单字符串消息，而不是对象，避免后端解析错误
-    const response = await window.deepagents.chat(message, true, currentWorkspaceId, currentConversationId);
+    const response = await window.deepagents.chat(message, true, currentWorkspaceId, currentConversationId, requestId);
 
-    // 移除加载状态，显示实际响应
-    loadingElement.remove();
-    // 响应结构: { status: 'success', data: { content: '...' } }
     console.log('[sendMessage] Response:', response);
-    
-    // 安全地提取内容，处理可能的对象类型
-    let content = '';
-    if (response?.data?.content) {
-      content = response.data.content;
-    } else if (response?.content) {
-      content = response.content;
-    }
-    
-    // 确保 content 是字符串
-    if (typeof content === 'object') {
-      try {
-        content = JSON.stringify(content);
-      } catch (e) {
-        content = String(content);
-      }
-    } else {
-      content = String(content || '');
-    }
 
-    console.log('[sendMessage] Extracted content length:', content.length);
-    addMessage('assistant', content);
+    // 检查是否是流式响应
+    if (response?.data?.streamed) {
+      // 流式响应已经在事件监听器中处理完成
+      console.log('[sendMessage] Streaming complete');
+    } else {
+      // 非流式响应（回退到原有逻辑）
+      const loadingElement = currentStreamingMessage.container;
+      loadingElement.remove();
+
+      // 安全地提取内容
+      let content = '';
+      if (response?.data?.content) {
+        content = response.data.content;
+      } else if (response?.content) {
+        content = response.content;
+      }
+
+      // 确保 content 是字符串
+      if (typeof content === 'object') {
+        try {
+          content = JSON.stringify(content);
+        } catch (e) {
+          content = String(content);
+        }
+      } else {
+        content = String(content || '');
+      }
+
+      console.log('[sendMessage] Extracted content length:', content.length);
+      addMessage('assistant', content);
+    }
 
     // 如果是第一条用户消息，现在可以安全地同步标题到后端了
     const conversation = getCurrentConversation();
@@ -939,10 +1027,17 @@ async function sendMessage() {
       }
     }
   } catch (error) {
+    // 清理流式消息容器
+    if (currentStreamingMessage) {
+      currentStreamingMessage.container.remove();
+      currentStreamingMessage = null;
+    }
     addMessage('assistant', `Error: ${error.message}`);
   } finally {
     isProcessing = false;
     sendBtn.disabled = false;
+    currentStreamingMessage = null;
+    currentStreamRequestId = null;
   }
 }
 
@@ -1643,6 +1738,33 @@ function setupHITL() {
         showToolApprovalDialog(data);
       }
     });
+
+    // 监听流式 chunk 消息
+    window.deepagents.onChunk((data) => {
+      console.log('[Stream] Received chunk:', { requestId: data.requestId, contentLen: data.content?.length, done: data.done });
+
+      // 验证 requestId 是否匹配当前请求
+      if (data.requestId !== currentStreamRequestId) {
+        console.log('[Stream] Ignoring chunk for different request:', data.requestId, 'current:', currentStreamRequestId);
+        return;
+      }
+
+      if (currentStreamingMessage && data.content) {
+        // 追加内容到流式消息
+        appendStreamingContent(currentStreamingMessage.contentDiv, data.content);
+        // 累积完整内容用于最终格式化
+        currentStreamingMessage.fullContent += data.content;
+      }
+
+      if (data.done) {
+        // 流式完成，重新格式化内容
+        console.log('[Stream] Streaming complete, finalizing...');
+        completeStreamingMessage(currentStreamingMessage);
+        currentStreamingMessage = null;
+        currentStreamRequestId = null;  // 清空 requestId
+      }
+    });
+
     hitlCallbackRegistered = true;
     console.log('[HITL] Response callback registered');
   }

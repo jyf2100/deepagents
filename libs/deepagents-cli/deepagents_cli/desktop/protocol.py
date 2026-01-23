@@ -9,6 +9,19 @@ import sys
 from pathlib import Path
 from typing import Any
 
+# 调试日志文件
+DEBUG_LOG_FILE = os.path.expanduser("~/Desktop/deepagents-debug.log")
+
+def debug_print(msg: str) -> None:
+    """同时输出到 stderr 和日志文件"""
+    print(msg, file=sys.stderr)
+    try:
+        with open(DEBUG_LOG_FILE, 'a') as f:
+            f.write(msg + '\n')
+            f.flush()
+    except Exception:
+        pass  # 忽略文件写入错误
+
 from deepagents_cli.agent import create_cli_agent
 from deepagents_cli.config import settings
 
@@ -41,6 +54,10 @@ class DesktopProtocol:
         self.current_workspace_id = None  # Track current workspace
         self.current_conversation_id = None  # Track current conversation
         self.pending_interrupts: dict[str, dict] = {}  # Store pending HITL interrupts
+
+        # Streaming support: current writer for sending chunks
+        self.current_writer: asyncio.StreamWriter | None = None
+        self.is_streaming = False  # Flag to indicate if currently streaming
 
         # Setup pre-installed skills for new users
         self._setup_preinstalled_skills()
@@ -309,6 +326,9 @@ class DesktopProtocol:
             reader: Stream reader for incoming data
             writer: Stream writer for outgoing data
         """
+        # Store writer for streaming support
+        self.current_writer = writer
+
         try:
             while True:
                 # Read length prefix (4 bytes)
@@ -375,8 +395,41 @@ class DesktopProtocol:
             except Exception:
                 pass  # Best effort error reporting
         finally:
+            # Clean up writer reference
+            self.current_writer = None
+            self.is_streaming = False
             writer.close()
             await writer.wait_closed()
+
+    async def _send_chunk(self, request_id: str, chunk_data: dict[str, Any]) -> None:
+        """Send a streaming chunk to the frontend.
+
+        Args:
+            request_id: Request identifier for response correlation
+            chunk_data: Chunk data with type, content, and done flag
+        """
+        if not self.current_writer:
+            debug_print("[_send_chunk] WARNING: No writer available, chunk not sent")
+            return
+
+        try:
+            # Build chunk message
+            chunk_message = {
+                'request_id': request_id,
+                **chunk_data
+            }
+
+            # Pack and send
+            message_bytes = msgpack.packb(chunk_message)
+            length_prefix = len(message_bytes).to_bytes(4, 'little')
+
+            self.current_writer.write(length_prefix + message_bytes)
+            await self.current_writer.drain()
+
+            debug_print(f"[_send_chunk] Sent chunk: type={chunk_data.get('type')}, content_len={len(chunk_data.get('content', ''))}, done={chunk_data.get('done')}")
+
+        except Exception as e:
+            print(f"[_send_chunk] ERROR: Failed to send chunk: {e}", file=sys.stderr)
 
     async def handle_request(self, message: dict[str, Any]) -> dict[str, Any]:
         """Handle incoming request from Electron.
@@ -520,6 +573,7 @@ class DesktopProtocol:
 
         # Debug logging (safe for None values)
         import sys
+        print(f"[_handle_chat] params: stream={stream}, message_len={len(user_message)}, workspace_id={workspace_id}, conversation_id={conversation_id}", file=sys.stderr)
         
         # Handle case where user_message might be a dictionary (from frontend bug)
         if isinstance(user_message, dict):
@@ -580,97 +634,282 @@ class DesktopProtocol:
         try:
             # Invoke agent
             if stream:
-                # Streaming response
-                content = ""
+                # Streaming response - send chunks immediately
+                # 清空旧的日志文件
+                try:
+                    open(DEBUG_LOG_FILE, 'w').close()
+                except Exception:
+                    pass
+
+                debug_print(f"[_handle_chat] *** STREAMING MODE ACTIVATED ***")
                 chunk_count = 0
+
                 async for chunk in self.agent.astream(
                     {'messages': [user_message]},
                     config=agent_config,
-                    stream_mode="updates"
+                    stream_mode=["messages", "updates"]  # 组合模式：消息流 + 中断检测
                 ):
                     chunk_count += 1
 
-                    # Debug: log chunk type
-                    # print(f"[_handle_chat] Chunk {chunk_count}: type={type(chunk).__name__}", file=sys.stderr)
-                    if isinstance(chunk, dict):
-                        # print(f"[_handle_chat] Chunk {chunk_count} keys: {list(chunk.keys())}", file=sys.stderr)
-                        if "__interrupt__" in chunk:
-                            print(f"[_handle_chat] *** INTERRUPT FOUND in chunk! ***", file=sys.stderr)
+                    # ===== 1. 处理 tuple 格式 =====
+                    if isinstance(chunk, tuple):
+                        debug_print(f"[_handle_chat] Processing tuple, len={len(chunk)}")
 
-                    # Handle UPDATES stream - for interrupts (similar to execution.py)
-                    if isinstance(chunk, tuple) and len(chunk) == 3:
-                        _namespace, current_stream_mode, data = chunk
-                        if current_stream_mode == "updates" and isinstance(data, dict):
-                            if "__interrupt__" in data:
-                                interrupts: list = data["__interrupt__"]
-                                if interrupts:
-                                    # Clear previous pending interrupts as we have new ones from current execution
-                                    self.pending_interrupts.clear()
-                                    
-                                    for interrupt_obj in interrupts:
-                                        interrupt_id = interrupt_obj.id
-                                        hitl_request = interrupt_obj.value
-                                        self.pending_interrupts[interrupt_id] = hitl_request
+                        # ===== 1a. 处理 (message, metadata) 格式（messages 模式） =====
+                        if len(chunk) == 2:
+                            debug_print(f"[_handle_chat] Processing len==2 tuple")
+                            message, metadata = chunk
+                            chunk_content = ""
 
-                                    # Extract tool info
-                                    tool_info = self._extract_tool_info(self.pending_interrupts)
+                            debug_print(f"[_handle_chat] message type: {type(message).__name__}")
+                            debug_print(f"[_handle_chat] message repr: {repr(message)[:200]}")
+                            # 关键：打印完整的 metadata，看看实际数据在哪里
+                            debug_print(f"[_handle_chat] metadata type: {type(metadata).__name__}")
+                            debug_print(f"[_handle_chat] metadata repr: {repr(metadata)[:500]}")
 
-                                    # Return interrupt event to frontend with expected format
-                                    print(f"[_handle_chat] Interrupt detected: tool={tool_info['tool_name']}, args={tool_info['tool_input']}, id={tool_info['tool_call_id']}", file=sys.stderr)
-                                    
-                                    # CRITICAL: Always use the original request ID
-                                    interrupt_request_id = self._original_chat_request_id if hasattr(self, '_original_chat_request_id') else request_id
-                                    
-                                    return {
-                                        'request_id': interrupt_request_id,
-                                        'type': 'interrupt_request',  # Use 'type' not 'status'
-                                        'data': tool_info
-                                    }
-                            # Skip updates chunks for content extraction
+                            # 处理不同类型的 message
+                            if isinstance(message, str):
+                                # 直接是字符串内容
+                                # 过滤掉元数据字符串，但要检查 messages 模式的 metadata
+                                if message == 'updates':
+                                    debug_print(f"[_handle_chat] Skipping 'updates' metadata")
+                                    continue
+                                elif message == 'messages':
+                                    # messages 模式：metadata 包含实际的消息对象
+                                    debug_print(f"[_handle_chat] Processing 'messages' mode, extracting from metadata...")
+                                    chunk_content = ""
+
+                                    # metadata 是 (AIMessageChunk, metadata_dict) 格式
+                                    if isinstance(metadata, tuple) and len(metadata) >= 1:
+                                        actual_message = metadata[0]  # AIMessageChunk
+                                        debug_print(f"[_handle_chat]   actual_message type: {type(actual_message).__name__}")
+
+                                        # 检查 content
+                                        if hasattr(actual_message, 'content'):
+                                            content_val = actual_message.content
+                                            debug_print(f"[_handle_chat]   content: {repr(content_val)[:100]}")
+
+                                            if isinstance(content_val, list):
+                                                for block in content_val:
+                                                    if isinstance(block, dict):
+                                                        if block.get('type') == 'text':
+                                                            chunk_content += block.get('text', '')
+                                                    else:
+                                                        chunk_content += str(block)
+                                            elif content_val:
+                                                chunk_content = str(content_val)
+
+                                        # 检查 tool_calls（可能包含文本输出）
+                                        if hasattr(actual_message, 'tool_calls') and actual_message.tool_calls:
+                                            debug_print(f"[_handle_chat]   has {len(actual_message.tool_calls)} tool_calls")
+                                            # tool_calls 可能包含响应内容
+                                            for tool_call in actual_message.tool_calls:
+                                                if hasattr(tool_call, 'name') and hasattr(tool_call, 'args'):
+                                                    debug_print(f"[_handle_chat]     tool: {tool_call.name}")
+
+                                        # 检查 response_metadata
+                                        if hasattr(actual_message, 'response_metadata'):
+                                            debug_print(f"[_handle_chat]   response_metadata: {list(actual_message.response_metadata.keys())}")
+
+                                    debug_print(f"[_handle_chat]   Extracted content length: {len(chunk_content)}")
+
+                                    if chunk_content:
+                                        await self._send_chunk(request_id, {
+                                            'type': 'chunk',
+                                            'content': chunk_content,
+                                            'done': False
+                                        })
+                                        await asyncio.sleep(0.01)
+                                    continue
+                                else:
+                                    # 普通字符串内容
+                                    chunk_content = message
+                                    debug_print(f"[_handle_chat] Direct string content: '{chunk_content}'")
+                            elif hasattr(message, 'content'):
+                                # 消息对象
+                                content_val = message.content
+                                debug_print(f"[_handle_chat] content_val: '{content_val}'")
+
+                                # 跳过空内容
+                                if not content_val:
+                                    debug_print(f"[_handle_chat] Skipping empty content")
+                                    continue
+
+                                # 处理不同类型的 content
+                                if isinstance(content_val, list):
+                                    # Block 结构
+                                    for block in content_val:
+                                        if isinstance(block, dict):
+                                            if block.get('type') == 'text':
+                                                chunk_content += block.get('text', '')
+                                        else:
+                                            chunk_content += str(block)
+                                elif content_val:
+                                    chunk_content = str(content_val)
+                                else:
+                                    debug_print(f"[_handle_chat] Skipping content_val: {type(content_val).__name__}")
+                                    continue
+                            else:
+                                debug_print(f"[_handle_chat] Unknown message type: {type(message).__name__}")
+                                continue
+
+                            # 跳过空内容
+                            if not chunk_content:
+                                debug_print(f"[_handle_chat] Skipping empty chunk_content")
+                                continue
+
+                            debug_print(f"[_handle_chat] Extracted chunk_content: '{chunk_content}'")
+
+                            # 发送 chunk
+                            if chunk_content:
+                                await self._send_chunk(request_id, {
+                                    'type': 'chunk',
+                                    'content': chunk_content,
+                                    'done': False
+                                })
+                                await asyncio.sleep(0.01)
                             continue
-                    elif isinstance(chunk, dict) and "__interrupt__" in chunk:
-                        # Handle dict-format interrupts (when using single stream_mode)
-                        interrupts: list = chunk["__interrupt__"]
-                        if interrupts:
-                            # Clear previous pending interrupts
-                            self.pending_interrupts.clear()
 
-                            # Store the original chat request_id with the interrupt
-                            # This allows _handle_tool_approval to resolve the correct Promise
-                            self._original_chat_request_id = request_id
+                        # ===== 1b. 处理 (namespace, stream_mode, data) 格式（updates 模式） =====
+                        elif len(chunk) == 3:
+                            _namespace, current_stream_mode, data = chunk
+                            debug_print(f"[_handle_chat] 3-tuple: stream_mode={current_stream_mode}, data_type={type(data).__name__}")
 
-                            for interrupt_obj in interrupts:
-                                interrupt_id = interrupt_obj.id
-                                hitl_request = interrupt_obj.value
-                                self.pending_interrupts[interrupt_id] = hitl_request
+                            # ===== 处理 messages 模式 =====
+                            if current_stream_mode == "messages":
+                                debug_print(f"[_handle_chat] Processing messages mode, data repr: {repr(data)[:200]}")
 
-                            # Extract tool info
-                            tool_info = self._extract_tool_info(self.pending_interrupts)
+                                # data 可能是消息对象、列表或字典
+                                chunk_content = ""
 
-                            # Return interrupt event to frontend with expected format
-                            print(f"[_handle_chat] Interrupt detected (dict): tool={tool_info['tool_name']}, args={tool_info['tool_input']}, id={tool_info['tool_call_id']}, original_request_id={request_id}", file=sys.stderr)
-                            
-                            # CRITICAL: Always use the original request ID for interrupts found during stream
-                            # This ensures the frontend can match the approval response to the original chat request
-                            interrupt_request_id = self._original_chat_request_id if hasattr(self, '_original_chat_request_id') else request_id
-                            
-                            return {
-                                'request_id': interrupt_request_id,
-                                'type': 'interrupt_request',  # Use 'type' not 'status'
-                                'data': tool_info
-                            }
-                        # Skip interrupt chunks for content extraction
-                        continue
+                                # 如果 data 是列表，遍历提取消息
+                                if isinstance(data, list):
+                                    for item in data:
+                                        if hasattr(item, 'content'):
+                                            content_val = item.content
+                                            if isinstance(content_val, list):
+                                                for block in content_val:
+                                                    if isinstance(block, dict) and block.get('type') == 'text':
+                                                        chunk_content += block.get('text', '')
+                                            elif content_val:
+                                                chunk_content += str(content_val)
+                                # 如果 data 是单个消息对象
+                                elif hasattr(data, 'content'):
+                                    content_val = data.content
+                                    debug_print(f"[_handle_chat]   Message content: {repr(content_val)[:100]}")
+                                    if isinstance(content_val, list):
+                                        for block in content_val:
+                                            if isinstance(block, dict) and block.get('type') == 'text':
+                                                chunk_content += block.get('text', '')
+                                    elif content_val:
+                                        chunk_content = str(content_val)
+                                # 如果 data 是字典（包含 messages）
+                                elif isinstance(data, dict) and 'messages' in data:
+                                    for msg in data['messages']:
+                                        if hasattr(msg, 'content'):
+                                            content_val = msg.content
+                                            if isinstance(content_val, list):
+                                                for block in content_val:
+                                                    if isinstance(block, dict) and block.get('type') == 'text':
+                                                        chunk_content += block.get('text', '')
+                                            elif content_val:
+                                                chunk_content += str(content_val)
 
-                    # Handle HumanInTheLoopMiddleware chunk (direct middleware key)
-                    if isinstance(chunk, dict) and "HumanInTheLoopMiddleware.after_model" in chunk:
-                        middleware_data = chunk["HumanInTheLoopMiddleware.after_model"]
-                        # Debug log only if data is present to reduce noise
-                        if middleware_data is not None:
-                            print(f"[_handle_chat] Checking HumanInTheLoopMiddleware chunk: {middleware_data.keys() if isinstance(middleware_data, dict) else type(middleware_data)}", file=sys.stderr)
-                        
-                        if isinstance(middleware_data, dict) and "__interrupt__" in middleware_data:
-                            interrupts: list = middleware_data["__interrupt__"]
+                                debug_print(f"[_handle_chat]   Extracted content length: {len(chunk_content)}")
+
+                                if chunk_content:
+                                    await self._send_chunk(request_id, {
+                                        'type': 'chunk',
+                                        'content': chunk_content,
+                                        'done': False
+                                    })
+                                    await asyncio.sleep(0.01)
+                                continue
+
+                            # ===== 处理 updates 模式 =====
+                            elif current_stream_mode == "updates" and isinstance(data, dict):
+                                # 先检查中断
+                                if "__interrupt__" in data:
+                                    interrupts: list = data["__interrupt__"]
+                                    if interrupts:
+                                        # Clear previous pending interrupts as we have new ones from current execution
+                                        self.pending_interrupts.clear()
+
+                                        for interrupt_obj in interrupts:
+                                            interrupt_id = interrupt_obj.id
+                                            hitl_request = interrupt_obj.value
+                                            self.pending_interrupts[interrupt_id] = hitl_request
+
+                                        # Extract tool info
+                                        tool_info = self._extract_tool_info(self.pending_interrupts)
+
+                                        # Return interrupt event to frontend with expected format
+                                        print(f"[_handle_chat] Interrupt detected (tuple): tool={tool_info['tool_name']}, args={tool_info['tool_input']}, id={tool_info['tool_call_id']}", file=sys.stderr)
+
+                                        # CRITICAL: Always use the original request ID
+                                        interrupt_request_id = self._original_chat_request_id if hasattr(self, '_original_chat_request_id') else request_id
+
+                                        return {
+                                            'request_id': interrupt_request_id,
+                                            'type': 'interrupt_request',  # Use 'type' not 'status'
+                                            'data': tool_info
+                                        }
+                                # Skip updates chunks for content extraction
+                                continue
+
+                    # ===== 2. 处理 list 格式 (messages 模式) =====
+                    elif isinstance(chunk, list):
+                        print(f"[_handle_chat] Processing list chunk with {len(chunk)} messages", file=sys.stderr)
+                        chunk_content = ""
+                        for i, message in enumerate(chunk):
+                            # Debug: print message type and attributes
+                            msg_type = type(message).__name__
+                            print(f"[_handle_chat]   Message {i}: type={msg_type}", file=sys.stderr)
+
+                            if isinstance(message, dict):
+                                print(f"[_handle_chat]     Dict keys: {list(message.keys())}", file=sys.stderr)
+                                if 'content' in message:
+                                    content_val = message['content']
+                                    print(f"[_handle_chat]     Content: {repr(content_val)[:100]}", file=sys.stderr)
+                                    chunk_content += str(content_val)
+                            elif hasattr(message, 'content'):
+                                content_val = message.content
+                                print(f"[_handle_chat]     Content attr: {repr(content_val)[:100]}", file=sys.stderr)
+                                # Handle both string and list content
+                                if isinstance(content_val, list):
+                                    for block in content_val:
+                                        if isinstance(block, dict):
+                                            if block.get('type') == 'text':
+                                                chunk_content += block.get('text', '')
+                                            elif block.get('type') == 'tool_use':
+                                                # Skip tool use blocks in streaming
+                                                pass
+                                        else:
+                                            chunk_content += str(block)
+                                else:
+                                    chunk_content += str(content_val)
+                            else:
+                                print(f"[_handle_chat]     No content found, attributes: {dir(message)[:10]}", file=sys.stderr)
+
+                        print(f"[_handle_chat]   Total chunk_content length: {len(chunk_content)}", file=sys.stderr)
+
+                        # Send chunk immediately if we have content
+                        if chunk_content:
+                            await self._send_chunk(request_id, {
+                                'type': 'chunk',
+                                'content': chunk_content,
+                                'done': False
+                            })
+                            # Small delay to avoid overwhelming the frontend
+                            await asyncio.sleep(0.01)
+
+                    # ===== 3. 处理 dict 格式 (updates 模式的普通格式) =====
+                    elif isinstance(chunk, dict):
+                        chunk_content = ""
+
+                        # ===== 3a. 优先检查中断 =====
+                        if "__interrupt__" in chunk:
+                            interrupts: list = chunk["__interrupt__"]
                             if interrupts:
                                 # Clear previous pending interrupts
                                 self.pending_interrupts.clear()
@@ -686,50 +925,101 @@ class DesktopProtocol:
                                 # Extract tool info
                                 tool_info = self._extract_tool_info(self.pending_interrupts)
 
-                                print(f"[_handle_chat] Interrupt detected (middleware key): tool={tool_info['tool_name']}, args={tool_info['tool_input']}, id={tool_info['tool_call_id']}", file=sys.stderr)
-                                
-                                # CRITICAL: Always use the original request ID
+                                # Return interrupt event to frontend with expected format
+                                print(f"[_handle_chat] Interrupt detected (dict): tool={tool_info['tool_name']}, args={tool_info['tool_input']}, id={tool_info['tool_call_id']}", file=sys.stderr)
+
+                                # CRITICAL: Always use the original request ID for interrupts found during stream
                                 interrupt_request_id = self._original_chat_request_id if hasattr(self, '_original_chat_request_id') else request_id
-                                
+
                                 return {
                                     'request_id': interrupt_request_id,
-                                    'type': 'interrupt_request',
+                                    'type': 'interrupt_request',  # Use 'type' not 'status'
                                     'data': tool_info
                                 }
-                        continue
+                            # Skip interrupt chunks for content extraction
+                            continue
 
-                    # Debug: print chunk with 'model' key
-                    # if isinstance(chunk, dict) and 'model' in chunk:
-                    #     print(f"[_handle_chat] Chunk {chunk_count} has 'model' key: {type(chunk['model'])}", file=sys.stderr)
-                    #     print(f"[_handle_chat] model value: {chunk['model']}", file=sys.stderr)
+                        # ===== 3b. 检查 HumanInTheLoopMiddleware chunk =====
+                        elif "HumanInTheLoopMiddleware.after_model" in chunk:
+                            middleware_data = chunk["HumanInTheLoopMiddleware.after_model"]
+                            # Debug log only if data is present to reduce noise
+                            if middleware_data is not None:
+                                print(f"[_handle_chat] Checking HumanInTheLoopMiddleware chunk: {middleware_data.keys() if isinstance(middleware_data, dict) else type(middleware_data)}", file=sys.stderr)
 
-                    # Try to extract content from different possible keys
-                    if isinstance(chunk, dict):
+                            if isinstance(middleware_data, dict) and "__interrupt__" in middleware_data:
+                                interrupts: list = middleware_data["__interrupt__"]
+                                if interrupts:
+                                    # Clear previous pending interrupts
+                                    self.pending_interrupts.clear()
+
+                                    # Store the original chat request_id with the interrupt
+                                    self._original_chat_request_id = request_id
+
+                                    for interrupt_obj in interrupts:
+                                        interrupt_id = interrupt_obj.id
+                                        hitl_request = interrupt_obj.value
+                                        self.pending_interrupts[interrupt_id] = hitl_request
+
+                                    # Extract tool info
+                                    tool_info = self._extract_tool_info(self.pending_interrupts)
+
+                                    print(f"[_handle_chat] Interrupt detected (middleware key): tool={tool_info['tool_name']}, args={tool_info['tool_input']}, id={tool_info['tool_call_id']}", file=sys.stderr)
+
+                                    # CRITICAL: Always use the original request ID
+                                    interrupt_request_id = self._original_chat_request_id if hasattr(self, '_original_chat_request_id') else request_id
+
+                                    return {
+                                        'request_id': interrupt_request_id,
+                                        'type': 'interrupt_request',
+                                        'data': tool_info
+                                    }
+                            continue
+
+                        # ===== 3c. 提取内容 =====
                         # Check for 'messages' key
                         if 'messages' in chunk:
                             for msg in chunk['messages']:
                                 if hasattr(msg, 'content'):
-                                    content += str(msg.content)
+                                    chunk_content += str(msg.content)
                                 elif isinstance(msg, dict) and 'content' in msg:
-                                    content += str(msg['content'])
+                                    chunk_content += str(msg['content'])
 
                         # Check for 'model' key (LLM response)
                         elif 'model' in chunk:
                             model_data = chunk['model']
                             if hasattr(model_data, 'content'):
-                                content += str(model_data.content)
+                                chunk_content = str(model_data.content)
                             elif isinstance(model_data, dict) and 'messages' in model_data:
                                 for msg in model_data['messages']:
                                     if hasattr(msg, 'content'):
-                                        content += str(msg.content)
+                                        chunk_content += str(msg.content)
                                     elif isinstance(msg, dict) and 'content' in msg:
-                                        content += str(msg['content'])
+                                        chunk_content += str(msg['content'])
 
-                print(f"[_handle_chat] Stream complete: {chunk_count} chunks, content length={len(content)}", file=sys.stderr)
+                        # Send chunk immediately if we have content
+                        if chunk_content:
+                            await self._send_chunk(request_id, {
+                                'type': 'chunk',
+                                'content': chunk_content,
+                                'done': False
+                            })
+                            # Small delay to avoid overwhelming the frontend
+                            await asyncio.sleep(0.01)
+
+                # Send completion signal
+                await self._send_chunk(request_id, {
+                    'type': 'chunk',
+                    'content': '',
+                    'done': True
+                })
+
+                print(f"[_handle_chat] Stream complete: {chunk_count} chunks sent", file=sys.stderr)
+
+                # Return success (content has been sent via chunks)
                 return {
                     'request_id': request_id,
                     'status': 'success',
-                    'data': {'content': content}
+                    'data': {'content': '', 'streamed': True}
                 }
             else:
                 # Single response
