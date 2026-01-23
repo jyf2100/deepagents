@@ -390,6 +390,128 @@
       color: var(--text-tertiary);
       font-size: 12px;
     }
+
+    /* 工作空间设置 - 技能过滤器 Segmented Control */
+    .ws-skill-filter-tabs {
+      display: flex;
+      background: #e5e5ea;
+      border-radius: 8px;
+      padding: 2px;
+      margin-bottom: 16px;
+    }
+
+    .ws-skill-filter-tab {
+      flex: 1;
+      padding: 5px 12px;
+      font-size: 13px;
+      font-weight: 400;
+      text-align: center;
+      background: transparent;
+      border: none;
+      border-radius: 6px;
+      color: #8e8e93;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+      user-select: none;
+    }
+
+    .ws-skill-filter-tab:hover {
+      color: #1d1d1f;
+    }
+
+    .ws-skill-filter-tab.active {
+      background: #ffffff;
+      color: #1d1d1f;
+      font-weight: 500;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08);
+    }
+
+    /* 工作空间技能项 */
+    .ws-skill-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 8px;
+      border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
+    }
+
+    .ws-skill-item:last-child {
+      border-bottom: none;
+    }
+
+    .ws-skill-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .ws-skill-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: #1d1d1f;
+      margin-bottom: 2px;
+      letter-spacing: -0.01em;
+    }
+
+    .ws-skill-description {
+      font-size: 12px;
+      color: #8e8e93;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      letter-spacing: -0.01em;
+    }
+
+    /* macOS 风格开关 */
+    .ws-skill-toggle-switch {
+      position: relative;
+      width: 42px;
+      height: 26px;
+      background: #e5e5ea;
+      border-radius: 13px;
+      cursor: pointer;
+      transition: background-color 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+      border: none;
+      padding: 0;
+      flex-shrink: 0;
+    }
+
+    .ws-skill-toggle-switch.enabled {
+      background: #34c759;
+    }
+
+    .ws-skill-toggle-switch::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 22px;
+      height: 22px;
+      background: #ffffff;
+      border-radius: 50%;
+      transition: transform 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .ws-skill-toggle-switch.enabled::after {
+      transform: translateX(16px);
+    }
+
+    .ws-skill-toggle-switch:hover {
+      opacity: 1;
+    }
+
+    .ws-skill-toggle-switch:active::after {
+      width: 24px;
+    }
+
+    /* 空状态 */
+    .ws-skills-empty {
+      text-align: center;
+      color: #8e8e93;
+      font-size: 13px;
+      padding: 24px;
+      font-weight: 400;
+    }
     /* 右侧聊天区域 */
     #chat-panel {
       flex: 1;
@@ -1227,8 +1349,8 @@
         <!-- 技能面板内容：双栏布局 (技能标签激活时显示) -->
         <div id="skills-panel-content" style="flex: 1; min-height: 0; flex-direction: row; gap: 12px;">
           <!-- 左侧：技能列表 -->
-          <div id="skills-list-panel" style="flex: 0 0 auto; width: 240px; overflow-y: auto;">
-            <div style="padding: 8px 8px 0 8px; display: flex; gap: 8px;">
+          <div id="skills-list-panel" style="flex: 0 0 auto; width: 240px; overflow-y: auto; display: flex; flex-direction: column;">
+            <div style="padding: 8px 8px 0 8px; display: flex; gap: 8px; flex-shrink: 0;">
               <button id="add-skill-btn" onclick="
                 const dialog = document.getElementById('add-skill-dialog');
                 if (dialog) {

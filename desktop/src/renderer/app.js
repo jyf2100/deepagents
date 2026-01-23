@@ -6,6 +6,9 @@ let conversations = [];
 let currentConversationId = null;
 let skills = [];
 
+// 工作空间设置中的技能过滤状态
+let workspaceSkillFilter = 'enabled'; // 'enabled' | 'disabled'
+
 // === 全局函数：添加技能对话框 ===
 // 在页面加载时就定义，确保 onclick 可以使用
 window.showAddSkillDialogGlobal = function() {
@@ -2747,7 +2750,110 @@ function setupWorkspaceSettingsDialog() {
   setupPromptConfigUI();
 }
 
+// 渲染工作空间设置中的技能列表
+function renderWorkspaceSkillsList(container, allSkills, enabledSkills) {
+  const allEnabled = enabledSkills.includes('*');
+
+  // 根据过滤器筛选技能
+  const filteredSkills = allSkills.filter(skill => {
+    const isEnabled = allEnabled || enabledSkills.includes(skill.dir_name);
+    return workspaceSkillFilter === 'enabled' ? isEnabled : !isEnabled;
+  });
+
+  let html = '';
+
+  // Segmented Control 过滤器
+  html += `
+    <div class="ws-skill-filter-tabs">
+      <button class="ws-skill-filter-tab ${workspaceSkillFilter === 'enabled' ? 'active' : ''}" data-filter="enabled">
+        已启用 <span style="opacity: 0.6;">(${allSkills.filter(s => allEnabled || enabledSkills.includes(s.dir_name)).length})</span>
+      </button>
+      <button class="ws-skill-filter-tab ${workspaceSkillFilter === 'disabled' ? 'active' : ''}" data-filter="disabled">
+        未启用 <span style="opacity: 0.6;">(${allSkills.filter(s => !(allEnabled || enabledSkills.includes(s.dir_name))).length})</span>
+      </button>
+    </div>
+  `;
+
+  // 技能列表
+  if (filteredSkills.length === 0) {
+    const emptyText = workspaceSkillFilter === 'enabled' ? '暂无已启用技能' : '暂无未启用技能';
+    html += `<div class="ws-skills-empty">${emptyText}</div>`;
+  } else {
+    html += '<div style="max-height: 200px; overflow-y: auto;">';
+
+    filteredSkills.forEach(skill => {
+      const isEnabled = allEnabled || enabledSkills.includes(skill.dir_name);
+
+      html += `
+        <div class="ws-skill-item">
+          <div class="ws-skill-info">
+            <div class="ws-skill-name">${escapeHtml(skill.name)}</div>
+            <div class="ws-skill-description">${escapeHtml(skill.description)}</div>
+          </div>
+          <button class="ws-skill-toggle-switch ${isEnabled ? 'enabled' : ''}" data-skill-id="${skill.dir_name}"></button>
+        </div>
+      `;
+    });
+
+    html += '</div>';
+  }
+
+  container.innerHTML = html;
+
+  // 绑定过滤器切换事件
+  const filterTabs = container.querySelectorAll('.ws-skill-filter-tab');
+  filterTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      workspaceSkillFilter = tab.dataset.filter;
+      renderWorkspaceSkillsList(container, allSkills, enabledSkills);
+    });
+  });
+
+  // 绑定开关切换事件
+  const toggleSwitches = container.querySelectorAll('.ws-skill-toggle-switch');
+  toggleSwitches.forEach(sw => {
+    sw.addEventListener('click', () => {
+      const skillId = sw.getAttribute('data-skill-id');
+      toggleWorkspaceSkill(skillId, allSkills);
+    });
+  });
+}
+
+// 切换工作空间技能启用状态
+function toggleWorkspaceSkill(skillId, allSkills) {
+  const allEnabled = editingWorkspaceSkills.includes('*');
+
+  if (allEnabled) {
+    // 从全启用切换到部分禁用：转换为具体列表，排除当前技能
+    editingWorkspaceSkills = allSkills
+      .map(s => s.dir_name)
+      .filter(id => id !== skillId);
+  } else {
+    // 普通列表模式
+    const isEnabled = editingWorkspaceSkills.includes(skillId);
+    if (isEnabled) {
+      // 禁用
+      editingWorkspaceSkills = editingWorkspaceSkills.filter(id => id !== skillId);
+      // 如果全部禁空，保持空数组
+    } else {
+      // 启用
+      editingWorkspaceSkills.push(skillId);
+      // 如果全部启用，转换为 '*'
+      if (editingWorkspaceSkills.length === allSkills.length) {
+        editingWorkspaceSkills = ['*'];
+      }
+    }
+  }
+
+  // 重新渲染技能列表
+  const skillsListDiv = document.getElementById('workspace-skills-list');
+  renderWorkspaceSkillsList(skillsListDiv, allSkills, editingWorkspaceSkills);
+}
+
 async function showWorkspaceSettings() {
+  // 重置技能过滤状态为"已启用"
+  workspaceSkillFilter = 'enabled';
+
   const dialog = document.getElementById('workspace-settings-dialog');
   const currentWorkspace = workspaces.find(w => w.id === currentWorkspaceId);
 
@@ -2781,70 +2887,10 @@ async function showWorkspaceSettings() {
 
     // 渲染技能选择列表
     if (allSkills.length === 0) {
-      skillsListDiv.innerHTML = '<div style="text-align: center; color: #86868b; font-size: 12px; padding: 20px;">暂无可用技能</div>';
+      skillsListDiv.innerHTML = '<div class="ws-skills-empty">暂无可用技能</div>';
     } else {
-      let html = '';
-
-      // "全部技能"选项
-      const allEnabled = editingWorkspaceSkills.includes('*');
-      html += `
-        <label style="display: flex; align-items: center; gap: 8px; padding: 8px 0; cursor: pointer; border-bottom: 1px solid #e5e5ea;">
-          <input type="checkbox" id="skill-all" ${allEnabled ? 'checked' : ''} style="margin: 0;">
-          <span style="font-size: 13px; color: #1d1d1f;">全部技能</span>
-        </label>
-      `;
-
-      // 各个技能选项
-      allSkills.forEach(skill => {
-        const checked = allEnabled || editingWorkspaceSkills.includes(skill.dir_name);
-        html += `
-          <label style="display: flex; align-items: center; gap: 8px; padding: 8px 0; cursor: pointer; border-bottom: 1px solid #e5e5ea;">
-            <input type="checkbox" class="skill-checkbox" data-skill-id="${skill.dir_name}" ${checked ? 'checked' : ''} ${allEnabled ? 'disabled' : ''} style="margin: 0;">
-            <div style="flex: 1;">
-              <div style="font-size: 13px; color: #1d1d1f;">${escapeHtml(skill.name)}</div>
-              <div style="font-size: 11px; color: #86868b;">${escapeHtml(skill.description)}</div>
-            </div>
-          </label>
-        `;
-      });
-
-      skillsListDiv.innerHTML = html;
-
-      // 绑定"全部技能"复选框事件
-      const allCheckbox = document.getElementById('skill-all');
-      if (allCheckbox) {
-        allCheckbox.addEventListener('change', (e) => {
-          const checked = e.target.checked;
-          const checkboxes = skillsListDiv.querySelectorAll('.skill-checkbox');
-          checkboxes.forEach(cb => {
-            cb.disabled = checked;
-            if (checked) {
-              cb.checked = false;
-            }
-          });
-
-          if (checked) {
-            editingWorkspaceSkills = ['*'];
-          } else {
-            editingWorkspaceSkills = [];
-          }
-        });
-      }
-
-      // 绑定各个技能复选框事件
-      const skillCheckboxes = skillsListDiv.querySelectorAll('.skill-checkbox');
-      skillCheckboxes.forEach(cb => {
-        cb.addEventListener('change', (e) => {
-          const skillId = e.target.getAttribute('data-skill-id');
-          const checked = e.target.checked;
-
-          if (checked) {
-            editingWorkspaceSkills.push(skillId);
-          } else {
-            editingWorkspaceSkills = editingWorkspaceSkills.filter(s => s !== skillId);
-          }
-        });
-      });
+      // 渲染过滤器和技能列表
+      renderWorkspaceSkillsList(skillsListDiv, allSkills, editingWorkspaceSkills);
     }
 
     dialog.style.display = 'flex';
