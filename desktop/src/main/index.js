@@ -17,7 +17,12 @@ let mainWindow;
 let pythonProcess;
 let socketServer;
 let webviewSession = null;  // 将在 app.whenReady() 中初始化
-const SOCKET_PATH = path.join(os.tmpdir(), 'deepagents-desktop.sock');
+
+// TCP socket 配置（所有平台统一使用 TCP）
+const IS_WINDOWS = process.platform === 'win32';
+const SOCKET_HOST = '127.0.0.1';
+const SOCKET_PORT = 34567;
+
 const pendingRequests = new Map();
 const connectedClients = []; // 手动跟踪连接的客户端
 let connectionTimeout = null; // Python agent 连接超时检测
@@ -56,12 +61,9 @@ async function configureWebviewProxy() {
   }
 }
 
-// === Unix Socket Server ===
+// === Socket Server ===
 async function startSocketServer() {
-  // Clean up old socket if exists
-  if (fs.existsSync(SOCKET_PATH)) {
-    fs.unlinkSync(SOCKET_PATH);
-  }
+  // TCP socket 不需要文件清理
 
   socketServer = net.createServer((socket) => {
     console.log('✓ Python client connected');
@@ -109,8 +111,9 @@ async function startSocketServer() {
   });
 
   return new Promise((resolve, reject) => {
-    socketServer.listen(SOCKET_PATH, () => {
-      console.log(`Socket server listening on ${SOCKET_PATH}`);
+    // TCP socket 监听
+    socketServer.listen(SOCKET_PORT, SOCKET_HOST, () => {
+      console.log(`Socket server listening on ${SOCKET_HOST}:${SOCKET_PORT}`);
       resolve();
     });
     socketServer.on('error', reject);
@@ -223,7 +226,7 @@ function startPythonAgent() {
     // Production: Use packaged executable directly
     const agentPath = path.join(process.resourcesPath, 'deepagents-desktop-agent', 'deepagents-desktop-agent');
     console.log(`Starting Python Agent from: ${agentPath}`);
-    console.log(`Socket path: ${SOCKET_PATH}`);
+    console.log(`Socket: ${SOCKET_HOST}:${SOCKET_PORT}`);
 
     // Use minimal clean environment - only keep essential variables
     const cleanEnv = {
@@ -241,7 +244,7 @@ function startPythonAgent() {
     // PyInstaller executable uses main.py as entry point, which expects CLI format
     pythonProcess = spawn(agentPath, [
       'desktop',
-      '--socket', SOCKET_PATH,
+      '--socket', `${SOCKET_HOST}:${SOCKET_PORT}`,
       '--agent', 'desktop'
     ], {
       env: cleanEnv
@@ -250,8 +253,8 @@ function startPythonAgent() {
     // Development: Use uv run
     const cliPath = path.join(__dirname, '../../../libs/deepagents-cli');
     console.log(`Starting Python Agent from: ${cliPath}`);
-    console.log(`Socket path: ${SOCKET_PATH}`);
-    console.log(`Command: uv run --directory ${cliPath} deepagents-cli desktop --socket ${SOCKET_PATH}`);
+    console.log(`Socket: ${SOCKET_HOST}:${SOCKET_PORT}`);
+    console.log(`Command: uv run --directory ${cliPath} deepagents-cli desktop --socket ${SOCKET_HOST}:${SOCKET_PORT}`);
 
     // Clean environment to avoid inheriting conflicting model config
     const cleanEnv = { ...process.env };
@@ -262,7 +265,7 @@ function startPythonAgent() {
     pythonProcess = spawn('uv', [
       'run', '--directory', cliPath,
       'deepagents-cli', 'desktop',
-      '--socket', SOCKET_PATH
+      '--socket', `${SOCKET_HOST}:${SOCKET_PORT}`
     ], {
       env: cleanEnv
     });
@@ -1169,9 +1172,7 @@ app.on('before-quit', () => {
   if (socketServer) {
     socketServer.close();
   }
-  if (fs.existsSync(SOCKET_PATH)) {
-    fs.unlinkSync(SOCKET_PATH);
-  }
+  // TCP socket 不需要文件清理
   if (pythonProcess) {
     pythonProcess.kill();
   }

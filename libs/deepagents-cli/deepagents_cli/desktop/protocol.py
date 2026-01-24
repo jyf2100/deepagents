@@ -14,20 +14,29 @@ from deepagents_cli.config import settings
 
 
 class DesktopProtocol:
-    """Desktop mode protocol using Unix Socket communication.
+    """Desktop mode protocol using Socket communication.
 
     This protocol handles communication between Electron desktop app and Python Agent
-    via Unix Domain Socket with MessagePack encoding.
+    via TCP socket (localhost) or Unix Domain Socket with MessagePack encoding.
     """
 
     def __init__(self, socket_path: str, assistant_id: str = "desktop"):
         """Initialize the DesktopProtocol.
 
         Args:
-            socket_path: Path to the Unix socket file
+            socket_path: TCP "host:port" string (e.g., "127.0.0.1:34567") or Unix socket path
             assistant_id: Agent identifier for memory storage
         """
-        self.socket_path = socket_path
+        # 解析 TCP host:port
+        if ':' in socket_path and not socket_path.startswith('/'):
+            self.socket_host, self.socket_port = socket_path.rsplit(':', 1)
+            self.socket_port = int(self.socket_port)
+            self.is_tcp = True
+        else:
+            # 保持向后兼容（Unix socket）
+            self.socket_path = socket_path
+            self.is_tcp = False
+
         self.assistant_id = assistant_id
 
         # Agent cache: workspace_id:conversation_id -> (agent, backend, model)
@@ -134,7 +143,12 @@ class DesktopProtocol:
         self.running = True
         while self.running:
             try:
-                reader, writer = await asyncio.open_unix_connection(self.socket_path)
+                if self.is_tcp:
+                    reader, writer = await asyncio.open_connection(
+                        self.socket_host, self.socket_port
+                    )
+                else:
+                    reader, writer = await asyncio.open_unix_connection(self.socket_path)
                 await self.handle_connection(reader, writer)
             except (ConnectionRefusedError, FileNotFoundError):
                 # Socket not ready yet, wait and retry
@@ -290,11 +304,17 @@ class DesktopProtocol:
 
     async def _test_mode_handler(self) -> None:
         """Test mode handler with simple ping-pong."""
-        print(f"DesktopProtocol: Test mode - connecting to {self.socket_path}")
+        socket_info = f"{self.socket_host}:{self.socket_port}" if self.is_tcp else self.socket_path
+        print(f"DesktopProtocol: Test mode - connecting to {socket_info}")
         self.running = True
         while self.running:
             try:
-                reader, writer = await asyncio.open_unix_connection(self.socket_path)
+                if self.is_tcp:
+                    reader, writer = await asyncio.open_connection(
+                        self.socket_host, self.socket_port
+                    )
+                else:
+                    reader, writer = await asyncio.open_unix_connection(self.socket_path)
                 await self.handle_connection(reader, writer)
             except (ConnectionRefusedError, FileNotFoundError):
                 await asyncio.sleep(1)

@@ -3,8 +3,12 @@
 import asyncio
 import json
 import sys
-import termios
-import tty
+import platform
+
+# Unix-specific imports (not available on Windows)
+if platform.system() != 'Windows':
+    import termios
+    import tty
 
 from langchain.agents.middleware.human_in_the_loop import (
     ActionRequest,
