@@ -258,6 +258,14 @@ function startPythonAgent() {
 
     // Clean environment to avoid inheriting conflicting model config
     const cleanEnv = { ...process.env };
+
+    // Add uv to PATH on Windows
+    if (process.platform === 'win32') {
+      const localBin = path.join(os.homedir(), '.local', 'bin');
+      cleanEnv.PATH = `${localBin}${path.delimiter}${cleanEnv.PATH || ''}`;
+      console.log(`Added ${localBin} to PATH`);
+    }
+
     delete cleanEnv.OPENAI_MODEL;
     delete cleanEnv.ANTHROPIC_MODEL;
     delete cleanEnv.GOOGLE_MODEL;
@@ -1079,10 +1087,18 @@ function cleanupOldResources() {
   // 清理旧的 Python agent 进程（来自之前的应用实例）
   // 注意：不要删除 socket 文件，让 startSocketServer() 处理
   try {
-    const result = execSync('pkill -f "deepagents-desktop-agent"', { encoding: 'utf-8' });
-    console.log('[cleanupOldResources] Killed old Python agents:', result.trim());
+    let command;
+    if (process.platform === 'win32') {
+      // Windows: 使用 taskkill
+      command = 'taskkill /F /IM python.exe /FI "WINDOWTITLE eq deepagents-desktop-agent*" 2>nul';
+    } else {
+      // Unix: 使用 pkill
+      command = 'pkill -f "deepagents-desktop-agent"';
+    }
+    execSync(command, { encoding: 'utf-8' });
+    console.log('[cleanupOldResources] Killed old Python agents');
   } catch (e) {
-    // pkill 返回非零退出码表示没有找到进程，这是正常的
+    // 没有找到进程是正常的
     console.log('[cleanupOldResources] No old Python agents found');
   }
 }
