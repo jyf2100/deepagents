@@ -169,7 +169,7 @@
       display: flex;
       height: 100vh;
     }
-    /* 左侧面板 - Mac 风格 */
+    /* 左侧面板 - 温暖自然风格 */
     #side-panel {
       width: 260px;
       height: 100%;
@@ -177,8 +177,30 @@
       border-right: 1px solid var(--border-color);
       display: flex;
       flex-direction: column;
-      /* box-shadow: 1px 0 3px rgba(0,0,0,0.04); 去掉阴影，使用更扁平的风格 */
-      transition: width 0.3s ease;
+      position: relative; /* 确保折叠按钮绝对定位生效 */
+      transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      contain: layout; /* 性能优化：防止子元素重排影响其他区域 */
+    }
+
+    /* 侧边栏收缩状态 */
+    #side-panel.collapsed {
+      width: 64px;
+    }
+
+    /* 收缩状态下隐藏文字标签 */
+    #side-panel.collapsed .nav-label,
+    #side-panel.collapsed .conversation-title,
+    #side-panel.collapsed .conversation-date {
+      display: none;
+    }
+
+    /* 收缩状态下图标居中 */
+    #side-panel.collapsed .nav-icon,
+    #side-panel.collapsed .conversation-icon {
+      margin: 0 auto;
+      width: 100%;
+      text-align: center;
+      padding: 12px 0;
     }
 
     /* 技能标签激活时，侧边栏扩展覆盖整个区域 */
