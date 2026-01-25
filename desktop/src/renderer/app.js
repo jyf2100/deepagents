@@ -1552,6 +1552,26 @@ async function initializeApp() {
   initConfigMenu(); // 初始化配置菜单
   setupThemeDialog(); // 初始化主题对话框
 
+  // === 初始化侧边栏折叠功能 ===
+  // 创建折叠按钮
+  const collapseBtn = document.createElement('button');
+  collapseBtn.id = 'collapse-btn';
+  collapseBtn.className = 'collapse-btn';
+  collapseBtn.innerHTML = '←';
+  collapseBtn.title = '收缩侧边栏';
+  collapseBtn.setAttribute('aria-label', '切换侧边栏');
+  collapseBtn.addEventListener('click', toggleSidePanel);
+
+  // 插入到侧边栏
+  const sidePanel = document.getElementById('side-panel');
+  if (sidePanel) {
+    // 确保侧边栏有相对定位
+    sidePanel.style.position = 'relative';
+    sidePanel.insertBefore(collapseBtn, sidePanel.firstChild);
+  } else {
+    console.error('[SidePanel] Side panel element not found');
+  }
+
   // 初始化主题管理器
   if (window.themeManager) {
     await window.themeManager.init();
