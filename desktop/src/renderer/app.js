@@ -1572,6 +1572,12 @@ async function initializeApp() {
     console.error('[SidePanel] Side panel element not found');
   }
 
+  // 初始化侧边栏状态
+  await initSidePanel();
+
+  // 设置工具提示
+  setupTooltips();
+
   // 初始化主题管理器
   if (window.themeManager) {
     await window.themeManager.init();
