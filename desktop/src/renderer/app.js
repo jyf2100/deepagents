@@ -3001,6 +3001,25 @@ async function toggleSidePanel() {
   }
 }
 
+/**
+ * 更新折叠按钮的图标和提示文本
+ * @param {boolean} isCollapsed - 是否处于收缩状态
+ */
+function updateCollapseButton(isCollapsed) {
+  const btn = document.getElementById('collapse-btn');
+
+  if (!btn) {
+    console.warn('[SidePanel] Collapse button not found');
+    return;
+  }
+
+  // 更新图标和提示文本
+  btn.innerHTML = isCollapsed ? '→' : '←';
+  btn.title = isCollapsed ? '展开侧边栏' : '收缩侧边栏';
+
+  console.log('[SidePanel] Button updated:', isCollapsed ? 'collapsed' : 'expanded');
+}
+
 // 在 DOM 加载完成后初始化
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initConfigMenu);
