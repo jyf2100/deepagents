@@ -1213,6 +1213,35 @@
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
+
+    /* === 温暖自然 - 按钮渐变效果 === */
+    button,
+    #send-btn,
+    .primary-button {
+      background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
+      border: none;
+      color: var(--text-inverse);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    button:hover,
+    #send-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-hover);
+    }
+
+    button:active,
+    #send-btn:active {
+      transform: translateY(0) scale(0.98);
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* 保持对话框按钮的原有样式 */
+    .dialog button,
+    .modal button {
+      background: var(--accent-color);
+      border: none;
+    }
   </style>
 </head>
 <body>
