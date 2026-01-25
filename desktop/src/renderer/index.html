@@ -1365,6 +1365,20 @@
         transform: translateY(0);
       }
     }
+
+    /* === 温暖自然 - 技能卡片悬停动画 === */
+    .skill-card {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .skill-card:hover {
+      transform: translateY(-4px) scale(1.02);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .skill-card:active {
+      transform: translateY(-2px) scale(1.01);
+    }
   </style>
 </head>
 <body>
