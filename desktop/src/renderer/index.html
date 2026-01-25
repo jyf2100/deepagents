@@ -1582,6 +1582,32 @@
     #side-panel.collapsed .collapse-btn {
       right: 16px; /* (64 - 32) / 2 = 16px 居中 */
     }
+
+    /* === 温暖自然 - 工具提示 === */
+    .icon-tooltip {
+      position: fixed;
+      left: 72px; /* 64px (侧边栏宽度) + 8px (margin) */
+      padding: 6px 12px;
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-md);
+      font-size: 14px;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s var(--ease-in-out);
+      z-index: 1000;
+    }
+
+    .icon-tooltip.visible {
+      opacity: 1;
+    }
+
+    /* 仅在收缩状态下显示 tooltip */
+    #side-panel:not(.collapsed) .icon-tooltip {
+      display: none;
+    }
   </style>
 </head>
 <body>
