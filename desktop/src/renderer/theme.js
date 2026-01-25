@@ -4,14 +4,33 @@
 class ThemeManager {
   constructor() {
     this.currentTheme = 'auto';
-    this.accentColor = 'blue';
+    this.accentColor = 'sand';  // 改为默认使用大地色
     this.accentColors = {
-      blue: { light: '#007aff', dark: '#0a84ff' },
-      purple: { light: '#5856d6', dark: '#bf5af2' },
-      pink: { light: '#ff2d55', dark: '#ff375f' },
-      orange: { light: '#ff9500', dark: '#ff9f0a' },
-      green: { light: '#34c759', dark: '#30d158' },
-      teal: { light: '#5ac8fa', dark: '#64d2ff' }
+      // 温暖自然的强调色系统
+      sand: {
+        light: '#D4A574',   // 浅金棕（大地色）
+        dark: '#E8B87D'     // 浅金棕（深色模式更亮）
+      },
+      rose: {
+        light: '#FF8FAB',   // 玫瑰粉
+        dark: '#FFB5BA'
+      },
+      wood: {
+        light: '#BC8F5F',   // 温暖木调
+        dark: '#DEB887'
+      },
+      sunset: {
+        light: '#FF6B6B',   // 日落红
+        dark: '#FF8FAB'
+      },
+      mint: {
+        light: '#6BCF7F',   // 薄荷绿
+        dark: '#8FD99E'
+      },
+      sky: {
+        light: '#87CEEB',   // 天空蓝
+        dark: '#A8D8EA'
+      }
     };
   }
 
@@ -26,7 +45,7 @@ class ThemeManager {
       // 从配置加载主题设置
       const config = await window.deepagents.getConfig();
       this.currentTheme = config.theme || 'auto';
-      this.accentColor = config.accentColor || 'blue';
+      this.accentColor = config.accentColor || 'sand';
 
       console.log('[ThemeManager] Loaded config:', { theme: this.currentTheme, accentColor: this.accentColor });
 
