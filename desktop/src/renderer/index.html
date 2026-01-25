@@ -1608,6 +1608,25 @@
     #side-panel:not(.collapsed) .icon-tooltip {
       display: none;
     }
+
+    /* === 响应式布局 === */
+    @media (max-width: 768px) {
+      #side-panel {
+        width: 64px !important;
+      }
+
+      /* 小屏幕下隐藏折叠按钮 */
+      .collapse-btn {
+        display: none;
+      }
+
+      /* 小屏幕下始终隐藏文字 */
+      .nav-label,
+      .conversation-title,
+      .conversation-date {
+        display: none !important;
+      }
+    }
   </style>
 </head>
 <body>
