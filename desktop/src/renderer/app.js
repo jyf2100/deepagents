@@ -2974,6 +2974,33 @@ async function initSidePanel() {
   }
 }
 
+/**
+ * 切换侧边栏收缩/展开状态
+ * 处理技能全屏模式的边缘情况，并保存状态到配置
+ */
+async function toggleSidePanel() {
+  const sidePanel = document.getElementById('side-panel');
+
+  // 边缘情况：如果在技能全屏模式，先退出
+  if (sidePanel.classList.contains('skills-active')) {
+    sidePanel.classList.remove('skills-active');
+  }
+
+  // 切换收缩状态
+  const isCollapsed = sidePanel.classList.toggle('collapsed');
+
+  // 更新按钮图标
+  updateCollapseButton(isCollapsed);
+
+  // 保存状态到配置
+  try {
+    await window.deepagents.setConfig({ sidePanelCollapsed: isCollapsed });
+    console.log('[SidePanel] Toggled to:', isCollapsed ? 'collapsed' : 'expanded');
+  } catch (error) {
+    console.error('[SidePanel] Failed to save config:', error);
+  }
+}
+
 // 在 DOM 加载完成后初始化
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initConfigMenu);
