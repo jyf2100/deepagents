@@ -1396,6 +1396,7 @@
 
     /* === 温暖自然 - 消息动画 === */
     .message-container {
+      will-change: opacity, transform;
       animation: messageSlideIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
@@ -1426,6 +1427,7 @@
       height: 10px;
       background: var(--accent-color);
       border-radius: 50%;
+      will-change: transform, opacity;
       animation: bounce 1.4s ease-in-out infinite;
     }
 
@@ -1482,6 +1484,8 @@
 
     /* === 温暖自然 - 技能卡片悬停动画 === */
     .skill-card {
+      will-change: transform, box-shadow;
+      contain: layout style paint;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
