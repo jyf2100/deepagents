@@ -1259,6 +1259,26 @@
       transform: translateY(-1px);
       outline: none;
     }
+
+    /* === 温暖自然 - 玻璃态效果 === */
+    #theme-dialog,
+    .modal,
+    .dialog,
+    .floating-panel {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      box-shadow: var(--shadow-xl);
+    }
+
+    /* 深色模式的玻璃态 */
+    .theme-dark #theme-dialog,
+    .theme-dark .modal,
+    .theme-dark .dialog {
+      background: rgba(69, 61, 53, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
   </style>
 </head>
 <body>
