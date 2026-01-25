@@ -2978,6 +2978,17 @@ function updatePromptPreview() {
 }
 
 // === 侧边栏折叠功能 ===
+/**
+ * 侧边栏折叠功能模块
+ *
+ * 提供侧边栏收缩/展开功能，包括：
+ * - 状态持久化（通过 window.deepagents API）
+ * - 流畅的动画过渡（0.3s cubic-bezier）
+ * - 工具提示支持（收缩状态下悬停显示）
+ * - 边缘情况处理（技能全屏模式）
+ *
+ * @module SidePanelCollapse
+ */
 
 /**
  * 初始化侧边栏状态
