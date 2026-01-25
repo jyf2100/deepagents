@@ -1280,6 +1280,120 @@
       border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
+    /* === 温暖自然 - 主题对话框优化 === */
+    #theme-dialog {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: var(--bg-elevated);
+      border-radius: var(--radius-xl);
+      padding: 24px;
+      min-width: 320px;
+      box-shadow: var(--shadow-modal);
+      z-index: 1000;
+    }
+
+    #theme-dialog h2,
+    #theme-dialog h3 {
+      margin: 0 0 16px 0;
+      color: var(--text-primary);
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    #theme-dialog .theme-section {
+      margin-bottom: 20px;
+    }
+
+    #theme-dialog .theme-section h3 {
+      margin: 0 0 12px 0;
+      color: var(--text-secondary);
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    #theme-dialog .theme-options,
+    #theme-dialog .accent-options {
+      display: flex;
+      gap: 8px;
+    }
+
+    #theme-dialog .theme-mode-btn,
+    #theme-dialog .accent-color-btn {
+      border: 2px solid transparent;
+      border-radius: var(--radius-md);
+      padding: 8px 16px;
+      cursor: pointer;
+      transition: all 0.2s var(--ease-in-out);
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    #theme-dialog .theme-mode-btn {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      flex: 1;
+    }
+
+    #theme-dialog .theme-mode-btn:hover {
+      border-color: var(--accent-color);
+      transform: translateY(-2px);
+    }
+
+    #theme-dialog .theme-mode-btn.active {
+      background: var(--accent-color);
+      color: var(--text-inverse);
+      border-color: var(--accent-color);
+    }
+
+    #theme-dialog .accent-color-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      padding: 0;
+      border: 3px solid transparent;
+      transition: all 0.2s var(--ease-in-out);
+    }
+
+    #theme-dialog .accent-color-btn:hover {
+      transform: scale(1.1);
+      box-shadow: var(--shadow-md);
+    }
+
+    #theme-dialog .accent-color-btn.active {
+      border-color: var(--text-primary);
+      transform: scale(1.15);
+      box-shadow: var(--shadow-lg);
+    }
+
+    #theme-dialog .close-btn {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 20px;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: var(--radius-sm);
+      transition: all 0.2s var(--ease-in-out);
+    }
+
+    #theme-dialog .close-btn:hover {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+
+    #theme-dialog label {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 500;
+    }
+
     /* === 温暖自然 - 消息动画 === */
     .message-container {
       animation: messageSlideIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -1770,35 +1884,35 @@
     </div>
 
     <!-- 主题设置对话框 -->
-    <div id="theme-dialog" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--bg-tertiary); border-radius: 16px; box-shadow: var(--shadow-modal); z-index: 2000; min-width: 320px; padding: 20px;">
-      <h3 style="margin: 0 0 16px 0; color: var(--text-primary);">主题设置</h3>
+    <div id="theme-dialog" style="display: none;">
+      <h3>主题设置</h3>
 
       <!-- 主题模式选择 -->
-      <div style="margin-bottom: 20px;">
-        <label style="display: block; margin-bottom: 8px; color: var(--text-secondary); font-size: 13px;">主题模式</label>
-        <div style="display: flex; gap: 8px;">
-          <button class="theme-mode-btn" data-mode="light" style="flex: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--bg-secondary); color: var(--text-primary); cursor: pointer;">☀️ 浅色</button>
-          <button class="theme-mode-btn" data-mode="dark" style="flex: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--bg-secondary); color: var(--text-primary); cursor: pointer;">🌙 深色</button>
-          <button class="theme-mode-btn" data-mode="auto" style="flex: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--bg-secondary); color: var(--text-primary); cursor: pointer;">🔄 自动</button>
+      <div class="theme-section">
+        <label>主题模式</label>
+        <div class="theme-options">
+          <button class="theme-mode-btn" data-mode="light">☀️ 浅色</button>
+          <button class="theme-mode-btn" data-mode="dark">🌙 深色</button>
+          <button class="theme-mode-btn" data-mode="auto">🔄 自动</button>
         </div>
       </div>
 
       <!-- 强调色选择 -->
-      <div style="margin-bottom: 20px;">
-        <label style="display: block; margin-bottom: 8px; color: var(--text-secondary); font-size: 13px;">强调色</label>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-          <button class="accent-color-btn" data-color="sand" style="width: 36px; height: 36px; border-radius: 50%; border: 2px solid transparent; background: #D4A574; cursor: pointer;" title="沙滩金"></button>
-          <button class="accent-color-btn" data-color="wood" style="width: 36px; height: 36px; border-radius: 50%; border: 2px solid transparent; background: #BC8F5F; cursor: pointer;" title="木棕"></button>
-          <button class="accent-color-btn" data-color="rose" style="width: 36px; height: 36px; border-radius: 50%; border: 2px solid transparent; background: #FF8FAB; cursor: pointer;" title="玫瑰粉"></button>
-          <button class="accent-color-btn" data-color="sunset" style="width: 36px; height: 36px; border-radius: 50%; border: 2px solid transparent; background: #FF6B6B; cursor: pointer;" title="日落红"></button>
-          <button class="accent-color-btn" data-color="mint" style="width: 36px; height: 36px; border-radius: 50%; border: 2px solid transparent; background: #6BCF7F; cursor: pointer;" title="薄荷绿"></button>
-          <button class="accent-color-btn" data-color="sky" style="width: 36px; height: 36px; border-radius: 50%; border: 2px solid transparent; background: #87CEEB; cursor: pointer;" title="天空蓝"></button>
+      <div class="theme-section">
+        <label>强调色</label>
+        <div class="accent-options">
+          <button class="accent-color-btn" data-color="sand" style="background: #D4A574;" title="沙滩金"></button>
+          <button class="accent-color-btn" data-color="wood" style="background: #BC8F5F;" title="木棕"></button>
+          <button class="accent-color-btn" data-color="rose" style="background: #FF8FAB;" title="玫瑰粉"></button>
+          <button class="accent-color-btn" data-color="sunset" style="background: #FF6B6B;" title="日落红"></button>
+          <button class="accent-color-btn" data-color="mint" style="background: #6BCF7F;" title="薄荷绿"></button>
+          <button class="accent-color-btn" data-color="sky" style="background: #87CEEB;" title="天空蓝"></button>
         </div>
       </div>
 
       <!-- 关闭按钮 -->
-      <div style="display: flex; justify-content: flex-end;">
-        <button id="close-theme-dialog" style="padding: 8px 16px; background: var(--accent-color); color: var(--text-inverse); border: none; border-radius: var(--radius-md); cursor: pointer; font-size: 13px;">完成</button>
+      <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
+        <button id="close-theme-dialog">完成</button>
       </div>
     </div>
 
