@@ -3020,6 +3020,75 @@ function updateCollapseButton(isCollapsed) {
   console.log('[SidePanel] Button updated:', isCollapsed ? 'collapsed' : 'expanded');
 }
 
+/**
+ * 为导航项添加工具提示
+ * 在收缩状态下悬停时显示功能说明
+ */
+function setupTooltips() {
+  const navItems = document.querySelectorAll('.nav-item, .conversation-item');
+
+  navItems.forEach(item => {
+    const label = item.querySelector('.nav-label, .conversation-title');
+    if (!label) return;
+
+    const text = label.textContent.trim();
+
+    // 鼠标悬停时显示 tooltip
+    item.addEventListener('mouseenter', () => {
+      const sidePanel = document.getElementById('side-panel');
+      if (!sidePanel.classList.contains('collapsed')) return;
+
+      showTooltip(item, text);
+    });
+
+    // 鼠标移开时隐藏 tooltip
+    item.addEventListener('mouseleave', () => {
+      hideTooltip();
+    });
+  });
+}
+
+/**
+ * 显示工具提示
+ * @param {HTMLElement} target - 目标元素
+ * @param {string} text - 提示文本
+ */
+function showTooltip(target, text) {
+  // 移除旧的 tooltip
+  hideTooltip();
+
+  // 创建新的 tooltip
+  const tooltip = document.createElement('div');
+  tooltip.className = 'icon-tooltip';
+  tooltip.id = 'sidebar-tooltip';
+  tooltip.textContent = text;
+
+  // 计算位置（目标元素顶部）
+  const rect = target.getBoundingClientRect();
+  tooltip.style.top = `${rect.top + rect.height / 2 - 12}px`;
+
+  document.body.appendChild(tooltip);
+
+  // 触发重排以应用过渡动画
+  requestAnimationFrame(() => {
+    tooltip.classList.add('visible');
+  });
+}
+
+/**
+ * 隐藏工具提示
+ */
+function hideTooltip() {
+  const tooltip = document.getElementById('sidebar-tooltip');
+  if (tooltip) {
+    tooltip.classList.remove('visible');
+    // 等待动画结束后移除
+    setTimeout(() => {
+      tooltip.remove();
+    }, 200);
+  }
+}
+
 // 在 DOM 加载完成后初始化
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initConfigMenu);
