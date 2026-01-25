@@ -2951,6 +2951,29 @@ function updatePromptPreview() {
   }
 }
 
+// === 侧边栏折叠功能 ===
+
+/**
+ * 初始化侧边栏状态
+ * 从配置中读取用户的折叠偏好并应用
+ */
+async function initSidePanel() {
+  try {
+    const config = await window.deepagents.getConfig();
+
+    if (config.sidePanelCollapsed) {
+      const sidePanel = document.getElementById('side-panel');
+      sidePanel.classList.add('collapsed');
+      updateCollapseButton(true);
+    }
+
+    console.log('[SidePanel] Initialized with state:', config.sidePanelCollapsed ? 'collapsed' : 'expanded');
+  } catch (error) {
+    console.error('[SidePanel] Failed to initialize:', error);
+    // 出错时默认展开
+  }
+}
+
 // 在 DOM 加载完成后初始化
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initConfigMenu);
