@@ -1019,15 +1019,17 @@
       white-space: normal;
     }
 
-    /* SkillsLM 网页嵌入面板样式 */
+    /* SkillsLM webview 面板样式 */
     #skillslm-webview-panel {
-      display: none;
+      display: flex;
       flex: 1;
       min-width: 0;
-      display: flex;
+      min-height: 0;
       flex-direction: column;
       overflow: hidden;
       position: relative;
+      height: 100%;
+      width: 100%;
     }
 
     #skillslm-webview {
@@ -1044,39 +1046,74 @@
       border-radius: var(--radius-lg);
     }
 
-    /* 技能面板内容区域 */
+    /* 技能面板内容区域 - 默认隐藏 */
     #skills-panel-content {
       display: none;
       flex: 1;
       min-height: 0; /* 允许 flex 子元素正确收缩 */
     }
 
-    /* 技能面板内容 - 默认隐藏 */
-    #skills-panel-content {
-      display: none !important;
+    /* 左侧技能列表面板 - 绝对定位 */
+    #side-panel.skills-active #skills-list-panel {
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 240px !important;
+      bottom: 0 !important;
+      overflow-y: auto !important;
     }
 
     /* 当侧边栏有 skills-active 类时显示技能面板 */
     #side-panel.skills-active #skills-panel-content {
-      display: flex !important;
+      display: block !important;
+      position: relative !important;
+      flex: 1 1 0 !important;
+      min-height: 0 !important;
+      overflow: hidden !important;
     }
 
     /* 当侧边栏有 skills-active 类时隐藏历史视图 */
     #side-panel.skills-active #history-view {
       display: none !important;
+      visibility: hidden !important;
+      flex: none !important;
+      height: 0 !important;
+      min-height: 0 !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      overflow: hidden !important;
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 0 !important;
+      opacity: 0 !important;
+    }
+
+    /* 当侧边栏有 skills-active 类时调整面板内容样式 */
+    #side-panel.skills-active #panel-content {
+      padding: 0 !important;
+      overflow: hidden !important;
+      min-height: 0 !important;
     }
 
     /* SkillsLM webview 面板 */
     #skillslm-webview-panel {
-      display: none !important;
+      flex: 1;
+      min-height: 0;
+      height: 100%;
+      max-height: 100%;
+      display: flex;
     }
 
     /* 当侧边栏有 skills-active 类时显示 webview 面板 */
     #side-panel.skills-active #skillslm-webview-panel {
-      display: block !important;
-      flex: 1;
-      min-height: 0;
-      overflow: hidden;
+      position: absolute !important;
+      top: 0 !important;
+      left: 252px !important; /* 240px + 12px gap */
+      right: 0 !important;
+      bottom: 0 !important;
+      border-left: 1px solid var(--divider-color) !important;
+      padding-left: 12px !important;
     }
 
     /* 工作空间头部 */
@@ -1162,7 +1199,7 @@
       </div>
 
       <!-- 技能面板双栏内容 (历史+技能标签共用区域) -->
-      <div id="panel-content" style="flex: 1; padding: 0 12px 12px 12px; display: flex; flex-direction: column;">
+      <div id="panel-content">
         <!-- 历史记录视图 -->
         <div id="history-view" class="panel-view active" style="flex: 1;">
           <div id="history-list">
@@ -1171,9 +1208,9 @@
         </div>
 
         <!-- 技能面板内容：双栏布局 (技能标签激活时显示) -->
-        <div id="skills-panel-content" style="flex: 1; min-height: 0; flex-direction: row; gap: 12px;">
+        <div id="skills-panel-content">
           <!-- 左侧：技能列表 -->
-          <div id="skills-list-panel" style="flex: 0 0 auto; width: 240px; overflow-y: auto;">
+          <div id="skills-list-panel">
             <div style="padding: 8px 8px 0 8px; display: flex; gap: 8px;">
               <button id="add-skill-btn" onclick="
                 const dialog = document.getElementById('add-skill-dialog');
@@ -1198,13 +1235,22 @@
             </div>
           </div>
 
-          <!-- 右侧：SkillsLM 网页 -->
-          <div id="skillslm-webview-panel" style="flex: 1; border-left: 1px solid var(--divider-color); padding-left: 12px; overflow: hidden;">
-            <iframe id="skillslm-webview"
-                    src="https://skillslm.com"
-                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"
-                    style="width: 100%; height: 100%; border: none; border-radius: var(--radius-lg);">
-            </iframe>
+          <!-- 右侧：技能市场入口 -->
+          <div id="skillslm-webview-panel">
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 40px;">
+              <div style="font-size: 48px; margin-bottom: 20px;">🛒</div>
+              <h2 style="margin: 0 0 12px 0; font-size: 24px; font-weight: 600; color: var(--text-primary);">Skills 技能市场</h2>
+              <p style="margin: 0 0 24px 0; font-size: 14px; color: var(--text-secondary); max-width: 300px; line-height: 1.5;">
+                浏览和发现社区驱动的技能，增强你的 AI 助手能力
+              </p>
+              <button id="open-skills-market-btn"
+                      style="padding: 12px 24px; font-size: 15px; background: var(--accent-color); color: white; border: none; border-radius: var(--radius-lg); cursor: pointer; box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3); transition: all 0.2s;"
+                      onmouseover="this.style.background='var(--accent-hover)'; this.style.transform='scale(1.02)'"
+                      onmouseout="this.style.background='var(--accent-color)'; this.style.transform='scale(1)'"
+                      onclick="window.open('https://skills.sh', '_blank')">
+                访问 Skills Market
+              </button>
+            </div>
           </div>
         </div>
       </div>

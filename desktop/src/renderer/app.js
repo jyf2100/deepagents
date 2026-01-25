@@ -24,6 +24,53 @@ window.showAddSkillDialogGlobal = function() {
   }
 };
 
+// === 动态调整 webview 面板大小 ===
+function resizeWebviewPanel() {
+  console.log('[resizeWebviewPanel] Start');
+
+  const sidePanel = document.getElementById('side-panel');
+  const tabs = document.getElementById('tabs');
+  const skillsPanelContent = document.getElementById('skills-panel-content');
+  const webviewPanel = document.getElementById('skillslm-webview-panel');
+  const webview = document.getElementById('skillslm-webview');
+
+  if (!sidePanel || !tabs || !skillsPanelContent || !webviewPanel || !webview) {
+    console.error('[resizeWebviewPanel] Missing elements');
+    return;
+  }
+
+  // 计算 panel-content 的可用高度
+  const tabsHeight = tabs.offsetHeight;
+  const sidePanelHeight = sidePanel.offsetHeight;
+  const availableHeight = sidePanelHeight - tabsHeight;
+
+  console.log('[resizeWebviewPanel] Dimensions:', {
+    sidePanelHeight,
+    tabsHeight,
+    availableHeight
+  });
+
+  // 设置 skills-panel-content 的高度
+  skillsPanelContent.style.setProperty('height', availableHeight + 'px', 'important');
+  skillsPanelContent.style.setProperty('position', 'relative', 'important');
+
+  // 同时设置父容器 panel-content 的高度
+  const panelContent = document.getElementById('panel-content');
+  if (panelContent) {
+    panelContent.style.setProperty('height', availableHeight + 'px', 'important');
+    panelContent.style.setProperty('min-height', availableHeight + 'px', 'important');
+  }
+
+  // 设置 webview 面板的高度和位置
+  webviewPanel.style.setProperty('height', availableHeight + 'px', 'important');
+  webviewPanel.style.setProperty('position', 'absolute', 'important');
+  webviewPanel.style.setProperty('top', '0', 'important');
+  webviewPanel.style.setProperty('left', '252px', 'important');
+  webviewPanel.style.setProperty('right', '0', 'important');
+
+  console.log('[resizeWebviewPanel] Applied styles');
+}
+
 // === 标签页切换 ===
 function setupTabs() {
   const tabs = document.querySelectorAll('.tab');
@@ -50,9 +97,17 @@ function setupTabs() {
       if (tabName === 'history') {
         // 显示历史视图，隐藏技能面板 - 通过 CSS 类控制
         document.getElementById('side-panel').classList.remove('skills-active');
+
+        // 恢复焦点管理
+        window.inputFocusPaused = false;
+        console.log('[Focus] Resumed (switched to history tab)');
       } else if (tabName === 'skills') {
         // 显示技能面板（包含 webview）- 通过 CSS 类控制
         document.getElementById('side-panel').classList.add('skills-active');
+
+        // 暂停焦点管理，避免与 webview 争夺焦点
+        window.inputFocusPaused = true;
+        console.log('[Focus] Paused (switched to skills tab)');
 
         // webview 加载监听
         const webview = document.getElementById('skillslm-webview');
@@ -76,6 +131,11 @@ function setupTabs() {
 
         // 加载技能列表
         loadSkills();
+
+        // 动态调整 webview 面板高度
+        setTimeout(() => {
+          resizeWebviewPanel();
+        }, 100);
       }
     });
   });

@@ -6,6 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 1、所有事情,先做plan再执行!PLAN FIRST!PLAN FIRST!PLAN FIRST!PLAN FIRST!PLAN FIRST!
 2、所有事情执行要有证据！！不能靠猜测！！！
+3、开始：先说好的老大，准备开始; 结束: 要做问题反馈总结并说好的，老大我是这样想的：
 
 ## 项目概述
 
@@ -17,6 +18,7 @@ DeepAgents 是一个基于 LangGraph 构建的通用 AI Agent 框架，实现了
 - **人机协作**：支持 Human-in-the-loop 工作流，可配置需要人工批准的工具
 
 ## 代码库结构
+
 
 ```
 deepagents/
@@ -147,6 +149,8 @@ CLI 使用 skills 系统扩展功能，skills 定义在 `~/.deepagents/skills/` 
 5. **系统提示词**：自定义 `system_prompt` 会追加到默认提示词之后，而非替换
 
 ## 桌面应用开发 (desktop/)
+
+> **💡 开发教训与最佳实践：** 参见 [desktop/LESSONS.md](desktop/LESSONS.md) 查看实际开发中遇到的问题和解决方案。
 
 ### 常见错误与解决方法
 
