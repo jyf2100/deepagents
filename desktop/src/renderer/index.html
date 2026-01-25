@@ -1242,6 +1242,23 @@
       background: var(--accent-color);
       border: none;
     }
+
+    /* === 温暖自然 - 输入框聚焦效果 === */
+    #message-input,
+    input[type="text"],
+    textarea {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    #message-input:focus,
+    input[type="text"]:focus,
+    textarea:focus {
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 4px rgba(212, 165, 116, 0.15),
+                  0 4px 12px rgba(0, 0, 0, 0.1);
+      transform: translateY(-1px);
+      outline: none;
+    }
   </style>
 </head>
 <body>
