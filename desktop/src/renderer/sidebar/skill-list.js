@@ -30,14 +30,16 @@ class SkillList extends MenuGroup {
       // 加载所有可用技能
       const skillsResult = await window.deepagents.listSkills();
       if (skillsResult.status === 'success') {
-        this.skills = skillsResult.data || [];
+        // 数据结构可能是 result.data.skills 或 result.skills
+        this.skills = skillsResult.data?.skills || skillsResult.skills || skillsResult.data || [];
       }
 
       // 获取当前工作空间的启用的技能
       if (window.currentWorkspaceId) {
         const workspaceResult = await window.deepagents.listWorkspaces();
         if (workspaceResult.status === 'success') {
-          const currentWorkspace = workspaceResult.data.find(
+          const workspaces = workspaceResult.data?.workspaces || workspaceResult.data || [];
+          const currentWorkspace = workspaces.find(
             ws => String(ws.id) === String(window.currentWorkspaceId)
           );
           if (currentWorkspace) {

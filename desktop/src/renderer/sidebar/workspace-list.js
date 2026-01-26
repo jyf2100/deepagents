@@ -31,7 +31,8 @@ class WorkspaceList extends MenuGroup {
       // Load workspaces
       const workspacesResult = await window.deepagents.listWorkspaces();
       if (workspacesResult.status === 'success') {
-        this.workspaces = workspacesResult.data || [];
+        // 数据结构是 result.data.workspaces
+        this.workspaces = workspacesResult.data?.workspaces || workspacesResult.data || [];
       }
 
       // Load conversations for current workspace
