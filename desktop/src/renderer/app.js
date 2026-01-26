@@ -2520,10 +2520,10 @@ function setupWorkspaceManager() {
   loadWorkspaces().then(() => {
     // 初始加载工作空间列表到菜单
     loadWorkspacesList();
-  });
 
-  // 初始化 WorkspaceMention
-  initWorkspaceMention();
+    // 初始化 WorkspaceMention (在 workspaces 加载完成后)
+    initWorkspaceMention();
+  });
 
   console.log('[Workspace] Workspace manager initialized');
 }
