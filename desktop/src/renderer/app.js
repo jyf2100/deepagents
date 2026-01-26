@@ -508,13 +508,25 @@ async function loadConversationHistory(workspaceId, conversationId) {
           role = 'user';
         } else if (msg.type === 'ai' || msg.type === 'assistant') {
           role = 'assistant';
-          
-          // 如果 AI 消息包含工具调用，追加到内容中显示
+
+          // 如果 AI 消息包含工具调用，先添加操作日志，再追加到内容中显示
           if (msg.tool_calls && msg.tool_calls.length > 0) {
+            // 确保有思考过程面板用于显示操作日志
+            if (!currentThinkingLog) {
+              createThinkingLog();
+            }
+
+            // 为每个工具调用添加操作日志
             msg.tool_calls.forEach(tc => {
               const toolName = tc.name;
-              const args = JSON.stringify(tc.args, null, 2);
-              // 使用特殊的格式标记工具调用，以便 formatMessageContent 处理
+              const toolInput = tc.args || {};
+              const inputSummary = formatToolInput(toolName, toolInput);
+
+              // 添加操作日志
+              addOperationLog(`📋 工具调用: ${toolName}\n${inputSummary}`);
+
+              // 追加工具调用标记到内容，用于显示卡片
+              const args = JSON.stringify(toolInput, null, 2);
               content += `\n\nTool Call: ${tc.id}\nname: ${toolName}\ntype: tool_call\ninput: ${args}`;
             });
           }
@@ -595,10 +607,6 @@ function formatMessageContent(content) {
   if (!content) return '';
 
   let formatted = content;
-
-  // Debug: log all calls
-  console.log('[formatMessageContent] === START ===');
-  console.log('[formatMessageContent] Original content:', formatted);
 
   // 使用 Map 存储解析后的 JSON 对象和代码块
   const jsonMap = new Map();
@@ -686,19 +694,24 @@ function formatMessageContent(content) {
   });
 
   // 现在安全地处理行内代码
-  console.log('[formatMessageContent] Before inline code replace:', formatted.substring(0, 200));
   formatted = formatted.replace(/`([^`]+)`/g, '<code>$1</code>');
-  console.log('[formatMessageContent] After inline code replace:', formatted.substring(0, 200));
 
   // 7. 检测粗体 (**text**)
-  console.log('[formatMessageContent] Before bold replace, has **:', formatted.includes('**'));
   formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-  console.log('[formatMessageContent] After bold replace, has <strong>:', formatted.includes('<strong>'));
 
   // 8. 检测斜体 (*text*)
   formatted = formatted.replace(/\*([^*]+)\*/g, '<em>$1</em>');
 
-  // 9. 将换行符转换为 <br>
+  // 9. 格式化列表
+  // 无序列表: - item (但避免与已处理的 <li> 冲突)
+  formatted = formatted.replace(/^(?:[\-\*])\s+(.+)$/gm, '<li class="list-item">$1</li>');
+  // 有序列表: 1. item
+  formatted = formatted.replace(/^(\d+)\.\s+(.+)$/gm, '<li class="list-item-num" value="$1">$2</li>');
+
+  // 10. 格式化链接 [text](url)
+  formatted = formatted.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" class="message-link">$1</a>');
+
+  // 11. 将换行符转换为 <br> (但不在代码块中)
   formatted = formatted.replace(/\n/g, '<br>');
 
   // 恢复保护的代码块
@@ -706,24 +719,131 @@ function formatMessageContent(content) {
     return protectedBlocks[parseInt(index)];
   });
 
-  // Debug: log before formatFilePaths
-  console.log('[formatMessageContent] Before formatFilePaths:', formatted.substring(0, 200));
+  // 工具调用格式化
+  formatted = formatToolCalls(formatted);
 
-  // 暂时禁用以测试
-  // // 新增：工具调用格式化
-  // formatted = formatToolCalls(formatted);
+  // Todo list 格式化
+  formatted = formatTodoList(formatted);
 
-  // Debug: log after formatToolCalls
-  console.log('[formatMessageContent] After formatToolCalls (SKIPPED):', formatted.substring(0, 200));
-
-  // 暂时禁用以测试
-  // // 新增：文件路径格式化
-  // formatted = formatFilePaths(formatted);
-
-  // Debug: log after formatFilePaths
-  console.log('[formatMessageContent] After formatFilePaths (SKIPPED):', formatted.substring(0, 200));
+  // 文件路径格式化
+  formatted = formatFilePaths(formatted);
 
   return formatted;
+}
+
+// 新增函数：Todo list 格式化
+function formatTodoList(text) {
+  // 检测 "Updated todo list to" 格式
+  const todoPattern = /Updated todo list to\s+(\[[\s\S]*?\])(?=\n|$)/g;
+
+  return text.replace(todoPattern, (match, todoListStr) => {
+    try {
+      // 解析 todo list（处理 Python repr 格式）
+      const todos = parseTodoList(todoListStr);
+      if (!todos || todos.length === 0) return match;
+
+      // 构建格式化的 HTML
+      let result = '<div class="todo-list-container">';
+      result += '<div class="todo-list-header">📋 任务列表</div>';
+      result += '<ul class="todo-list">';
+
+      todos.forEach(todo => {
+        const statusIcon = todo.status === 'completed' ? '✅' :
+                           todo.status === 'in_progress' ? '🔄' : '⏳';
+        const statusClass = todo.status === 'completed' ? 'completed' :
+                            todo.status === 'in_progress' ? 'in-progress' : 'pending';
+        result += `<li class="todo-item ${statusClass}">`;
+        result += `<span class="todo-icon">${statusIcon}</span>`;
+        result += `<span class="todo-content">${escapeHtml(todo.content)}</span>`;
+        result += `</li>`;
+      });
+
+      result += '</ul></div>';
+      return result;
+    } catch (e) {
+      console.error('[formatTodoList] Failed to parse:', e);
+      return match;
+    }
+  });
+}
+
+// 解析 Python repr 格式的 todo list
+function parseTodoList(str) {
+  // 移除最外层的方括号和引号
+  str = str.trim().replace(/^\[|\]$/g, '');
+
+  // 使用简单的状态机解析
+  const todos = [];
+  let current = '';
+  let depth = 0;
+  let inString = false;
+  let escapeNext = false;
+
+  for (let i = 0; i < str.length; i++) {
+    const char = str[i];
+
+    if (escapeNext) {
+      current += char;
+      escapeNext = false;
+      continue;
+    }
+
+    if (char === '\\') {
+      escapeNext = true;
+      current += char;
+      continue;
+    }
+
+    if (char === "'" || char === '"') {
+      inString = !inString;
+      current += char;
+      continue;
+    }
+
+    if (!inString) {
+      if (char === '{') {
+        depth++;
+        current += char;
+      } else if (char === '}') {
+        depth--;
+        current += char;
+      } else if (char === ',' && depth === 0) {
+        // 完成一个 todo 对象
+        const todo = parseTodoItem(current.trim());
+        if (todo) todos.push(todo);
+        current = '';
+      } else {
+        current += char;
+      }
+    } else {
+      current += char;
+    }
+  }
+
+  // 处理最后一个
+  if (current.trim()) {
+    const todo = parseTodoItem(current.trim());
+    if (todo) todos.push(todo);
+  }
+
+  return todos;
+}
+
+// 解析单个 todo 项
+function parseTodoItem(str) {
+  // 移除外层的 { }
+  str = str.trim().replace(/^\{|\}$/g, '');
+
+  const todo = { content: '', status: 'pending' };
+
+  // 简单的正则匹配
+  const contentMatch = str.match(/'content':\s*'([^']*)'/);
+  const statusMatch = str.match(/'status':\s*'(\w+)'/);
+
+  if (contentMatch) todo.content = contentMatch[1].replace(/\\'/g, "'");
+  if (statusMatch) todo.status = statusMatch[1];
+
+  return todo.content ? todo : null;
 }
 
 // 新增函数：JSON 语法高亮
@@ -806,12 +926,48 @@ function formatToolCalls(text) {
     // input 参数块（如果有）
     if (inputMatch) {
       const inputJson = inputMatch[1];
-      // 格式化 JSON 并添加语法高亮
-      const formattedInput = formatJsonWithHighlight(inputJson);
-      result += `<div class="tool-input-section">`;
-      result += `<div class="section-label">输入参数</div>`;
-      result += `<pre class="tool-input-json">${formattedInput}</pre>`;
-      result += `</div>`;
+      try {
+        // 解析 JSON
+        const inputObj = JSON.parse(inputJson);
+
+        // 检查是否有 content 字段
+        if (inputObj.content && typeof inputObj.content === 'string') {
+          // content 字段单独渲染为格式化内容
+          const content = inputObj.content;
+          const otherFields = Object.keys(inputObj).filter(k => k !== 'content');
+
+          result += `<div class="tool-input-section">`;
+          result += `<div class="section-label">内容预览</div>`;
+          result += `<div class="tool-content-preview">${formatMessageContent(content)}</div>`;
+
+          // 其他字段显示为 JSON
+          if (otherFields.length > 0) {
+            const otherObj = {};
+            otherFields.forEach(k => otherObj[k] = inputObj[k]);
+            if (Object.keys(otherObj).length > 0) {
+              const otherJson = JSON.stringify(otherObj, null, 2);
+              const formattedOther = formatJsonWithHighlight(otherJson);
+              result += `<div class="section-label" style="margin-top: 8px;">其他参数</div>`;
+              result += `<pre class="tool-input-json">${formattedOther}</pre>`;
+            }
+          }
+          result += `</div>`;
+        } else {
+          // 没有 content 字段，显示完整 JSON
+          const formattedInput = formatJsonWithHighlight(inputJson);
+          result += `<div class="tool-input-section">`;
+          result += `<div class="section-label">输入参数</div>`;
+          result += `<pre class="tool-input-json">${formattedInput}</pre>`;
+          result += `</div>`;
+        }
+      } catch (e) {
+        // JSON 解析失败，回退到原样显示
+        const formattedInput = formatJsonWithHighlight(inputJson);
+        result += `<div class="tool-input-section">`;
+        result += `<div class="section-label">输入参数</div>`;
+        result += `<pre class="tool-input-json">${formattedInput}</pre>`;
+        result += `</div>`;
+      }
     }
 
     result += `</div>`;
@@ -2274,6 +2430,36 @@ function initConfigMenu() {
 let workspaces = [];
 let currentWorkspaceId = null;
 
+// WorkspaceMention 实例
+let workspaceMention = null;
+
+// 初始化 WorkspaceMention
+function initWorkspaceMention() {
+  workspaceMention = new WorkspaceMention(
+    workspaces,
+    currentWorkspaceId,
+    (workspace) => {
+      // 选择工作空间回调
+      handleWorkspaceMentionSelect(workspace);
+    }
+  );
+}
+
+// 处理工作空间选择
+function handleWorkspaceMentionSelect(workspace) {
+  // 复用现有切换函数
+  switchWorkspace(workspace.id);
+
+  // UI 闪烁提示
+  const selector = document.getElementById('workspace-selector');
+  if (selector) {
+    selector.classList.add('flash');
+    setTimeout(() => selector.classList.remove('flash'), 500);
+  }
+
+  console.log('[WorkspaceMention] Switched to:', workspace.name);
+}
+
 // 图标映射
 const workspaceIcons = {
   'folder': '📁',
@@ -2335,6 +2521,9 @@ function setupWorkspaceManager() {
     // 初始加载工作空间列表到菜单
     loadWorkspacesList();
   });
+
+  // 初始化 WorkspaceMention
+  initWorkspaceMention();
 
   console.log('[Workspace] Workspace manager initialized');
 }
@@ -2445,6 +2634,11 @@ async function loadWorkspaces() {
     }
 
     updateWorkspaceUI();
+
+    // 更新 WorkspaceMention
+    if (workspaceMention) {
+      workspaceMention.updateWorkspaces(workspaces, currentWorkspaceId);
+    }
 
     // 加载当前工作空间的对话列表
     if (currentWorkspaceId) {
