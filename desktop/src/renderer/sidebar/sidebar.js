@@ -17,6 +17,16 @@ class Sidebar {
     this.expandedGroups = ['workspace', 'settings'];
     this.groups = new Map();
 
+    // 工作空间相关
+    this.workspaces = [];
+    this.workspaceIcons = {
+      'folder': '📁',
+      'code': '💻',
+      'book': '📚',
+      'briefcase': '💼',
+      'lightbulb': '💡'
+    };
+
     this.callbacks = {
       onWorkspaceChange: options.onWorkspaceChange || null,
       onConversationChange: options.onConversationChange || null,
@@ -33,6 +43,9 @@ class Sidebar {
     this._updateCollapseState();
     this._updateGroupStates();
     this._bindEvents();
+
+    // 初始化工作空间选择器
+    this._initWorkspaceSelector();
 
     // 监听窗口大小变化
     window.addEventListener('resize', () => this._handleResize());
@@ -53,12 +66,41 @@ class Sidebar {
       this.overlay.addEventListener('click', () => {
         this.container.classList.remove('sidebar-expanded');
         this.overlay.classList.remove('active');
+        // 同时关闭工作空间菜单
+        this._closeWorkspaceMenu();
       });
     }
 
     // 使用事件委托处理所有菜单点击
     this.container.addEventListener('click', (e) => {
       this._handleClick(e);
+    });
+
+    // 工作空间选择器按钮
+    const workspaceSelector = document.getElementById('sidebar-workspace-selector');
+    if (workspaceSelector) {
+      workspaceSelector.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this._toggleWorkspaceMenu();
+      });
+    }
+
+    // 工作空间设置按钮
+    const workspaceSettingsBtn = document.getElementById('sidebar-workspace-settings-btn');
+    if (workspaceSettingsBtn) {
+      workspaceSettingsBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this._closeWorkspaceMenu();
+        this._openWorkspaceSettings(window.currentWorkspaceId);
+      });
+    }
+
+    // 点击其他地方关闭工作空间菜单
+    document.addEventListener('click', (e) => {
+      const menu = document.getElementById('sidebar-workspace-menu');
+      if (menu && !menu.contains(e.target)) {
+        this._closeWorkspaceMenu();
+      }
     });
 
     // 键盘快捷键
@@ -77,16 +119,6 @@ class Sidebar {
       const groupId = groupHeader.dataset.group;
       if (groupId) {
         this.toggleGroup(groupId);
-      }
-      return;
-    }
-
-    // 工作空间头部点击（切换工作空间并自动展开）
-    const workspaceHeader = e.target.closest('.workspace-header');
-    if (workspaceHeader) {
-      const workspaceId = workspaceHeader.dataset.workspaceId;
-      if (workspaceId) {
-        this._selectWorkspaceAndExpand(workspaceId);
       }
       return;
     }
@@ -368,6 +400,19 @@ class Sidebar {
   }
 
   /**
+   * 打开历史标签页
+   */
+  _openHistory() {
+    // 点击"历史"标签切换到历史视图
+    const historyTab = document.querySelector('.tab[data-tab="history"]');
+    if (historyTab) {
+      historyTab.click();
+    } else {
+      console.error('[Sidebar] History tab not found');
+    }
+  }
+
+  /**
    * 删除对话
    */
   async _deleteConversation(conversationId) {
@@ -466,6 +511,158 @@ class Sidebar {
         item.classList.remove('active');
       }
     });
+  }
+
+  /**
+   * 初始化工作空间选择器
+   */
+  async _initWorkspaceSelector() {
+    try {
+      await this._loadWorkspaces();
+      this._updateWorkspaceSelectorUI();
+    } catch (error) {
+      console.error('[Sidebar] Failed to init workspace selector:', error);
+    }
+  }
+
+  /**
+   * 加载工作空间列表
+   */
+  async _loadWorkspaces() {
+    try {
+      const result = await window.deepagents.listWorkspaces();
+      this.workspaces = result.data?.workspaces || result.data || [];
+      console.log('[Sidebar] Loaded workspaces:', this.workspaces.length);
+    } catch (error) {
+      console.error('[Sidebar] Failed to load workspaces:', error);
+      this.workspaces = [];
+    }
+  }
+
+  /**
+   * 更新工作空间选择器 UI
+   */
+  _updateWorkspaceSelectorUI() {
+    const workspaceSelector = document.getElementById('sidebar-workspace-selector');
+    const currentWorkspace = this.workspaces.find(w => String(w.id) === String(window.currentWorkspaceId));
+
+    if (workspaceSelector && currentWorkspace) {
+      const icon = this.workspaceIcons[currentWorkspace.icon] || '📁';
+      workspaceSelector.textContent = `${icon} ${currentWorkspace.name}`;
+    } else if (workspaceSelector) {
+      workspaceSelector.textContent = '📁 未选择工作空间';
+    }
+
+    this._renderWorkspaceMenu();
+  }
+
+  /**
+   * 渲染工作空间下拉菜单
+   */
+  _renderWorkspaceMenu() {
+    const workspaceMenu = document.getElementById('sidebar-workspace-menu');
+    if (!workspaceMenu) return;
+
+    let html = '';
+
+    // 显示所有工作空间
+    this.workspaces.forEach(workspace => {
+      const icon = this.workspaceIcons[workspace.icon] || '📁';
+      const isActive = String(workspace.id) === String(window.currentWorkspaceId);
+      html += '<div class="sidebar-workspace-menu-item' + (isActive ? ' active' : '') + '" data-workspace-id="' + workspace.id + '">';
+      html += '<span class="workspace-icon">' + icon + '</span>';
+      html += '<span class="workspace-name">' + this._escapeHtml(workspace.name) + '</span>';
+      html += '</div>';
+    });
+
+    // 分隔线
+    html += '<div class="sidebar-workspace-menu-divider"></div>';
+
+    // 创建工作空间按钮
+    html += '<div class="sidebar-workspace-menu-create" id="sidebar-create-workspace-btn">';
+    html += '<span>➕</span>';
+    html += '<span>创建工作空间</span>';
+    html += '</div>';
+
+    workspaceMenu.innerHTML = html;
+
+    // 绑定点击事件
+    workspaceMenu.querySelectorAll('.sidebar-workspace-menu-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const workspaceId = item.getAttribute('data-workspace-id');
+        this._switchWorkspace(workspaceId);
+        this._closeWorkspaceMenu();
+      });
+    });
+
+    // 创建工作空间按钮
+    const createBtn = workspaceMenu.querySelector('#sidebar-create-workspace-btn');
+    if (createBtn) {
+      createBtn.addEventListener('click', () => {
+        this._closeWorkspaceMenu();
+        this._createWorkspace();
+      });
+    }
+  }
+
+  /**
+   * 切换工作空间菜单显示/隐藏
+   */
+  _toggleWorkspaceMenu() {
+    const workspaceMenu = document.getElementById('sidebar-workspace-menu');
+    if (workspaceMenu) {
+      workspaceMenu.classList.toggle('show');
+    }
+  }
+
+  /**
+   * 关闭工作空间菜单
+   */
+  _closeWorkspaceMenu() {
+    const workspaceMenu = document.getElementById('sidebar-workspace-menu');
+    if (workspaceMenu) {
+      workspaceMenu.classList.remove('show');
+    }
+  }
+
+  /**
+   * 切换工作空间
+   */
+  async _switchWorkspace(workspaceId) {
+    if (workspaceId === String(window.currentWorkspaceId)) return;
+
+    try {
+      await window.deepagents.updateWorkspace(workspaceId, {});
+      window.currentWorkspaceId = workspaceId;
+      localStorage.setItem('deepagents-current-workspace', workspaceId);
+
+      // 更新 UI
+      this._updateWorkspaceSelectorUI();
+
+      // 触发回调
+      if (this.callbacks.onWorkspaceChange) {
+        this.callbacks.onWorkspaceChange(workspaceId);
+      }
+
+      // 清空对话视图
+      const messagesDiv = document.getElementById('messages');
+      if (messagesDiv) {
+        messagesDiv.innerHTML = '';
+      }
+
+      console.log('[Sidebar] Switched to workspace:', workspaceId);
+    } catch (error) {
+      console.error('[Sidebar] Failed to switch workspace:', error);
+    }
+  }
+
+  /**
+   * HTML 转义
+   */
+  _escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   }
 
   /**

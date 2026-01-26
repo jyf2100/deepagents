@@ -1544,14 +1544,12 @@
     </div>
 
     <div class="sidebar-content">
-      <!-- 工作空间分组 -->
-      <div class="menu-group" id="workspace-group">
-        <div class="menu-group-header" data-group="workspace" data-tooltip="工作空间">
-          <span class="menu-group-icon">📁</span>
-          <span class="menu-group-title">工作空间</span>
-          <span class="menu-group-arrow">▾</span>
-        </div>
-        <div class="menu-group-content">
+      <!-- 工作空间选择器（从右边移过来） -->
+      <div class="sidebar-workspace-selector" style="position: relative;">
+        <button id="sidebar-workspace-selector">📁 加载中...</button>
+        <button id="sidebar-workspace-settings-btn">⚙️</button>
+        <!-- 工作空间下拉菜单 -->
+        <div id="sidebar-workspace-menu" class="sidebar-workspace-menu">
           <!-- 工作空间列表将动态插入这里 -->
         </div>
       </div>
@@ -1995,15 +1993,9 @@
 
     <!-- 右侧聊天区域 -->
     <div id="chat-panel">
-      <!-- 工作空间切换器 -->
-      <div id="workspace-switcher" style="position: relative;">
-        <button id="workspace-selector">📁 默认工作空间</button>
-        <button id="workspace-settings-btn">⚙️</button>
+      <!-- 顶部工具栏 -->
+      <div id="chat-toolbar" style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--bg-tertiary); border-bottom: 1px solid var(--divider-color); height: 44px;">
         <button id="theme-toggle-btn" title="切换主题">🌓</button>
-        <!-- 工作空间下拉菜单 -->
-        <div id="workspace-menu">
-          <!-- 工作空间列表将动态插入这里 -->
-        </div>
       </div>
 
       <div id="messages"></div>
@@ -2030,7 +2022,6 @@
   </script>
   <script src="sidebar/menu-group.js"></script>
   <script src="sidebar/settings-list.js"></script>
-  <script src="sidebar/workspace-list.js"></script>
   <script src="sidebar/sidebar.js"></script>
   <script src="theme.js"></script>
   <script src="app.js"></script>
