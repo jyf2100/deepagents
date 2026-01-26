@@ -376,14 +376,14 @@ class Sidebar {
   }
 
   /**
-   * 打开工作空间设置
+   * 打开模型设置对话框
    */
   _openSettings() {
-    // 直接调用现有的工作空间设置对话框函数
-    if (typeof showWorkspaceSettings === 'function') {
-      showWorkspaceSettings();
+    // 直接调用现有的配置对话框函数
+    if (typeof openConfigDialog === 'function') {
+      openConfigDialog();
     } else {
-      console.error('[Sidebar] showWorkspaceSettings function not found');
+      console.error('[Sidebar] openConfigDialog function not found');
     }
   }
 

@@ -52,12 +52,12 @@ class SettingsList extends MenuGroup {
       tooltip: '切换主题'
     });
 
-    // 通用设置
+    // 模型设置
     this.addItem({
-      icon: '⚙️',
-      text: '通用设置',
+      icon: '🤖',
+      text: '模型设置',
       action: 'open-settings',
-      tooltip: '打开设置对话框'
+      tooltip: '配置 AI 模型和 API'
     });
 
     // 分隔符
