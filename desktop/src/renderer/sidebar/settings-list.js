@@ -45,12 +45,9 @@ class SettingsList extends MenuGroup {
     this.clear();
 
     // 主题切换
-    const themeIcon = this.currentTheme === 'dark' ? '🌞' : '🌓';
-    const themeText = this.currentTheme === 'dark' ? '浅色主题' : '深色主题';
-
     this.addItem({
-      icon: themeIcon,
-      text: themeText,
+      icon: '🌓',
+      text: '主题设置',
       action: 'toggle-theme',
       tooltip: '切换主题'
     });
