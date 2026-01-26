@@ -1114,6 +1114,64 @@ function escapeHtml(text) {
   return text.replace(/[&<>"']/g, m => map[m]);
 }
 
+// === @工作空间 快速切换 ===
+let mentionDebounceTimer = null;
+
+// 设置输入框监听
+function setupWorkspaceMentionInput() {
+  const input = document.getElementById('message-input');
+  if (!input) return;
+
+  // 监听输入检测 @ 符号
+  input.addEventListener('input', (e) => {
+    const value = e.target.value;
+    const cursorPos = e.target.selectionStart;
+
+    // 检测光标前的 @ 符号
+    const beforeCursor = value.substring(0, cursorPos);
+    const match = beforeCursor.match(/@(\w*)$/);
+
+    if (match && workspaceMention) {
+      // 延迟弹出避免闪烁
+      clearTimeout(mentionDebounceTimer);
+      mentionDebounceTimer = setTimeout(() => {
+        const rect = input.getBoundingClientRect();
+        workspaceMention.show(rect);
+      }, 100);
+    } else {
+      clearTimeout(mentionDebounceTimer);
+      if (workspaceMention) {
+        workspaceMention.hide();
+      }
+    }
+  });
+
+  // 监听键盘事件
+  input.addEventListener('keydown', (e) => {
+    if (!workspaceMention || !workspaceMention.isDropdownVisible()) {
+      return;
+    }
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      workspaceMention.selectNext();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      workspaceMention.selectPrevious();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      workspaceMention.confirmSelection();
+      // 恢复 Enter 发送消息的行为
+      setTimeout(() => {
+        input.focus();
+      }, 10);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      workspaceMention.hide();
+    }
+  });
+}
+
 async function sendMessage() {
   const message = input.value.trim();
   if (!message || isProcessing) return;
@@ -2523,6 +2581,9 @@ function setupWorkspaceManager() {
 
     // 初始化 WorkspaceMention (在 workspaces 加载完成后)
     initWorkspaceMention();
+
+    // 设置输入框 @工作空间 监听
+    setupWorkspaceMentionInput();
   });
 
   console.log('[Workspace] Workspace manager initialized');
