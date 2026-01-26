@@ -1942,6 +1942,12 @@ function initSidebar() {
   });
   sidebar.registerGroup('skills', skillList);
 
+  // 注册系统设置分组
+  const settingsList = new SettingsList({
+    sidebar: sidebar
+  });
+  sidebar.registerGroup('settings', settingsList);
+
   console.log('[App] Sidebar initialized');
 }
 

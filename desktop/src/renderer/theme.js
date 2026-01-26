@@ -76,6 +76,14 @@ class ThemeManager {
     // 应用强调色
     this.applyAccentColor();
 
+    // 更新侧边栏设置组的主题状态
+    if (window.sidebar) {
+      const settingsGroup = window.sidebar.groups.get('settings');
+      if (settingsGroup && settingsGroup.updateTheme) {
+        settingsGroup.updateTheme(theme);
+      }
+    }
+
     console.log('[ThemeManager] Applied theme:', theme);
   }
 
