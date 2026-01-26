@@ -480,15 +480,12 @@ body.sidebar-collapsed {
 /* 侧边栏工作空间下拉菜单 */
 .sidebar-workspace-menu {
   display: none;
-  position: absolute;
-  left: 16px;
-  margin-top: 2px;
+  position: fixed;
   background: var(--bg-elevated);
   border-radius: var(--radius-sm);
   box-shadow: 0 4px 16px rgba(0,0,0,0.15);
   border: 1px solid var(--border-color);
-  z-index: 1000;
-  min-width: 220px;
+  z-index: 10000;
   max-height: 300px;
   overflow-y: auto;
 }

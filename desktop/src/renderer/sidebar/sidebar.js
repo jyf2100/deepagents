@@ -544,7 +544,38 @@ class Sidebar {
    */
   _updateWorkspaceSelectorUI() {
     const workspaceSelector = document.getElementById('sidebar-workspace-selector');
-    const currentWorkspace = this.workspaces.find(w => String(w.id) === String(window.currentWorkspaceId));
+
+    // 如果没有当前工作空间，尝试从 localStorage 获取
+    if (!window.currentWorkspaceId) {
+      const savedId = localStorage.getItem('deepagents-current-workspace');
+      if (savedId) {
+        window.currentWorkspaceId = savedId;
+      }
+    }
+
+    let currentWorkspace = this.workspaces.find(w => String(w.id) === String(window.currentWorkspaceId));
+
+    // 如果还是没有，优先选择 default 工作空间
+    if (!currentWorkspace && this.workspaces.length > 0) {
+      const defaultWorkspace = this.workspaces.find(w => w.id === 'default' || w.name === '默认工作空间');
+      if (defaultWorkspace) {
+        currentWorkspace = defaultWorkspace;
+        window.currentWorkspaceId = defaultWorkspace.id;
+        localStorage.setItem('deepagents-current-workspace', defaultWorkspace.id);
+        // 通知 app.js 更新
+        if (this.callbacks.onWorkspaceChange) {
+          this.callbacks.onWorkspaceChange(defaultWorkspace.id);
+        }
+      } else {
+        // 使用第一个工作空间
+        currentWorkspace = this.workspaces[0];
+        window.currentWorkspaceId = currentWorkspace.id;
+        localStorage.setItem('deepagents-current-workspace', currentWorkspace.id);
+        if (this.callbacks.onWorkspaceChange) {
+          this.callbacks.onWorkspaceChange(currentWorkspace.id);
+        }
+      }
+    }
 
     if (workspaceSelector && currentWorkspace) {
       const icon = this.workspaceIcons[currentWorkspace.icon] || '📁';
@@ -609,9 +640,21 @@ class Sidebar {
    * 切换工作空间菜单显示/隐藏
    */
   _toggleWorkspaceMenu() {
+    const workspaceSelector = document.getElementById('sidebar-workspace-selector');
     const workspaceMenu = document.getElementById('sidebar-workspace-menu');
-    if (workspaceMenu) {
-      workspaceMenu.classList.toggle('show');
+    if (workspaceMenu && workspaceSelector) {
+      const isShow = !workspaceMenu.classList.contains('show');
+
+      if (isShow) {
+        // 计算菜单位置：在按钮正下方
+        const rect = workspaceSelector.getBoundingClientRect();
+        workspaceMenu.style.top = (rect.bottom + 4) + 'px';
+        workspaceMenu.style.left = rect.left + 'px';
+        workspaceMenu.style.width = rect.width + 'px';
+        workspaceMenu.classList.add('show');
+      } else {
+        workspaceMenu.classList.remove('show');
+      }
     }
   }
 

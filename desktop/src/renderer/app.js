@@ -2685,9 +2685,20 @@ async function loadWorkspaces() {
     const savedWorkspaceId = localStorage.getItem('deepagents-current-workspace');
 
     if (savedWorkspaceId && workspaces.find(w => w.id === savedWorkspaceId)) {
+      // 使用保存的工作空间
       currentWorkspaceId = savedWorkspaceId;
-    } else if (workspaces.length > 0) {
-      currentWorkspaceId = workspaces[0].id;
+    } else {
+      // 首次登录：优先使用 default 工作空间
+      const defaultWorkspace = workspaces.find(w => w.id === 'default' || w.name === '默认工作空间');
+      if (defaultWorkspace) {
+        currentWorkspaceId = defaultWorkspace.id;
+        // 保存到 localStorage
+        localStorage.setItem('deepagents-current-workspace', currentWorkspaceId);
+      } else if (workspaces.length > 0) {
+        // 如果没有 default，使用第一个工作空间
+        currentWorkspaceId = workspaces[0].id;
+        localStorage.setItem('deepagents-current-workspace', currentWorkspaceId);
+      }
     }
 
     updateWorkspaceUI();
