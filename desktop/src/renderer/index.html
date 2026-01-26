@@ -1140,6 +1140,21 @@
       word-break: break-all;
       font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
     }
+    .tool-content-preview {
+      background: var(--bg-elevated);
+      padding: 8px;
+      border-radius: 3px;
+      border: 1px solid #eee;
+      font-size: 12px;
+      line-height: 1.5;
+      max-height: 200px;
+      overflow: auto;
+      margin: 0;
+    }
+    .tool-content-preview pre {
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
     /* 工具输出紧凑卡片 */
     .tool-output-compact {
       margin: 6px 0;
@@ -1202,6 +1217,86 @@
     .file-path-long:hover {
       max-width: none;
       white-space: normal;
+    }
+
+    /* 列表样式 */
+    .list-item, .list-item-num {
+      margin-left: 20px;
+      padding: 4px 0;
+      display: list-item;
+      list-style-position: inside;
+    }
+    .list-item {
+      list-style-type: disc;
+    }
+    .list-item-num {
+      list-style-type: decimal;
+    }
+
+    /* 链接样式 */
+    .message-link {
+      color: #0066cc;
+      text-decoration: none;
+      border-bottom: 1px dotted #0066cc;
+    }
+    .message-link:hover {
+      color: #0052a3;
+      border-bottom-style: solid;
+    }
+
+    /* Todo list 样式 */
+    .todo-list-container {
+      margin: 12px 0;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      background: rgba(0, 0, 0, 0.02);
+    }
+    .todo-list-header {
+      padding: 8px 12px;
+      background: rgba(0, 102, 204, 0.1);
+      font-weight: 600;
+      font-size: 13px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .todo-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .todo-item {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 13px;
+      transition: background 0.15s ease;
+    }
+    .todo-item:last-child {
+      border-bottom: none;
+    }
+    .todo-item:hover {
+      background: rgba(0, 0, 0, 0.03);
+    }
+    .todo-icon {
+      flex-shrink: 0;
+      font-size: 14px;
+    }
+    .todo-content {
+      flex: 1;
+      line-height: 1.5;
+    }
+    .todo-item.completed .todo-content {
+      text-decoration: line-through;
+      opacity: 0.6;
+    }
+    .todo-item.in-progress {
+      background: rgba(0, 102, 204, 0.05);
+    }
+    .todo-item.in-progress .todo-content {
+      color: #0066cc;
+      font-weight: 500;
     }
 
     /* SkillsLM 网页嵌入面板样式 */
@@ -1332,6 +1427,84 @@
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+    }
+
+    /* WorkspaceMention 下拉列表样式 */
+    .workspace-mention-dropdown {
+      position: fixed;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      max-height: 300px;
+      overflow-y: auto;
+      z-index: 2000;
+      padding: 4px;
+    }
+
+    .workspace-mention-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: background var(--transition-fast);
+    }
+
+    .workspace-mention-item:hover {
+      background: var(--bg-elevated);
+    }
+
+    .workspace-mention-item.selected {
+      background: var(--accent-color);
+      color: var(--text-inverse);
+    }
+
+    .workspace-mention-item.current {
+      font-weight: 500;
+    }
+
+    .workspace-mention-item .workspace-icon {
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .workspace-mention-item .workspace-name {
+      flex: 1;
+      font-size: 13px;
+    }
+
+    .workspace-mention-item .current-badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      background: var(--bg-elevated);
+      border-radius: 3px;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+
+    .workspace-mention-item.selected .current-badge {
+      background: rgba(255, 255, 255, 0.2);
+      color: var(--text-inverse);
+    }
+
+    /* 滚动条样式 */
+    .workspace-mention-dropdown::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .workspace-mention-dropdown::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .workspace-mention-dropdown::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 3px;
+    }
+
+    .workspace-mention-dropdown::-webkit-scrollbar-thumb:hover {
+      background: var(--text-tertiary);
     }
   </style>
 </head>
@@ -1785,5 +1958,6 @@
   </script>
   <script src="theme.js"></script>
   <script src="app.js"></script>
+  <script src="workspace-mention.js"></script>
 </body>
 </html>
