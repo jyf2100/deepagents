@@ -57,6 +57,11 @@ class Sidebar {
     this.container.addEventListener('click', (e) => {
       this._handleClick(e);
     });
+
+    // 键盘快捷键
+    document.addEventListener('keydown', (e) => {
+      this._handleKeyboard(e);
+    });
   }
 
   /**
@@ -80,6 +85,31 @@ class Sidebar {
       const data = menuItem.dataset;
       this._handleMenuAction(action, data, e);
       return;
+    }
+  }
+
+  /**
+   * 处理键盘快捷键
+   */
+  _handleKeyboard(e) {
+    // Cmd/Ctrl + B: 切换侧边栏
+    if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
+      e.preventDefault();
+      this.toggle();
+    }
+
+    // Cmd/Ctrl + K: 聚焦到搜索框（如果有的话）
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      e.preventDefault();
+      // TODO: 实现搜索功能
+    }
+
+    // Escape: 关闭侧边栏（移动端展开状态）
+    if (e.key === 'Escape') {
+      if (this.container.classList.contains('sidebar-expanded')) {
+        this.container.classList.remove('sidebar-expanded');
+        this.overlay.classList.remove('active');
+      }
     }
   }
 
