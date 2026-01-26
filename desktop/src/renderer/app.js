@@ -1119,6 +1119,10 @@ let mentionDebounceTimer = null;
 
 // 设置输入框监听
 function setupWorkspaceMentionInput() {
+  // Prevent duplicate initialization
+  if (window.workspaceMentionInputInitialized) return;
+  window.workspaceMentionInputInitialized = true;
+
   const input = document.getElementById('message-input');
   if (!input) return;
 
@@ -1135,8 +1139,10 @@ function setupWorkspaceMentionInput() {
       // 延迟弹出避免闪烁
       clearTimeout(mentionDebounceTimer);
       mentionDebounceTimer = setTimeout(() => {
-        const rect = input.getBoundingClientRect();
-        workspaceMention.show(rect);
+        if (workspaceMention) {  // Add guard
+          const rect = input.getBoundingClientRect();
+          workspaceMention.show(rect);
+        }
       }, 100);
     } else {
       clearTimeout(mentionDebounceTimer);
