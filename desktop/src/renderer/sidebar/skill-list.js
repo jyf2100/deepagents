@@ -97,14 +97,6 @@ class SkillList extends MenuGroup {
       action: 'open-add-skill-dialog',
       tooltip: '添加新技能'
     });
-
-    // 添加"技能配置"按钮
-    this.addItem({
-      icon: '⚙️',
-      text: '技能配置',
-      action: 'open-skills-dialog',
-      tooltip: '打开技能配置面板'
-    });
   }
 
   /**
