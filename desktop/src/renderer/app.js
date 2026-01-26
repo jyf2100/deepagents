@@ -1892,7 +1892,46 @@ async function initializeApp() {
     if (e.key === 'Enter') sendMessage();
   });
 
+  // === 初始化侧边栏 ===
+  initSidebar();
+
   console.log('[INIT] App initialized');
+}
+
+// === 侧边栏初始化 ===
+let sidebar = null;
+
+function initSidebar() {
+  console.log('[App] Initializing sidebar...');
+
+  sidebar = new Sidebar({
+    container: document.getElementById('sidebar'),
+    onWorkspaceChange: (workspaceId) => {
+      console.log('[Sidebar] Workspace changed to:', workspaceId);
+      // 工作空间切换后刷新数据
+      if (sidebar) {
+        const workspaceGroup = sidebar.groups.get('workspace');
+        if (workspaceGroup && workspaceGroup.refresh) {
+          workspaceGroup.refresh();
+        }
+      }
+    },
+    onConversationChange: (conversationId) => {
+      console.log('[Sidebar] Conversation changed to:', conversationId);
+      // 对话切换后更新选中状态
+      if (sidebar) {
+        sidebar._updateActiveStates();
+      }
+    }
+  });
+
+  // 注册工作空间分组
+  const workspaceList = new WorkspaceList({
+    sidebar: sidebar
+  });
+  sidebar.registerGroup('workspace', workspaceList);
+
+  console.log('[App] Sidebar initialized');
 }
 
 // 暴露添加技能对话框函数到全局（用于内联 onclick）
@@ -2787,6 +2826,15 @@ async function switchWorkspace(workspaceId) {
 
   // 更新 UI
   updateWorkspaceUI();
+
+  // 通知侧边栏刷新
+  if (sidebar) {
+    const workspaceGroup = sidebar.groups.get('workspace');
+    if (workspaceGroup && workspaceGroup.refresh) {
+      await workspaceGroup.refresh();
+    }
+    sidebar._updateActiveStates();
+  }
 
   console.log('[Workspace] Switched to workspace:', workspaceId);
 }
