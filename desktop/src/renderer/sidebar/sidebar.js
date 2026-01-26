@@ -363,15 +363,15 @@ class Sidebar {
   }
 
   /**
-   * 切换主题
+   * 打开主题设置对话框
    */
-  async _toggleTheme() {
-    try {
-      const current = await window.deepagents.getTheme();
-      const newTheme = current.data.theme === 'dark' ? 'light' : 'dark';
-      await window.deepagents.setTheme(newTheme);
-    } catch (error) {
-      console.error('[Sidebar] Failed to toggle theme:', error);
+  _toggleTheme() {
+    // 点击现有的主题切换按钮来打开主题对话框
+    const themeToggleBtn = document.getElementById('theme-toggle-btn');
+    if (themeToggleBtn) {
+      themeToggleBtn.click();
+    } else {
+      console.error('[Sidebar] theme-toggle-btn not found');
     }
   }
 
