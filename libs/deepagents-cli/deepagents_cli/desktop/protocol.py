@@ -672,6 +672,33 @@ class DesktopProtocol:
                                 # 直接是字符串内容
                                 # 过滤掉元数据字符串，但要检查 messages 模式的 metadata
                                 if message == 'updates':
+                                    debug_print(f"[_handle_chat] Processing 'updates', metadata is dict: {isinstance(metadata, dict)}, has __interrupt__: {'__interrupt__' in metadata if isinstance(metadata, dict) else 'N/A'}")
+                                    # CRITICAL: 先检查 metadata 中是否有 interrupt
+                                    if isinstance(metadata, dict) and '__interrupt__' in metadata:
+                                        interrupts = metadata['__interrupt__']
+                                        if interrupts:
+                                            # Clear previous pending interrupts
+                                            self.pending_interrupts.clear()
+
+                                            # Store the original chat request_id with the interrupt
+                                            self._original_chat_request_id = request_id
+
+                                            for interrupt_obj in interrupts:
+                                                interrupt_id = interrupt_obj.id
+                                                hitl_request = interrupt_obj.value
+                                                self.pending_interrupts[interrupt_id] = hitl_request
+
+                                            # Extract tool info
+                                            tool_info = self._extract_tool_info(self.pending_interrupts)
+
+                                            # Return interrupt event to frontend with expected format
+                                            print(f"[_handle_chat] Interrupt detected (from updates): tool={tool_info['tool_name']}, args={tool_info['tool_input']}, id={tool_info['tool_call_id']}", file=sys.stderr)
+
+                                            return {
+                                                'request_id': request_id,
+                                                'type': 'interrupt_request',
+                                                'data': tool_info
+                                            }
                                     debug_print(f"[_handle_chat] Skipping 'updates' metadata")
                                     continue
                                 elif message == 'messages':
@@ -679,10 +706,66 @@ class DesktopProtocol:
                                     debug_print(f"[_handle_chat] Processing 'messages' mode, extracting from metadata...")
                                     chunk_content = ""
 
+                                    # CRITICAL: 首先检查 metadata 是否直接包含 interrupt（字典格式）
+                                    if isinstance(metadata, dict) and '__interrupt__' in metadata:
+                                        interrupts = metadata['__interrupt__']
+                                        if interrupts:
+                                            # Clear previous pending interrupts
+                                            self.pending_interrupts.clear()
+
+                                            # Store the original chat request_id with the interrupt
+                                            self._original_chat_request_id = request_id
+
+                                            for interrupt_obj in interrupts:
+                                                interrupt_id = interrupt_obj.id
+                                                hitl_request = interrupt_obj.value
+                                                self.pending_interrupts[interrupt_id] = hitl_request
+
+                                            # Extract tool info
+                                            tool_info = self._extract_tool_info(self.pending_interrupts)
+
+                                            # Return interrupt event to frontend with expected format
+                                            print(f"[_handle_chat] Interrupt detected (metadata is dict): tool={tool_info['tool_name']}, args={tool_info['tool_input']}, id={tool_info['tool_call_id']}", file=sys.stderr)
+
+                                            return {
+                                                'request_id': request_id,
+                                                'type': 'interrupt_request',
+                                                'data': tool_info
+                                            }
+
                                     # metadata 是 (AIMessageChunk, metadata_dict) 格式
                                     if isinstance(metadata, tuple) and len(metadata) >= 1:
                                         actual_message = metadata[0]  # AIMessageChunk
+                                        metadata_dict = metadata[1] if len(metadata) >= 2 else {}
                                         debug_print(f"[_handle_chat]   actual_message type: {type(actual_message).__name__}")
+                                        debug_print(f"[_handle_chat]   metadata_dict keys: {list(metadata_dict.keys()) if metadata_dict else 'N/A'}")
+
+                                        # CRITICAL: 检查 metadata_dict 中是否有 interrupt（优先级最高）
+                                        if metadata_dict and '__interrupt__' in metadata_dict:
+                                            interrupts = metadata_dict['__interrupt__']
+                                            if interrupts:
+                                                # Clear previous pending interrupts
+                                                self.pending_interrupts.clear()
+
+                                                # Store the original chat request_id with the interrupt
+                                                self._original_chat_request_id = request_id
+
+                                                for interrupt_obj in interrupts:
+                                                    interrupt_id = interrupt_obj.id
+                                                    hitl_request = interrupt_obj.value
+                                                    self.pending_interrupts[interrupt_id] = hitl_request
+
+                                                # Extract tool info
+                                                tool_info = self._extract_tool_info(self.pending_interrupts)
+
+                                                # Return interrupt event to frontend with expected format
+                                                print(f"[_handle_chat] Interrupt detected (from metadata_dict): tool={tool_info['tool_name']}, args={tool_info['tool_input']}, id={tool_info['tool_call_id']}", file=sys.stderr)
+
+                                                return {
+                                                    'request_id': request_id,
+                                                    'type': 'interrupt_request',
+                                                    'data': tool_info
+                                                }
 
                                         # 检查 content
                                         if hasattr(actual_message, 'content'):
@@ -710,6 +793,32 @@ class DesktopProtocol:
                                         # 检查 response_metadata
                                         if hasattr(actual_message, 'response_metadata'):
                                             debug_print(f"[_handle_chat]   response_metadata: {list(actual_message.response_metadata.keys())}")
+                                            # CRITICAL: 检查 metadata 中是否有 interrupt
+                                            if '__interrupt__' in actual_message.response_metadata:
+                                                interrupts = actual_message.response_metadata['__interrupt__']
+                                                if interrupts:
+                                                    # Clear previous pending interrupts
+                                                    self.pending_interrupts.clear()
+
+                                                    # Store the original chat request_id with the interrupt
+                                                    self._original_chat_request_id = request_id
+
+                                                    for interrupt_obj in interrupts:
+                                                        interrupt_id = interrupt_obj.id
+                                                        hitl_request = interrupt_obj.value
+                                                        self.pending_interrupts[interrupt_id] = hitl_request
+
+                                                    # Extract tool info
+                                                    tool_info = self._extract_tool_info(self.pending_interrupts)
+
+                                                    # Return interrupt event to frontend with expected format
+                                                    print(f"[_handle_chat] Interrupt detected (from metadata): tool={tool_info['tool_name']}, args={tool_info['tool_input']}, id={tool_info['tool_call_id']}", file=sys.stderr)
+
+                                                    return {
+                                                        'request_id': request_id,
+                                                        'type': 'interrupt_request',
+                                                        'data': tool_info
+                                                    }
 
                                     debug_print(f"[_handle_chat]   Extracted content length: {len(chunk_content)}")
 
@@ -905,6 +1014,7 @@ class DesktopProtocol:
 
                     # ===== 3. 处理 dict 格式 (updates 模式的普通格式) =====
                     elif isinstance(chunk, dict):
+                        debug_print(f"[_handle_chat] Processing dict chunk, keys: {list(chunk.keys())[:10]}")
                         chunk_content = ""
 
                         # ===== 3a. 优先检查中断 =====
