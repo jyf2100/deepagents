@@ -1506,6 +1506,23 @@
     .workspace-mention-dropdown::-webkit-scrollbar-thumb:hover {
       background: var(--text-tertiary);
     }
+
+    /* 工作空间切换器闪烁动画 */
+    #workspace-selector.flash {
+      animation: flashAnimation 0.5s ease-in-out;
+    }
+
+    @keyframes flashAnimation {
+      0%, 100% {
+        background: var(--bg-tertiary);
+        border-color: var(--border-color);
+      }
+      50% {
+        background: var(--accent-color);
+        border-color: var(--accent-color);
+        color: var(--text-inverse);
+      }
+    }
   </style>
 </head>
 <body>

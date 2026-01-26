@@ -1291,12 +1291,9 @@ function setupAddSkillButton() {
   skillPreviewContent = document.getElementById('skill-preview-content');
 
   const addSkillBtn = document.getElementById('add-skill-btn');
-  console.log('[setupAddSkillButton] addSkillBtn:', addSkillBtn);
-  console.log('[setupAddSkillButton] addSkillBtn tagName:', addSkillBtn?.tagName);
 
   if (!addSkillBtn) {
     console.error('[setupAddSkillButton] add-skill-btn not found!');
-    console.log('[setupAddSkillButton] Available buttons:', document.querySelectorAll('button[id]'));
     return;
   }
 
@@ -1304,21 +1301,14 @@ function setupAddSkillButton() {
   const cancelBtn = document.getElementById('cancel-skill-btn');
   const uploadBtn = document.getElementById('upload-skill-btn');
 
-  console.log('[setupAddSkillButton] browseBtn:', browseBtn);
-  console.log('[setupAddSkillButton] cancelBtn:', cancelBtn);
-  console.log('[setupAddSkillButton] uploadBtn:', uploadBtn);
-
   // 打开对话框 - 使用更明确的处理函数
   const handleAddSkillClick = (e) => {
-    console.log('[addSkillBtn] Clicked! event:', e);
-    console.log('[addSkillBtn] Dialog element:', addSkillDialog);
     e.preventDefault();
     e.stopPropagation();
     showAddSkillDialog();
   };
 
   addSkillBtn.addEventListener('click', handleAddSkillClick);
-  console.log('[setupAddSkillButton] Event listener attached to addSkillBtn');
 
   // 浏览按钮
   browseBtn.addEventListener('click', () => {
@@ -1394,6 +1384,7 @@ function setupAddSkillButton() {
           size: file.size
         });
 
+
         console.log('[FileSelect] Loaded file:', file.name, 'size:', base64Data.length, 'bytes (base64)');
       }
 
@@ -1408,8 +1399,6 @@ function setupAddSkillButton() {
       `;
       uploadBtn.textContent = '上传';
       uploadBtn.disabled = false;
-
-      console.log('[FileSelect] Files loaded:', fileData.map(f => f.name));
     } catch (error) {
       console.error('[FileSelect] Error reading files:', error);
       skillPreview.style.display = 'block';
@@ -1488,8 +1477,6 @@ function setupGithubImportButton() {
   // 用于保存扫描结果
   let scanResult = null;
 
-  console.log('[setupGithubImportButton] githubImportBtn:', githubImportBtn);
-
   if (!githubImportBtn) {
     console.error('[setupGithubImportButton] github-import-btn not found!');
     return;
@@ -1497,7 +1484,6 @@ function setupGithubImportButton() {
 
   // 打开扫描对话框
   githubImportBtn.addEventListener('click', () => {
-    console.log('[githubImportBtn] Clicked!');
     githubUrlInput.value = '';
     githubImportStatus.style.display = 'none';
     githubImportDialog.style.display = 'flex';
@@ -1521,8 +1507,6 @@ function setupGithubImportButton() {
   confirmGithubImport.addEventListener('click', async () => {
     const url = githubUrlInput.value.trim();
     const useProxy = useProxyCheckbox.checked;
-
-    console.log('[confirmGithubImport] URL:', url, 'useProxy:', useProxy);
 
     // 验证 URL - 支持 GitHub 和自定义 git 仓库
     if (!url) {
@@ -1552,9 +1536,7 @@ function setupGithubImportButton() {
     githubImportMessage.style.color = '#1d1d1f';
 
     try {
-      console.log('[confirmGithubImport] Calling scanGithubForSkills...');
       const result = await window.deepagents.scanGithubForSkills(cleanUrl, useProxy);
-      console.log('[confirmGithubImport] Result:', result);
 
       if (result.status === 'success') {
         // 保存扫描结果
@@ -1697,8 +1679,6 @@ function setupGithubImportButton() {
       return;
     }
 
-    console.log('[confirmSelectedImport] Selected skills:', selectedSkills, 'location:', location);
-
     // 禁用按钮，显示状态
     confirmSelectedImport.disabled = true;
     backToScanBtn.disabled = true;
@@ -1707,13 +1687,11 @@ function setupGithubImportButton() {
     selectionImportMessage.style.color = '#1d1d1f';
 
     try {
-      console.log('[confirmSelectedImport] Calling importSelectedSkills...');
       const result = await window.deepagents.importSelectedSkills(
         scanResult.temp_dir,
         selectedSkills,
         location
       );
-      console.log('[confirmSelectedImport] Result:', result);
 
       if (result.status === 'success') {
         const data = result.data;
@@ -1790,7 +1768,6 @@ async function initializeApp() {
   skillsList = document.getElementById('skills-list');
 
   console.log('[INIT] DOM elements initialized');
-  console.log('[INIT] add-skill-btn exists:', !!document.getElementById('add-skill-btn'));
 
   // 检查是否首次启动（无配置）
   const configStatus = await checkConfigStatus();
