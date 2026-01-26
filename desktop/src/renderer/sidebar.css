@@ -341,3 +341,89 @@ body.sidebar-collapsed {
     padding-left: 60px;
   }
 }
+
+/* === 工作空间项（可展开的子分组） === */
+
+.workspace-item {
+  border-bottom: 1px solid transparent;
+}
+
+.workspace-item.active > .workspace-header {
+  background: rgba(0, 122, 255, 0.08);
+}
+
+.workspace-item.active > .workspace-header .workspace-name {
+  color: var(--accent-color);
+}
+
+/* 工作空间头部 */
+.workspace-header {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px 10px 48px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s var(--ease-out);
+}
+
+.workspace-header:hover {
+  background: var(--bg-tertiary);
+}
+
+/* 工作空间图标 */
+.workspace-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  font-size: 14px;
+}
+
+/* 工作空间名称 */
+.workspace-name {
+  margin-left: 8px;
+  font-size: 13px;
+  color: var(--text-primary);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 工作空间箭头 */
+.workspace-arrow {
+  font-size: 10px;
+  color: var(--text-secondary);
+  transition: transform 0.2s var(--ease-out);
+  flex-shrink: 0;
+}
+
+/* 工作空间内容 */
+.workspace-content {
+  overflow: hidden;
+  transition: max-height 0.3s var(--ease-in-out),
+              opacity 0.2s var(--ease-out);
+  max-height: 1000px;
+  opacity: 1;
+}
+
+.workspace-content[style*="display: none"] {
+  max-height: 0;
+  opacity: 0;
+}
+
+/* 折叠状态下的工作空间头部 */
+.sidebar.collapsed .workspace-header {
+  padding: 10px 16px;
+}
+
+.sidebar.collapsed .workspace-name {
+  display: none;
+}
+
+.sidebar.collapsed .workspace-arrow {
+  display: none;
+}
+
+.sidebar.collapsed .workspace-content {
+  display: none !important;
+}

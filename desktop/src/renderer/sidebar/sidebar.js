@@ -81,6 +81,16 @@ class Sidebar {
       return;
     }
 
+    // 工作空间头部点击（切换工作空间并自动展开）
+    const workspaceHeader = e.target.closest('.workspace-header');
+    if (workspaceHeader) {
+      const workspaceId = workspaceHeader.dataset.workspaceId;
+      if (workspaceId) {
+        this._selectWorkspaceAndExpand(workspaceId);
+      }
+      return;
+    }
+
     // 菜单项点击
     const menuItem = e.target.closest('.menu-item');
     if (menuItem) {
@@ -142,6 +152,9 @@ class Sidebar {
         break;
       case 'create-conversation':
         await this._createConversation();
+        break;
+      case 'open-workspace-settings':
+        this._openWorkspaceSettings(data.workspaceId);
         break;
       case 'open-skills-dialog':
         this._openSkillsDialog();
@@ -272,6 +285,42 @@ class Sidebar {
       this._updateActiveStates();
     } catch (error) {
       console.error('[Sidebar] Failed to select workspace:', error);
+    }
+  }
+
+  /**
+   * 选择工作空间并切换展开状态
+   */
+  async _selectWorkspaceAndExpand(workspaceId) {
+    // 先切换工作空间
+    await this._selectWorkspace(workspaceId);
+
+    // 然后切换展开状态
+    const workspaceGroup = this.groups.get('workspace');
+    if (workspaceGroup && workspaceGroup.expandedWorkspaces) {
+      const index = workspaceGroup.expandedWorkspaces.indexOf(workspaceId);
+      if (index > -1) {
+        // 如果已展开，不需要做任何事
+      } else {
+        // 如果未展开，展开它
+        workspaceGroup.expandedWorkspaces.push(workspaceId);
+        workspaceGroup._render();
+      }
+    }
+  }
+
+  /**
+   * 打开工作空间设置（需要先切换到该工作空间）
+   */
+  _openWorkspaceSettings(workspaceId) {
+    // 切换到指定工作空间
+    this._selectWorkspaceAndExpand(workspaceId);
+
+    // 然后打开设置对话框
+    if (typeof showWorkspaceSettings === 'function') {
+      showWorkspaceSettings();
+    } else {
+      console.error('[Sidebar] showWorkspaceSettings function not found');
     }
   }
 

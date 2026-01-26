@@ -1,7 +1,7 @@
 // desktop/src/renderer/sidebar/workspace-list.js
 
 /**
- * WorkspaceList class - Manages workspace list and conversation history
+ * WorkspaceList class - Manages workspace list with nested conversations
  */
 class WorkspaceList extends MenuGroup {
   /**
@@ -16,7 +16,8 @@ class WorkspaceList extends MenuGroup {
     });
 
     this.workspaces = [];
-    this.conversations = [];
+    this.workspaceConversations = new Map(); // workspaceId -> conversations[]
+    this.expandedWorkspaces = [];
     this.sidebar = options.sidebar || null;
 
     // Load data
@@ -24,20 +25,19 @@ class WorkspaceList extends MenuGroup {
   }
 
   /**
-   * Load workspaces and conversation list
+   * Load workspaces and conversations for each workspace
    */
   async load() {
     try {
       // Load workspaces
       const workspacesResult = await window.deepagents.listWorkspaces();
       if (workspacesResult.status === 'success') {
-        // 数据结构是 result.data.workspaces
         this.workspaces = workspacesResult.data?.workspaces || workspacesResult.data || [];
       }
 
-      // Load conversations for current workspace
-      if (window.currentWorkspaceId) {
-        await this._loadConversations(window.currentWorkspaceId);
+      // Load conversations for each workspace
+      for (const workspace of this.workspaces) {
+        await this._loadConversations(workspace.id);
       }
 
       this._render();
@@ -54,41 +54,29 @@ class WorkspaceList extends MenuGroup {
   }
 
   /**
-   * Load conversation list
+   * Load conversation list for a workspace
    */
   async _loadConversations(workspaceId) {
     try {
       const result = await window.deepagents.listConversations(workspaceId);
       if (result.status === 'success') {
-        this.conversations = result.data || [];
+        this.workspaceConversations.set(workspaceId, result.data || []);
       }
     } catch (error) {
       console.error('[WorkspaceList] Failed to load conversations:', error);
-      this.conversations = [];
+      this.workspaceConversations.set(workspaceId, []);
     }
   }
 
   /**
-   * Render workspace list
+   * Render workspace list with nested conversations
    */
   _render() {
     this.clear();
 
-    // Render workspace list
+    // Render each workspace as an expandable group
     this.workspaces.forEach(workspace => {
-      const isActive = String(workspace.id) === String(window.currentWorkspaceId);
-      this.addItem({
-        icon: this._getWorkspaceIcon(workspace.icon),
-        text: workspace.name,
-        action: 'select-workspace',
-        data: { workspaceId: workspace.id },
-        tooltip: workspace.name
-      });
-
-      if (isActive) {
-        const item = this.contentElement.lastElementChild;
-        if (item) item.classList.add('active');
-      }
+      this._renderWorkspace(workspace);
     });
 
     // Add divider
@@ -101,68 +89,108 @@ class WorkspaceList extends MenuGroup {
       action: 'create-workspace',
       tooltip: '创建工作空间'
     });
-
-    // Add history subgroup
-    this._renderConversations();
   }
 
   /**
-   * Render conversation history
+   * Render a single workspace with its conversations
    */
-  _renderConversations() {
-    // Add subgroup title
-    this.addSubgroupTitle('最近对话');
+  _renderWorkspace(workspace) {
+    const isActive = String(workspace.id) === String(window.currentWorkspaceId);
+    const isExpanded = this.expandedWorkspaces.includes(workspace.id);
 
-    // Render conversation list (max 10)
-    const recent = this.conversations.slice(0, 10);
+    // Create workspace container
+    const wsContainer = document.createElement('div');
+    wsContainer.className = 'workspace-item';
+    if (isActive) wsContainer.classList.add('active');
+
+    // Create workspace header
+    const wsHeader = document.createElement('div');
+    wsHeader.className = 'workspace-header';
+    wsHeader.dataset.workspaceId = workspace.id;
+    wsHeader.innerHTML = `
+      <span class="workspace-icon">${this._getWorkspaceIcon(workspace.icon)}</span>
+      <span class="workspace-name">${this._escapeHtml(workspace.name)}</span>
+      <span class="workspace-arrow">${isExpanded ? '▾' : '▶'</span>
+    `;
+
+    // Create workspace content
+    const wsContent = document.createElement('div');
+    wsContent.className = 'workspace-content';
+    if (!isExpanded) {
+      wsContent.style.display = 'none';
+    }
+
+    // Add conversations
+    const conversations = this.workspaceConversations.get(workspace.id) || [];
+    const recent = conversations.slice(0, 10);
 
     if (recent.length === 0) {
-      // Show message when no conversations
       const emptyItem = document.createElement('div');
       emptyItem.className = 'menu-item';
       emptyItem.style.cssText = 'cursor: default; opacity: 0.5;';
       emptyItem.innerHTML = '<span class="menu-item-text" style="font-size: 12px;">暂无对话</span>';
-      this.contentElement.appendChild(emptyItem);
+      wsContent.appendChild(emptyItem);
     } else {
       recent.forEach(conv => {
-        const isActive = String(conv.id) === String(window.currentConversationId);
+        const isConvActive = String(conv.id) === String(window.currentConversationId);
         const timeStr = this._formatTime(conv.updated_at || conv.created_at);
 
-        this.addItem({
-          icon: '💬',
-          text: (conv.title || '未命名对话') + `  ·  ${timeStr}`,
-          action: 'select-conversation',
-          data: { conversationId: conv.id },
-          actionIcon: '×',
-          actionAction: 'delete-conversation',
-          actionTooltip: '删除对话',
-          tooltip: conv.title || '未命名对话'
-        });
-
-        if (isActive) {
-          const item = this.contentElement.lastElementChild;
-          if (item) item.classList.add('active');
-        }
+        const convItem = document.createElement('div');
+        convItem.className = 'menu-item';
+        if (isConvActive) convItem.classList.add('active');
+        convItem.dataset.action = 'select-conversation';
+        convItem.dataset.conversationId = conv.id;
+        convItem.innerHTML = `
+          <span class="menu-item-icon">💬</span>
+          <span class="menu-item-text">${this._escapeHtml(conv.title || '未命名对话')}  ·  ${timeStr}</span>
+          <span class="menu-item-action" data-action="delete-conversation" data-conversation-id="${conv.id}" title="删除对话">×</span>
+        `;
+        wsContent.appendChild(convItem);
       });
 
-      // If there are more conversations, show "View All"
-      if (this.conversations.length > 10) {
-        this.addItem({
-          icon: '•••',
-          text: `查看全部 ${this.conversations.length} 个对话`,
-          action: 'view-all-conversations',
-          tooltip: '查看全部对话'
-        });
+      // If there are more conversations, show indicator
+      if (conversations.length > 10) {
+        const moreItem = document.createElement('div');
+        moreItem.className = 'menu-item';
+        moreItem.style.cssText = 'cursor: default; opacity: 0.6; font-size: 11px;';
+        moreItem.innerHTML = `<span class="menu-item-text">还有 ${conversations.length - 10} 个对话...</span>`;
+        wsContent.appendChild(moreItem);
       }
     }
 
-    // Add "New Conversation" button
-    this.addItem({
-      icon: '➕',
-      text: '新对话',
-      action: 'create-conversation',
-      tooltip: '创建新对话'
-    });
+    // Add divider before settings
+    const divider = document.createElement('div');
+    divider.className = 'menu-divider';
+    wsContent.appendChild(divider);
+
+    // Add workspace settings button
+    const settingsItem = document.createElement('div');
+    settingsItem.className = 'menu-item';
+    settingsItem.dataset.action = 'open-workspace-settings';
+    settingsItem.dataset.workspaceId = workspace.id;
+    settingsItem.innerHTML = `
+      <span class="menu-item-icon">⚙️</span>
+      <span class="menu-item-text">工作空间设置</span>
+    `;
+    wsContent.appendChild(settingsItem);
+
+    // Append to container
+    wsContainer.appendChild(wsHeader);
+    wsContainer.appendChild(wsContent);
+    this.contentElement.appendChild(wsContainer);
+  }
+
+  /**
+   * Toggle workspace expand/collapse
+   */
+  _toggleWorkspace(workspaceId) {
+    const index = this.expandedWorkspaces.indexOf(workspaceId);
+    if (index > -1) {
+      this.expandedWorkspaces.splice(index, 1);
+    } else {
+      this.expandedWorkspaces.push(workspaceId);
+    }
+    this._render();
   }
 
   /**
@@ -197,18 +225,23 @@ class WorkspaceList extends MenuGroup {
 
     // Today
     if (date.toDateString() === now.toDateString()) {
-      return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+      return `今天 ${date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`;
     }
 
     // Yesterday
     const yesterday = new Date(now);
     yesterday.setDate(yesterday.getDate() - 1);
     if (date.toDateString() === yesterday.toDateString()) {
-      return '昨天';
+      return `昨天`;
     }
 
-    // Earlier
-    return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+    // This year
+    if (date.getFullYear() === now.getFullYear()) {
+      return `${date.getMonth() + 1}/${date.getDate()}`;
+    }
+
+    // Other years
+    return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
   }
 
   /**
