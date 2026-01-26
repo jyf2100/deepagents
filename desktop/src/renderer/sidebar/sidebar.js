@@ -33,6 +33,9 @@ class Sidebar {
     this._updateCollapseState();
     this._updateGroupStates();
     this._bindEvents();
+
+    // 监听窗口大小变化
+    window.addEventListener('resize', () => this._handleResize());
   }
 
   /**
@@ -162,9 +165,15 @@ class Sidebar {
    * 切换侧边栏折叠状态
    */
   toggle() {
-    this.isCollapsed = !this.isCollapsed;
-    this._updateCollapseState();
-    this._saveState();
+    // 小窗口模式下使用 overlay 展开模式
+    if (window.innerWidth <= 800) {
+      this.container.classList.toggle('sidebar-expanded');
+      this.overlay.classList.toggle('active');
+    } else {
+      this.isCollapsed = !this.isCollapsed;
+      this._updateCollapseState();
+      this._saveState();
+    }
   }
 
   /**
@@ -177,6 +186,17 @@ class Sidebar {
     } else {
       this.container.classList.remove('collapsed');
       document.body.classList.remove('sidebar-collapsed');
+    }
+  }
+
+  /**
+   * 处理窗口大小变化
+   */
+  _handleResize() {
+    // 从小窗口切换到大窗口时，清理 overlay 状态
+    if (window.innerWidth > 800) {
+      this.container.classList.remove('sidebar-expanded');
+      this.overlay.classList.remove('active');
     }
   }
 
