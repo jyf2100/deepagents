@@ -77,7 +77,7 @@ class ThemeManager {
     this.applyAccentColor();
 
     // 更新侧边栏设置组的主题状态
-    if (window.sidebar) {
+    if (window.sidebar && window.sidebar.groups) {
       const settingsGroup = window.sidebar.groups.get('settings');
       if (settingsGroup && settingsGroup.updateTheme) {
         settingsGroup.updateTheme(theme);
