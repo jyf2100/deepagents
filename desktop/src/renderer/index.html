@@ -1524,8 +1524,64 @@
       }
     }
   </style>
+  <link rel="stylesheet" href="sidebar.css">
 </head>
 <body>
+  <!-- 左侧侧边栏 -->
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-header">
+      <button id="hamburger-button" class="hamburger-button" title="折叠/展开菜单">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+          <path d="M2 4h16v2H2V4zm0 5h16v2H2V9zm0 5h16v2H2v-2z"/>
+        </svg>
+      </button>
+      <span class="sidebar-title">Cowork</span>
+    </div>
+
+    <div class="sidebar-content">
+      <!-- 工作空间分组 -->
+      <div class="menu-group" id="workspace-group">
+        <div class="menu-group-header" data-group="workspace" data-tooltip="工作空间">
+          <span class="menu-group-icon">📁</span>
+          <span class="menu-group-title">工作空间</span>
+          <span class="menu-group-arrow">▾</span>
+        </div>
+        <div class="menu-group-content">
+          <!-- 工作空间列表将动态插入这里 -->
+        </div>
+      </div>
+
+      <!-- 技能管理分组 -->
+      <div class="menu-group" id="skills-group">
+        <div class="menu-group-header" data-group="skills" data-tooltip="技能管理">
+          <span class="menu-group-icon">⚡</span>
+          <span class="menu-group-title">技能管理</span>
+          <span class="menu-group-arrow">▾</span>
+        </div>
+        <div class="menu-group-content">
+          <!-- 技能列表将动态插入这里 -->
+        </div>
+      </div>
+
+      <!-- 系统设置分组 -->
+      <div class="menu-group" id="settings-group">
+        <div class="menu-group-header" data-group="settings" data-tooltip="系统设置">
+          <span class="menu-group-icon">⚙️</span>
+          <span class="menu-group-title">系统设置</span>
+          <span class="menu-group-arrow">▾</span>
+        </div>
+        <div class="menu-group-content">
+          <!-- 设置项将动态插入这里 -->
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- 侧边栏遮罩（移动端） -->
+  <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+  <!-- 现有内容 -->
+  <div id="app">
   <div id="container">
     <!-- 左侧面板 -->
     <div id="side-panel">
