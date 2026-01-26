@@ -1914,6 +1914,11 @@ function initSidebar() {
         if (workspaceGroup && workspaceGroup.refresh) {
           workspaceGroup.refresh();
         }
+        // 刷新技能列表（不同工作空间可能有不同技能）
+        const skillGroup = sidebar.groups.get('skills');
+        if (skillGroup && skillGroup.refresh) {
+          skillGroup.refresh();
+        }
       }
     },
     onConversationChange: (conversationId) => {
@@ -1930,6 +1935,12 @@ function initSidebar() {
     sidebar: sidebar
   });
   sidebar.registerGroup('workspace', workspaceList);
+
+  // 注册技能管理分组
+  const skillList = new SkillList({
+    sidebar: sidebar
+  });
+  sidebar.registerGroup('skills', skillList);
 
   console.log('[App] Sidebar initialized');
 }
