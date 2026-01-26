@@ -1,3 +1,6 @@
+// === 配置开关 ===
+const USE_SIDEBAR_LAYOUT = true;  // 设置为 false 可禁用侧边栏布局
+
 // DOM 元素引用 - 在 initializeApp 中初始化
 let messagesDiv, input, sendBtn, historyList, skillsList;
 
@@ -1892,8 +1895,14 @@ async function initializeApp() {
     if (e.key === 'Enter') sendMessage();
   });
 
-  // === 初始化侧边栏 ===
-  initSidebar();
+  // === 初始化侧边栏（根据配置开关） ===
+  if (USE_SIDEBAR_LAYOUT) {
+    console.log('[App] Sidebar layout enabled, initializing...');
+    document.body.classList.add('with-sidebar');
+    initSidebar();
+  } else {
+    console.log('[App] Sidebar layout disabled');
+  }
 
   console.log('[INIT] App initialized');
 }
