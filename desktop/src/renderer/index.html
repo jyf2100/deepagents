@@ -1556,16 +1556,10 @@
         </div>
       </div>
 
-      <!-- 技能管理分组 -->
-      <div class="menu-group" id="skills-group">
-        <div class="menu-group-header" data-group="skills" data-tooltip="技能管理">
-          <span class="menu-group-icon">⚡</span>
-          <span class="menu-group-title">技能管理</span>
-          <span class="menu-group-arrow">▾</span>
-        </div>
-        <div class="menu-group-content">
-          <!-- 技能列表将动态插入这里 -->
-        </div>
+      <!-- 技能管理（直接点击切换到技能面板） -->
+      <div class="menu-item" data-action="open-skills-dialog" data-tooltip="切换到技能面板">
+        <span class="menu-item-icon">⚡</span>
+        <span class="menu-item-text">技能管理</span>
       </div>
 
       <!-- 系统设置分组 -->
@@ -2036,7 +2030,6 @@
   </script>
   <script src="sidebar/menu-group.js"></script>
   <script src="sidebar/settings-list.js"></script>
-  <script src="sidebar/skill-list.js"></script>
   <script src="sidebar/workspace-list.js"></script>
   <script src="sidebar/sidebar.js"></script>
   <script src="theme.js"></script>

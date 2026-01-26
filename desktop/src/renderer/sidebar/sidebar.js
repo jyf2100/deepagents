@@ -14,7 +14,7 @@ class Sidebar {
     this.container = options.container || document.getElementById('sidebar');
     this.overlay = document.getElementById('sidebar-overlay');
     this.isCollapsed = false;
-    this.expandedGroups = ['workspace', 'skills', 'settings'];
+    this.expandedGroups = ['workspace', 'settings'];
     this.groups = new Map();
 
     this.callbacks = {
