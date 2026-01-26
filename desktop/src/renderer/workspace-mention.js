@@ -94,6 +94,26 @@ class WorkspaceMention {
   confirmSelection() {
     if (!this.isVisible || !this.workspaces[this.selectedIndex]) return;
     const workspace = this.workspaces[this.selectedIndex];
+
+    // 获取输入框并移除 @工作空间名
+    const input = document.getElementById('message-input');
+    if (input) {
+      const value = input.value;
+      const cursorPos = input.selectionStart;
+
+      // 找到最近的 @ 符号位置（从光标往前找）
+      const beforeCursor = value.substring(0, cursorPos);
+      const atMatch = beforeCursor.lastIndexOf('@');
+
+      if (atMatch !== -1) {
+        // 移除从 @ 到光标位置的所有内容
+        const newValue = value.substring(0, atMatch) + value.substring(cursorPos);
+        input.value = newValue;
+        // 设置光标到 @ 符号之前的位置
+        input.setSelectionRange(atMatch, atMatch);
+      }
+    }
+
     this.onWorkspaceSelect(workspace);
     this.hide();
   }
@@ -111,11 +131,17 @@ class WorkspaceMention {
 
   /**
    * 定位下拉列表
+   * 固定向上弹出，紧贴输入框
    */
   _position(rect) {
+    const dropdownHeight = 300; // 最大高度（与 CSS max-height 一致）
+
     this.dropdown.style.left = `${rect.left}px`;
-    this.dropdown.style.top = `${rect.bottom + 4}px`;
     this.dropdown.style.minWidth = `${rect.width}px`;
+
+    // 固定向上弹出：列表底部对齐输入框顶部
+    this.dropdown.style.bottom = `${window.innerHeight - rect.top + 4}px`;
+    this.dropdown.style.top = 'auto';
   }
 
   /**
