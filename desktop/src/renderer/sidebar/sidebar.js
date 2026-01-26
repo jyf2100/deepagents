@@ -279,10 +279,11 @@ class Sidebar {
    * 创建工作空间
    */
   _createWorkspace() {
-    // 触发现有的创建工作空间对话框
-    const existingButton = document.getElementById('create-workspace-btn');
-    if (existingButton) {
-      existingButton.click();
+    // 直接调用现有的创建工作空间对话框函数
+    if (typeof showCreateWorkspaceDialog === 'function') {
+      showCreateWorkspaceDialog();
+    } else {
+      console.error('[Sidebar] showCreateWorkspaceDialog function not found');
     }
   }
 
@@ -339,13 +340,15 @@ class Sidebar {
   }
 
   /**
-   * 打开技能对话框
+   * 打开技能面板
    */
   _openSkillsDialog() {
-    // 触发现有的技能面板
-    const existingButton = document.getElementById('show-skills-panel-btn');
-    if (existingButton) {
-      existingButton.click();
+    // 通过切换到"技能"标签来显示技能面板
+    const skillsTab = document.querySelector('.tab[data-tab="skills"]');
+    if (skillsTab) {
+      skillsTab.click();
+    } else {
+      console.error('[Sidebar] Skills tab not found');
     }
   }
 
@@ -373,13 +376,14 @@ class Sidebar {
   }
 
   /**
-   * 打开设置
+   * 打开工作空间设置
    */
   _openSettings() {
-    // 可以打开通用设置对话框
-    const settingsButton = document.getElementById('workspace-settings-btn');
-    if (settingsButton) {
-      settingsButton.click();
+    // 直接调用现有的工作空间设置对话框函数
+    if (typeof showWorkspaceSettings === 'function') {
+      showWorkspaceSettings();
+    } else {
+      console.error('[Sidebar] showWorkspaceSettings function not found');
     }
   }
 
