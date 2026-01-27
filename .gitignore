@@ -235,4 +235,4 @@ desktop/node_modules/
 # PyInstaller 打包的桌面 agent
 desktop/src/resources/deepagents-desktop-agent/
 dist/
-plans/
+plans/.worktrees/
