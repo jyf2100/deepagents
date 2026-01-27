@@ -14,7 +14,7 @@ class Sidebar {
     this.container = options.container || document.getElementById('sidebar');
     this.overlay = document.getElementById('sidebar-overlay');
     this.isCollapsed = false;
-    this.expandedGroups = ['workspace', 'settings'];
+    this.expandedGroups = ['workspace'];
     this.groups = new Map();
 
     // 工作空间相关
@@ -95,6 +95,16 @@ class Sidebar {
       });
     }
 
+    // 新建工作空间按钮
+    const createWorkspaceBtn = document.getElementById('sidebar-create-workspace-btn');
+    if (createWorkspaceBtn) {
+      createWorkspaceBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this._closeWorkspaceMenu();
+        this._createWorkspace();
+      });
+    }
+
     // 点击其他地方关闭工作空间菜单
     document.addEventListener('click', (e) => {
       const menu = document.getElementById('sidebar-workspace-menu');
@@ -170,6 +180,11 @@ class Sidebar {
         await this._deleteConversation(data.conversationId);
       }
       return;
+    }
+
+    // 点击非技能管理的菜单项时，关闭技能面板
+    if (action !== 'open-skills-dialog') {
+      this._closeSkillsPanel();
     }
 
     switch (action) {
@@ -436,14 +451,40 @@ class Sidebar {
   /**
    * 打开技能面板
    */
-  _openSkillsDialog() {
-    // 通过切换到"技能"标签来显示技能面板
-    const skillsTab = document.querySelector('.tab[data-tab="skills"]');
-    if (skillsTab) {
-      skillsTab.click();
-    } else {
-      console.error('[Sidebar] Skills tab not found');
+  async _openSkillsDialog() {
+    // 隐藏历史视图，显示技能面板
+    const historyView = document.getElementById('history-view');
+    const skillsPanel = document.getElementById('skills-panel-content');
+    const sidePanel = document.getElementById('side-panel');
+
+    if (historyView) historyView.style.display = 'none';
+    if (skillsPanel) {
+      skillsPanel.style.display = 'flex';
+      skillsPanel.style.flexDirection = 'row';
     }
+
+    // 标记侧边栏为技能激活状态
+    if (sidePanel) sidePanel.classList.add('skills-active');
+
+    // 确保技能列表已加载
+    if (window.loadSkillsGlobal && typeof window.loadSkillsGlobal === 'function') {
+      await window.loadSkillsGlobal();
+    }
+  }
+
+  /**
+   * 关闭技能面板，返回历史视图
+   */
+  _closeSkillsPanel() {
+    const historyView = document.getElementById('history-view');
+    const skillsPanel = document.getElementById('skills-panel-content');
+    const sidePanel = document.getElementById('side-panel');
+
+    if (historyView) historyView.style.display = 'block';
+    if (skillsPanel) skillsPanel.style.display = 'none';
+
+    // 移除技能激活状态
+    if (sidePanel) sidePanel.classList.remove('skills-active');
   }
 
   /**

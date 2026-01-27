@@ -1544,10 +1544,11 @@
     </div>
 
     <div class="sidebar-content">
-      <!-- 工作空间选择器（从右边移过来） -->
-      <div class="sidebar-workspace-selector" style="position: relative;">
+      <!-- 工作空间选择器 -->
+      <div class="sidebar-workspace-selector">
         <button id="sidebar-workspace-selector">📁 加载中...</button>
         <button id="sidebar-workspace-settings-btn">⚙️</button>
+        <button id="sidebar-create-workspace-btn" title="新建工作空间">➕</button>
         <!-- 工作空间下拉菜单 -->
         <div id="sidebar-workspace-menu" class="sidebar-workspace-menu">
           <!-- 工作空间列表将动态插入这里 -->
@@ -1560,16 +1561,20 @@
         <span class="menu-item-text">技能管理</span>
       </div>
 
-      <!-- 系统设置分组 -->
-      <div class="menu-group" id="settings-group">
-        <div class="menu-group-header" data-group="settings" data-tooltip="系统设置">
-          <span class="menu-group-icon">⚙️</span>
-          <span class="menu-group-title">系统设置</span>
-          <span class="menu-group-arrow">▾</span>
-        </div>
-        <div class="menu-group-content">
-          <!-- 设置项将动态插入这里 -->
-        </div>
+      <!-- 系统设置菜单项（一级菜单） -->
+      <div class="menu-item menu-item-top-level" data-action="toggle-theme" data-tooltip="主题设置">
+        <span class="menu-item-icon">🌓</span>
+        <span class="menu-item-text">主题设置</span>
+      </div>
+
+      <div class="menu-item menu-item-top-level" data-action="open-settings" data-tooltip="模型设置">
+        <span class="menu-item-icon">🤖</span>
+        <span class="menu-item-text">模型设置</span>
+      </div>
+
+      <div class="menu-item menu-item-top-level" data-action="open-about" data-tooltip="版本信息">
+        <span class="menu-item-icon">ℹ️</span>
+        <span class="menu-item-text">版本信息</span>
       </div>
     </div>
   </aside>
@@ -1582,14 +1587,7 @@
   <div id="container">
     <!-- 左侧面板 -->
     <div id="side-panel">
-      <!-- 标签切换 -->
-      <div id="tabs">
-        <div class="tab active" data-tab="history">历史</div>
-        <div class="tab" data-tab="skills">技能</div>
-        <button id="settings-btn" title="模型配置">⚙️</button>
-      </div>
-
-      <!-- 技能面板双栏内容 (历史+技能标签共用区域) -->
+      <!-- 面板内容区域 -->
       <div id="panel-content" style="flex: 1; padding: 0 12px 12px 12px; display: flex; flex-direction: column;">
         <!-- 历史记录视图 -->
         <div id="history-view" class="panel-view active" style="flex: 1;">
@@ -2021,7 +2019,6 @@
     };
   </script>
   <script src="sidebar/menu-group.js"></script>
-  <script src="sidebar/settings-list.js"></script>
   <script src="sidebar/sidebar.js"></script>
   <script src="theme.js"></script>
   <script src="app.js"></script>

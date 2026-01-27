@@ -30,6 +30,13 @@ window.showAddSkillDialogGlobal = function() {
   }
 };
 
+// 全局函数：加载技能列表（供侧边栏调用）
+window.loadSkillsGlobal = async function() {
+  if (typeof loadSkills === 'function') {
+    await loadSkills();
+  }
+};
+
 // === 标签页切换 ===
 function setupTabs() {
   const tabs = document.querySelectorAll('.tab');
@@ -299,41 +306,6 @@ function toggleWorkspaceMenu() {
 function renderHistory() {
   console.log('[renderHistory] Start rendering. Conversations count:', conversations.length);
   historyList.innerHTML = '';
-
-  // 工作空间头部
-  const workspaceHeader = document.createElement('div');
-  workspaceHeader.className = 'workspace-header';
-
-  const workspaceInfo = document.createElement('div');
-  workspaceInfo.className = 'workspace-info';
-  workspaceInfo.onclick = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    toggleWorkspaceMenu();
-  };
-
-  workspaceInfo.innerHTML = `
-    <span class="workspace-icon">📁</span>
-    <span class="workspace-name">${getCurrentWorkspaceName()}</span>
-  `;
-
-  const createWorkspaceBtn = document.createElement('button');
-  createWorkspaceBtn.className = 'create-workspace-btn';
-  createWorkspaceBtn.textContent = '+ 新建';
-  createWorkspaceBtn.onclick = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    showCreateWorkspaceDialog();
-  };
-
-  workspaceHeader.appendChild(workspaceInfo);
-  workspaceHeader.appendChild(createWorkspaceBtn);
-  historyList.appendChild(workspaceHeader);
-
-  // 分隔线
-  const divider = document.createElement('div');
-  divider.className = 'workspace-divider';
-  historyList.appendChild(divider);
 
   // 对话区域标题
   const conversationHeader = document.createElement('div');
@@ -1781,6 +1753,7 @@ async function initializeApp() {
   // 正常初始化流程
   setupTabs();
   loadConversations();
+  loadSkills();  // 加载技能列表
   setupAddSkillButton();
   setupGithubImportButton();
   setupHITL(); // 初始化 HITL 功能
@@ -1930,12 +1903,6 @@ function initSidebar() {
       }
     }
   });
-
-  // 注册系统设置分组
-  const settingsList = new SettingsList({
-    sidebar: sidebar
-  });
-  sidebar.registerGroup('settings', settingsList);
 
   console.log('[App] Sidebar initialized');
 }
