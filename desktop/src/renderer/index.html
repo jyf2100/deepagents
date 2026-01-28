@@ -1544,17 +1544,6 @@
     </div>
 
     <div class="sidebar-content">
-      <!-- 工作空间选择器 -->
-      <div class="sidebar-workspace-selector">
-        <button id="sidebar-workspace-selector">📁 加载中...</button>
-        <button id="sidebar-workspace-settings-btn">⚙️</button>
-        <button id="sidebar-create-workspace-btn" title="新建工作空间">➕</button>
-        <!-- 工作空间下拉菜单 -->
-        <div id="sidebar-workspace-menu" class="sidebar-workspace-menu">
-          <!-- 工作空间列表将动态插入这里 -->
-        </div>
-      </div>
-
       <!-- 技能管理（直接点击切换到技能面板） -->
       <div class="menu-item menu-item-top-level" data-action="open-skills-dialog" data-tooltip="切换到技能面板">
         <span class="menu-item-icon">⚡</span>
@@ -1587,6 +1576,17 @@
   <div id="container">
     <!-- 左侧面板 -->
     <div id="side-panel">
+      <!-- 工作空间选择器区域 -->
+      <div class="panel-workspace-selector">
+        <button id="workspace-selector-btn">📁 加载中...</button>
+        <button id="workspace-settings-btn" title="工作空间设置">⚙️</button>
+        <button id="create-workspace-btn" title="创建工作空间">➕</button>
+        <!-- 工作空间下拉菜单 -->
+        <div id="workspace-dropdown-menu" class="workspace-dropdown">
+          <!-- 工作空间列表将动态插入这里 -->
+        </div>
+      </div>
+
       <!-- 面板内容区域 -->
       <div id="panel-content" style="flex: 1; padding: 0 12px 12px 12px; display: flex; flex-direction: column;">
         <!-- 历史记录视图 -->
