@@ -304,6 +304,9 @@ function toggleWorkspaceMenu() {
 }
 
 function renderHistory() {
+  // 确保工作空间选择器是最新的
+  renderWorkspaceSelector();
+
   console.log('[renderHistory] Start rendering. Conversations count:', conversations.length);
   historyList.innerHTML = '';
 
@@ -1752,6 +1755,48 @@ async function initializeApp() {
 
   // 正常初始化流程
   setupTabs();
+
+  // 初始化工作空间选择器
+  await initWorkspaceSelector();
+
+  // 工作空间选择器事件绑定
+  const workspaceSelectorBtn = document.getElementById('workspace-selector-btn');
+  if (workspaceSelectorBtn) {
+    workspaceSelectorBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleWorkspaceDropdown();
+    });
+  }
+
+  const workspaceSettingsBtn = document.getElementById('workspace-settings-btn');
+  if (workspaceSettingsBtn) {
+    workspaceSettingsBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (typeof showWorkspaceSettings === 'function') {
+        showWorkspaceSettings(currentWorkspaceId);
+      }
+    });
+  }
+
+  const createWorkspaceBtn = document.getElementById('create-workspace-btn');
+  if (createWorkspaceBtn) {
+    createWorkspaceBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (typeof showCreateWorkspaceDialog === 'function') {
+        showCreateWorkspaceDialog();
+      }
+    });
+  }
+
+  // 点击其他地方关闭工作空间菜单
+  document.addEventListener('click', (e) => {
+    const menu = document.getElementById('workspace-dropdown-menu');
+    const btn = document.getElementById('workspace-selector-btn');
+    if (menu && !menu.contains(e.target) && !btn.contains(e.target)) {
+      menu.classList.remove('show');
+    }
+  });
+
   loadConversations();
   loadSkills();  // 加载技能列表
   setupAddSkillButton();
@@ -1886,14 +1931,16 @@ function initSidebar() {
 
   sidebar = new Sidebar({
     container: document.getElementById('sidebar'),
-    onWorkspaceChange: (workspaceId) => {
+    onWorkspaceChange: async (workspaceId) => {
       console.log('[Sidebar] Workspace changed to:', workspaceId);
-      // 工作空间切换后刷新侧边栏 UI
+      // 更新当前工作空间 ID
+      currentWorkspaceId = workspaceId;
+      // 直接加载该工作空间的对话列表
+      await loadWorkspaceConversations(workspaceId);
+      // 刷新侧边栏 UI
       if (sidebar) {
         sidebar._updateWorkspaceSelectorUI();
       }
-      // 刷新右侧历史列表
-      loadWorkspaces();
     },
     onConversationChange: (conversationId) => {
       console.log('[Sidebar] Conversation changed to:', conversationId);
@@ -2503,11 +2550,11 @@ function handleWorkspaceMentionSelect(workspace) {
   // 复用现有切换函数
   switchWorkspace(workspace.id);
 
-  // UI 闪烁提示（侧边栏）
-  const sidebarSelector = document.getElementById('sidebar-workspace-selector');
-  if (sidebarSelector) {
-    sidebarSelector.classList.add('flash');
-    setTimeout(() => sidebarSelector.classList.remove('flash'), 500);
+  // UI 闪烁提示（更新工作空间选择器）
+  const workspaceSelector = document.getElementById('workspace-selector-btn');
+  if (workspaceSelector) {
+    workspaceSelector.classList.add('flash');
+    setTimeout(() => workspaceSelector.classList.remove('flash'), 500);
   }
 
   console.log('[WorkspaceMention] Switched to:', workspace.name);
@@ -2686,21 +2733,122 @@ async function loadWorkspaces() {
   }
 }
 
+// 初始化工作空间选择器
+async function initWorkspaceSelector() {
+  try {
+    console.log('[Workspace] Initializing workspace selector...');
+    const result = await window.deepagents.listWorkspaces();
+    workspaces = result.data?.workspaces || result.data || [];
+
+    // 如果没有当前工作空间，尝试从 localStorage 获取
+    if (!currentWorkspaceId) {
+      const savedId = localStorage.getItem('deepagents-current-workspace');
+      if (savedId) {
+        currentWorkspaceId = savedId;
+      }
+    }
+
+    // 优先选择 default 工作空间
+    if (!currentWorkspaceId && workspaces.length > 0) {
+      const defaultWorkspace = workspaces.find(w => w.id === 'default' || w.name === '默认工作空间');
+      if (defaultWorkspace) {
+        currentWorkspaceId = defaultWorkspace.id;
+        localStorage.setItem('deepagents-current-workspace', currentWorkspaceId);
+      }
+    }
+
+    renderWorkspaceSelector();
+    console.log('[Workspace] Workspace selector initialized');
+  } catch (error) {
+    console.error('[Workspace] Failed to init workspace selector:', error);
+  }
+}
+
+// 渲染工作空间选择器
+function renderWorkspaceSelector() {
+  const btn = document.getElementById('workspace-selector-btn');
+  if (!btn) return;
+
+  const currentWorkspace = workspaces.find(w => String(w.id) === String(currentWorkspaceId));
+  const icon = workspaceIcons[currentWorkspace?.icon] || '📁';
+  btn.textContent = `${icon} ${currentWorkspace?.name || '未选择工作空间'}`;
+
+  renderWorkspaceDropdown();
+}
+
+// 渲染工作空间下拉菜单
+function renderWorkspaceDropdown() {
+  const menu = document.getElementById('workspace-dropdown-menu');
+  if (!menu) return;
+
+  let html = '';
+
+  // 显示所有工作空间
+  workspaces.forEach(workspace => {
+    const icon = workspaceIcons[workspace.icon] || '📁';
+    const isActive = String(workspace.id) === String(currentWorkspaceId);
+    html += '<div class="workspace-dropdown-item' + (isActive ? ' active' : '') + '" data-workspace-id="' + workspace.id + '">';
+    html += '<span class="workspace-icon">' + icon + '</span>';
+    html += '<span class="workspace-name">' + escapeHtml(workspace.name) + '</span>';
+    html += '</div>';
+  });
+
+  // 分隔线
+  html += '<div class="workspace-dropdown-divider"></div>';
+
+  // 创建工作空间按钮
+  html += '<div class="workspace-dropdown-create" id="dropdown-create-workspace">';
+  html += '<span>➕</span>';
+  html += '<span>创建工作空间</span>';
+  html += '</div>';
+
+  menu.innerHTML = html;
+
+  // 绑定点击事件
+  menu.querySelectorAll('.workspace-dropdown-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const workspaceId = item.getAttribute('data-workspace-id');
+      switchWorkspace(workspaceId);
+      toggleWorkspaceDropdown();
+    });
+  });
+
+  // 创建工作空间按钮
+  const createBtn = menu.querySelector('#dropdown-create-workspace');
+  if (createBtn) {
+    createBtn.addEventListener('click', () => {
+      toggleWorkspaceDropdown();
+      if (typeof showCreateWorkspaceDialog === 'function') {
+        showCreateWorkspaceDialog();
+      }
+    });
+  }
+}
+
+// 切换工作空间下拉菜单显示/隐藏
+function toggleWorkspaceDropdown() {
+  const menu = document.getElementById('workspace-dropdown-menu');
+  const btn = document.getElementById('workspace-selector-btn');
+  if (!menu || !btn) return;
+
+  const isShow = !menu.classList.contains('show');
+
+  if (isShow) {
+    // 计算菜单位置：在按钮正下方
+    const rect = btn.getBoundingClientRect();
+    menu.style.top = (rect.bottom + 4) + 'px';
+    menu.style.left = rect.left + 'px';
+    menu.style.width = rect.width + 'px';
+    menu.classList.add('show');
+  } else {
+    menu.classList.remove('show');
+  }
+}
+
 // 更新工作空间 UI
 function updateWorkspaceUI() {
-  // 更新侧边栏工作空间选择器
-  const sidebarSelector = document.getElementById('sidebar-workspace-selector');
-  const currentWorkspace = workspaces.find(w => w.id === currentWorkspaceId);
-
-  if (sidebarSelector && currentWorkspace) {
-    const icon = workspaceIcons[currentWorkspace.icon] || '📁';
-    sidebarSelector.textContent = `${icon} ${currentWorkspace.name}`;
-  }
-
-  // 如果侧边栏实例存在，也更新其内部状态
-  if (window.sidebar && window.sidebar._updateWorkspaceSelectorUI) {
-    window.sidebar._updateWorkspaceSelectorUI();
-  }
+  // 更新左侧面板的工作空间选择器
+  renderWorkspaceSelector();
 }
 
 // 加载工作空间列表到下拉菜单（已移至侧边栏，此函数保留兼容性）

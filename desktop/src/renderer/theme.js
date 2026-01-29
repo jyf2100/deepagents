@@ -102,6 +102,9 @@ class ThemeManager {
     const hoverColor = theme === 'dark' ? this.adjustBrightness(colors.dark, 20) : this.adjustBrightness(colors.light, -20);
     root.style.setProperty('--accent-hover', hoverColor);
 
+    // 设置用户消息渐变背景（跟随主题强调色）
+    root.style.setProperty('--user-message-gradient', `linear-gradient(135deg, ${colorValue}, ${hoverColor})`);
+
     console.log('[ThemeManager] Applied accent color:', this.accentColor, colorValue);
   }
 

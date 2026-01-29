@@ -4,7 +4,8 @@
 
 set -e
 
-DESKTOP_DIR="/Users/roc/deepagents/desktop"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DESKTOP_DIR="$SCRIPT_DIR"
 
 echo "========================================="
 echo "  重新构建 Electron 应用"
@@ -20,9 +21,9 @@ echo ""
 
 # 安装并启动
 echo "[2/2] 安装并启动应用..."
-/bin/sh -c 'rm -rf /Applications/DeepAgents.app && \
-  cp -R /Users/roc/deepagents/desktop/release/mac-arm64/Cowork.app /Applications/DeepAgents.app && \
-  open /Applications/DeepAgents.app'
+/bin/sh -c 'rm -rf /Applications/Cowork.app && \
+  cp -R "$DESKTOP_DIR"/release/mac-arm64/cowork.app /Applications/Cowork.app && \
+  open /Applications/Cowork.app'
 echo "✓ 应用已启动"
 echo ""
 

@@ -1,4 +1,4 @@
-appId: com.deepagents.cowork
+appId: com.cowork.app
 productName: Cowork
 executableName: cowork
 directories:
@@ -12,8 +12,8 @@ files:
   - src/**/*
   - node_modules/msgpackr/**/*
 extraResources:
-  - from: "src/resources/deepagents-desktop-agent"
-    to: "deepagents-desktop-agent"
+  - from: "src/resources/cowork-agent"
+    to: "cowork-agent"
     filter: ["**/*"]
   - from: "src/resources/skills"
     to: "skills"

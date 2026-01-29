@@ -6,8 +6,10 @@
   left: 0;
   top: 0;
   bottom: 0;
-  width: 280px;
-  background: var(--bg-secondary);
+  width: 220px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
@@ -183,8 +185,9 @@
   padding: 12px 16px 12px 48px;
   cursor: pointer;
   user-select: none;
-  transition: background 0.15s var(--ease-out);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
+  border-radius: 12px;
 }
 
 /* 一级菜单项（无缩进） */
@@ -193,13 +196,14 @@
 }
 
 .menu-item:hover {
-  background: var(--bg-tertiary);
+  background: rgba(103, 126, 234, 0.1);
+  transform: translateX(4px);
 }
 
 /* 选中状态 */
 .menu-item.active {
-  border-left: 3px solid var(--accent-color);
-  background: rgba(0, 122, 255, 0.08);
+  border-left: 3px solid #667eea;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.15));
 }
 
 /* 菜单项图标 */
@@ -302,7 +306,7 @@
   }
 
   .sidebar.sidebar-expanded {
-    width: 280px;
+    width: 220px;
   }
 }
 
@@ -328,7 +332,7 @@
 /* === 主内容区域调整 === */
 
 body.with-sidebar {
-  padding-left: 280px;
+  padding-left: 220px;  /* 只补偿 #sidebar 的宽度 */
   transition: padding-left 0.2s var(--ease-out);
 }
 
@@ -434,7 +438,9 @@ body.sidebar-collapsed {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 16px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 14px;
   border-bottom: 1px solid var(--divider-color);
   position: relative;
 }

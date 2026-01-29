@@ -17,7 +17,7 @@ let mainWindow;
 let pythonProcess;
 let socketServer;
 let webviewSession = null;  // 将在 app.whenReady() 中初始化
-const SOCKET_PATH = path.join(os.tmpdir(), 'deepagents-desktop.sock');
+const SOCKET_PATH = path.join(os.tmpdir(), 'cowork-desktop.sock');
 const pendingRequests = new Map();
 const connectedClients = []; // 手动跟踪连接的客户端
 let connectionTimeout = null; // Python agent 连接超时检测
@@ -250,7 +250,7 @@ function startPythonAgent() {
 
   if (app.isPackaged) {
     // Production: Use packaged executable directly
-    const agentPath = path.join(process.resourcesPath, 'deepagents-desktop-agent', 'deepagents-desktop-agent');
+    const agentPath = path.join(process.resourcesPath, 'cowork-agent', 'cowork-agent');
     console.log(`Starting Python Agent from: ${agentPath}`);
     console.log(`Socket path: ${SOCKET_PATH}`);
 
@@ -1128,7 +1128,7 @@ function cleanupOldResources() {
   // 清理旧的 Python agent 进程（来自之前的应用实例）
   // 注意：不要删除 socket 文件，让 startSocketServer() 处理
   try {
-    const result = execSync('pkill -f "deepagents-desktop-agent"', { encoding: 'utf-8' });
+    const result = execSync('pkill -f "cowork-agent"', { encoding: 'utf-8' });
     console.log('[cleanupOldResources] Killed old Python agents:', result.trim());
   } catch (e) {
     // pkill 返回非零退出码表示没有找到进程，这是正常的

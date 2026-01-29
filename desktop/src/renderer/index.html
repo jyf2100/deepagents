@@ -22,7 +22,7 @@
       /* 边框和分隔线 */
       --border-color: #d2d2d7;
       --divider-color: #e5e5ea;
-      --shadow-color: rgba(0, 0, 0, 0.08);
+      --shadow-color: var(--black-20);
 
       /* 强调色 - macOS 系统色 */
       --accent-color: #007aff;
@@ -35,18 +35,18 @@
       /* macOS 风格圆角 */
       --radius-sm: 4px;
       --radius-md: 6px;
-      --radius-lg: 8px;
+      /* --radius-lg 由 glassmorphism.css 定义为 20px */
       --radius-xl: 10px;
       --radius-2xl: 14px;
       --radius-full: 9999px;
 
       /* macOS 风格多层阴影 */
-      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.06);
-      --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.06);
-      --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
-      --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.1), 0 10px 10px rgba(0, 0, 0, 0.04);
-      --shadow-2xl: 0 25px 50px rgba(0, 0, 0, 0.15);
-      --shadow-modal: 0 30px 60px rgba(0, 0, 0, 0.2), 0 0 1px rgba(0, 0, 0, 0.2);
+      --shadow-sm: 0 1px 2px var(--black-10), 0 1px 3px var(--black-20);
+      --shadow-md: 0 4px 6px var(--black-25), 0 2px 4px var(--black-20);
+      --shadow-lg: 0 10px 15px var(--black-25), 0 4px 6px var(--black-15);
+      --shadow-xl: 0 20px 25px var(--black-25), 0 10px 10px var(--black-10);
+      --shadow-2xl: 0 25px 50px var(--black-40);
+      --shadow-modal: 0 30px 60px var(--black-50), 0 0 1px var(--black-50);
 
       /* macOS 缓动函数 */
       --ease-out: cubic-bezier(0, 0, 0.2, 1);
@@ -73,7 +73,7 @@
 
       --border-color: #38383a;
       --divider-color: #48484a;
-      --shadow-color: rgba(0, 0, 0, 0.3);
+      --shadow-color: var(--black-60);
 
       --accent-color: #0a84ff;
       --accent-hover: #409cff;
@@ -83,12 +83,12 @@
       --danger-hover: #ff6961;
 
       /* 暗色主题阴影 */
-      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2);
-      --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2);
-      --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.4), 0 4px 6px rgba(0, 0, 0, 0.3);
-      --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.4), 0 10px 10px rgba(0, 0, 0, 0.3);
-      --shadow-2xl: 0 25px 50px rgba(0, 0, 0, 0.5);
-      --shadow-modal: 0 30px 60px rgba(0, 0, 0, 0.6), 0 0 1px rgba(255, 255, 255, 0.1);
+      --shadow-sm: 0 1px 2px var(--black-60), 0 1px 3px var(--black-50);
+      --shadow-md: 0 4px 6px var(--black-60), 0 2px 4px var(--black-50);
+      --shadow-lg: 0 10px 15px var(--black-80), 0 4px 6px var(--black-60);
+      --shadow-xl: 0 20px 25px var(--black-80), 0 10px 10px var(--black-60);
+      --shadow-2xl: 0 25px 50px var(--black-80);
+      --shadow-modal: 0 30px 60px var(--black-80), 0 0 1px var(--white-10);
     }
 
     /* 主题过渡动画 */
@@ -104,27 +104,47 @@
       font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', Helvetica, Arial, sans-serif;
       margin: 0;
       padding: 0;
-      background: var(--bg-primary); /* 经典 Mac 灰色背景 */
+      background: var(--bg-gradient);
       color: var(--text-primary);
       height: 100vh;
       overflow: hidden;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
     }
+
+    /* 背景光晕动画 - Glassmorphism 效果 */
+    body::before {
+      content: '';
+      position: fixed;
+      top: -30%;
+      left: -30%;
+      width: 160%;
+      height: 160%;
+      background:
+        radial-gradient(circle at 30% 30%, var(--brand-purple-strong) 0%, transparent 45%),
+        radial-gradient(circle at 70% 20%, var(--brand-purple-light) 0%, transparent 40%),
+        radial-gradient(circle at 20% 80%, var(--brand-purple-mid) 0%, transparent 40%);
+      animation: float 25s ease-in-out infinite;
+      pointer-events: none;
+      z-index: 0;
+    }
     #container {
       display: flex;
       height: 100vh;
+      position: relative;
+      z-index: 1;
     }
-    /* 左侧面板 - Mac 风格 */
+    /* 左侧面板 - Glassmorphism 毛玻璃风格 */
     #side-panel {
-      width: 260px;
+      width: 320px;
       height: 100%;
-      background: var(--bg-secondary); /* 更深的侧边栏背景 */
-      border-right: 1px solid var(--border-color);
+      background: var(--glass-bg); /* 毛玻璃半透明背景 */
+      backdrop-filter: var(--blur-md);
+      -webkit-backdrop-filter: var(--blur-md);
+      border-right: 1px solid var(--glass-border);
       display: flex;
       flex-direction: column;
-      /* box-shadow: 1px 0 3px rgba(0,0,0,0.04); 去掉阴影，使用更扁平的风格 */
-      transition: width 0.3s ease;
+      transition: width var(--duration-standard) var(--ease-standard);
     }
 
     /* 技能标签激活时，侧边栏扩展覆盖整个区域 */
@@ -152,7 +172,7 @@
       background: var(--divider-color);
       border-radius: var(--radius-lg);
       padding: 3px;
-      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+      box-shadow: inset 0 1px 3px var(--black-25);
     }
     .tab {
       flex: 1;
@@ -171,7 +191,7 @@
     .tab.active {
       background: var(--bg-tertiary);
       color: var(--text-primary);
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 2px 4px var(--black-25);
       font-weight: 600;
     }
     #settings-btn {
@@ -221,7 +241,7 @@
       transition: all var(--transition-fast);
     }
     /* 隔行变色 (可选，经典 Mac 特性，这里先不用，保持现代简洁) */
-    /* .history-item:nth-child(even) { background: rgba(0,0,0,0.02); } */
+    /* .history-item:nth-child(even) { background: var(--black-5); } */
 
     .history-item:hover {
       background: var(--bg-elevated);
@@ -230,10 +250,10 @@
     .history-item.active {
       background: var(--accent-color); /* 使用主题强调色 */
       color: var(--text-inverse);
-      box-shadow: 0 2px 8px rgba(0, 122, 255, 0.2);
+      box-shadow: 0 2px 8px var(--brand-blue-subtle);
     }
     .history-item.active .history-time {
-      color: rgba(255,255,255,0.8);
+      color: var(--white-80);
     }
     .history-title {
       font-weight: 400;
@@ -275,14 +295,14 @@
       visibility: visible;
     }
     .history-delete-btn:hover {
-      background: rgba(0,0,0,0.1);
+      background: var(--black-25);
       color: #cc3300;
     }
     .history-item.active .history-delete-btn {
-      color: rgba(255,255,255,0.7);
+      color: var(--white-70);
     }
     .history-item.active .history-delete-btn:hover {
-      background: rgba(255,255,255,0.2);
+      background: var(--white-20);
       color: var(--text-inverse);
     }
     /* 技能列表项 - Mac card style */
@@ -322,25 +342,25 @@
       letter-spacing: 0.3px;
     }
     .skill-source.user {
-      background: rgba(52, 199, 89, 0.15);
+      background: var(--brand-green-subtle);
       color: #34c759;
-      border: 1px solid rgba(52, 199, 89, 0.3);
+      border: 1px solid var(--brand-green-subtle-stronger);
     }
     .skill-source.project {
-      background: rgba(90, 200, 250, 0.15);
+      background: var(--brand-blue-light);
       color: #5ac8fa;
-      border: 1px solid rgba(90, 200, 250, 0.3);
+      border: 1px solid var(--brand-blue-lighter);
     }
     /* 暗色主题下的技能标签 */
     .theme-dark .skill-source.user {
-      background: rgba(52, 199, 89, 0.2);
+      background: var(--brand-green-subtle);
       color: #34c759;
-      border: 1px solid rgba(52, 199, 89, 0.3);
+      border: 1px solid var(--brand-green-subtle-stronger);
     }
     .theme-dark .skill-source.project {
-      background: rgba(90, 200, 250, 0.2);
+      background: var(--brand-blue-light);
       color: #5ac8fa;
-      border: 1px solid rgba(90, 200, 250, 0.3);
+      border: 1px solid var(--brand-blue-lighter);
     }
     .skill-description {
       font-size: 12px;
@@ -423,7 +443,7 @@
       background: #ffffff;
       color: #1d1d1f;
       font-weight: 500;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08);
+      box-shadow: 0 1px 3px var(--black-30), 0 1px 2px var(--black-20);
     }
 
     /* 工作空间技能项 */
@@ -432,7 +452,7 @@
       align-items: center;
       gap: 12px;
       padding: 12px 8px;
-      border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
+      border-bottom: 0.5px solid var(--black-20);
     }
 
     .ws-skill-item:last-child {
@@ -489,7 +509,7 @@
       background: #ffffff;
       border-radius: 50%;
       transition: transform 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 2px 4px var(--black-50), 0 1px 2px var(--black-25);
     }
 
     .ws-skill-toggle-switch.enabled::after {
@@ -567,24 +587,26 @@
       background: transparent;
     }
     .message::-webkit-scrollbar-thumb {
-      background: rgba(0,0,0,0.2);
+      background: var(--black-50);
       border-radius: 3px;
     }
     .message::-webkit-scrollbar-thumb:hover {
-      background: rgba(0,0,0,0.3);
+      background: var(--black-60);
     }
     .user {
-      background: var(--accent-color);
+      background: var(--user-message-gradient);
       color: white;
       margin-left: auto;
-      border-radius: 20px 20px 4px 20px; /* iMessage 风格：右下角小圆角 */
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      border-radius: 18px;
+      border-bottom-right-radius: 6px;
+      box-shadow: 0 8px 20px var(--brand-purple-strong);
     }
     .assistant {
-      background: var(--bg-elevated);
+      background: var(--glass-bg-strong);
       color: var(--text-primary);
-      border-radius: 20px 20px 20px 4px; /* iMessage 风格：左下角小圆角 */
-      box-shadow: var(--shadow-sm);
+      border-radius: 18px;
+      border-bottom-left-radius: 6px;
+      box-shadow: 0 4px 12px var(--black-15);
     }
     /* 操作日志样式 */
     .operation-log {
@@ -678,7 +700,7 @@
       background: transparent;
     }
     .thinking-log::-webkit-scrollbar-thumb {
-      background: rgba(0,0,0,0.15);
+      background: var(--black-40);
       border-radius: 3px;
     }
     #input-area {
@@ -690,53 +712,53 @@
     }
     #message-input {
       flex: 1;
-      padding: 10px 12px;
-      border-radius: var(--radius-lg);
-      border: 1.5px solid var(--border-color);
-      background: var(--bg-tertiary);
+      padding: 14px 18px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--glass-border);
+      background: var(--glass-bg);
       color: var(--text-primary);
-      font-size: 14px;
-      transition: all var(--transition-normal);
+      font-size: 15px;
+      transition: all var(--duration-standard) var(--ease-standard);
     }
     #message-input:focus {
-      /* Windows 需要 outline 来显示光标状态，macOS 使用 box-shadow */
-      border-color: var(--accent-color);
-      box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.1);
+      /* Glassmorphism focus style with purple glow */
+      outline: none;
+      border-color: var(--accent-purple);
+      box-shadow: var(--input-glow);
+      background: var(--glass-bg-strong);
     }
     /* Windows 特定样式 - 确保光标可见 */
     @media (platform: win32) {
       #message-input {
         -webkit-appearance: none;
         appearance: none;
-        caret-color: var(--text-primary);
-      }
-      #message-input:focus {
-        outline: 2px solid var(--accent-color);
+        caret-color: #1a202c;
       }
     }
     #message-input::placeholder {
       color: var(--text-tertiary);
     }
-    /* 通用输入框样式 */
+    /* 通用输入框样式 - Glassmorphism */
     input[type="text"],
     input[type="password"],
     textarea,
     select {
       padding: 10px 12px;
-      border-radius: var(--radius-lg);
-      border: 1.5px solid var(--border-color);
-      background: var(--bg-tertiary);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--glass-border);
+      background: var(--glass-bg);
       color: var(--text-primary);
       font-size: 14px;
-      transition: all var(--transition-normal);
+      transition: all var(--duration-standard) var(--ease-standard);
     }
     input[type="text"]:focus,
     input[type="password"]:focus,
     textarea:focus,
     select:focus {
       outline: none;
-      border-color: var(--accent-color);
-      box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.1);
+      border-color: var(--accent-purple);
+      box-shadow: var(--input-glow);
+      background: var(--glass-bg-strong);
     }
     /* macOS 风格按钮样式 */
     button {
@@ -781,19 +803,19 @@
       border: none;
       color: white;
       font-weight: 600;
-      box-shadow: 0 1px 3px rgba(0, 122, 255, 0.2);
+      box-shadow: 0 1px 3px var(--brand-blue-subtle);
     }
 
     #send-btn:hover {
       background: var(--accent-hover);
-      box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+      box-shadow: 0 4px 12px var(--brand-blue-subtle);
       transform: scale(1.02);
     }
 
     #send-btn:active {
       background: var(--accent-hover);
       transform: scale(0.98);
-      box-shadow: 0 1px 3px rgba(0, 122, 255, 0.2);
+      box-shadow: 0 1px 3px var(--brand-blue-subtle);
     }
 
     /* 次要按钮样式 */
@@ -808,11 +830,11 @@
       background: transparent;
     }
     ::-webkit-scrollbar-thumb {
-      background: rgba(0,0,0,0.2);
+      background: var(--black-50);
       border-radius: var(--radius-sm);
     }
     ::-webkit-scrollbar-thumb:hover {
-      background: rgba(0,0,0,0.35);
+      background: var(--black-60);
     }
 
     /* 工作空间切换器样式 */
@@ -883,7 +905,7 @@
       margin-top: 2px;
       background: var(--bg-tertiary);
       border-radius: var(--radius-sm);
-      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+      box-shadow: 0 4px 16px var(--black-40);
       border: 1px solid var(--border-color);
       z-index: 1000;
       min-width: 220px;
@@ -935,7 +957,7 @@
       text-transform: uppercase;
     }
     .workspace-menu-item:hover .workspace-category {
-      color: rgba(255,255,255,0.8);
+      color: var(--white-80);
     }
     
     .workspace-menu-divider {
@@ -999,13 +1021,13 @@
 
     /* 格式化消息内容样式 */
     .message code {
-      background: rgba(0, 0, 0, 0.05);
+      background: var(--black-15);
       padding: 2px 4px;
       border-radius: 3px;
       font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
       font-size: 12px;
       color: #d63384;
-      border: 1px solid rgba(0,0,0,0.05);
+      border: 1px solid var(--black-15);
     }
     .message pre {
       background: var(--bg-secondary);
@@ -1066,13 +1088,13 @@
     }
     /* 用户消息中的代码样式 */
     .user.message code {
-      background: rgba(255, 255, 255, 0.2);
+      background: var(--white-20);
       color: var(--text-inverse);
       border: none;
     }
     .user.message pre {
-      background: rgba(0, 0, 0, 0.2);
-      border: 1px solid rgba(255,255,255,0.2);
+      background: var(--black-50);
+      border: 1px solid var(--white-20);
       color: white;
     }
     /* JSON 语法高亮 - 浅色主题 */
@@ -1194,7 +1216,7 @@
       font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
       font-size: 11px;
       color: #0066cc;
-      background: rgba(0,102,204,0.08);
+      background: var(--brand-blue-subtle);
       padding: 2px 6px;
       border-radius: var(--radius-sm);
       word-break: break-all;
@@ -1203,7 +1225,7 @@
       font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
       font-size: 11px;
       color: #0066cc;
-      background: rgba(0,102,204,0.08);
+      background: var(--brand-blue-subtle);
       padding: 2px 6px;
       border-radius: var(--radius-sm);
       display: inline-block;
@@ -1250,11 +1272,11 @@
       border: 1px solid var(--border-color);
       border-radius: var(--radius-md);
       overflow: hidden;
-      background: rgba(0, 0, 0, 0.02);
+      background: var(--black-5);
     }
     .todo-list-header {
       padding: 8px 12px;
-      background: rgba(0, 102, 204, 0.1);
+      background: var(--brand-blue-subtle);
       font-weight: 600;
       font-size: 13px;
       border-bottom: 1px solid var(--border-color);
@@ -1277,7 +1299,7 @@
       border-bottom: none;
     }
     .todo-item:hover {
-      background: rgba(0, 0, 0, 0.03);
+      background: var(--black-8);
     }
     .todo-icon {
       flex-shrink: 0;
@@ -1292,7 +1314,7 @@
       opacity: 0.6;
     }
     .todo-item.in-progress {
-      background: rgba(0, 102, 204, 0.05);
+      background: var(--brand-blue-subtler);
     }
     .todo-item.in-progress .todo-content {
       color: #0066cc;
@@ -1343,6 +1365,11 @@
 
     /* 当侧边栏有 skills-active 类时隐藏历史视图 */
     #side-panel.skills-active #history-view {
+      display: none !important;
+    }
+
+    /* 当侧边栏有 skills-active 类时隐藏工作空间选择器 */
+    #side-panel.skills-active .panel-workspace-selector {
       display: none !important;
     }
 
@@ -1485,7 +1512,7 @@
     }
 
     .workspace-mention-item.selected .current-badge {
-      background: rgba(255, 255, 255, 0.2);
+      background: var(--white-20);
       color: var(--text-inverse);
     }
 
@@ -1529,7 +1556,9 @@
       display: none !important;
     }
   </style>
+  <link rel="stylesheet" href="glassmorphism.css">
   <link rel="stylesheet" href="sidebar.css">
+  <link rel="stylesheet" href="panel.css">
 </head>
 <body>
   <!-- 左侧侧边栏 -->
@@ -1638,8 +1667,8 @@
     </div>
 
     <!-- 添加技能对话框 -->
-    <div id="add-skill-dialog" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); z-index: 1000; align-items: center; justify-content: center;">
-      <div style="background: var(--bg-tertiary); border-radius: 16px; padding: 24px; width: 480px; max-width: 90%; box-shadow: var(--shadow-modal);">
+    <div id="add-skill-dialog" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--black-80); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); z-index: 1000; align-items: center; justify-content: center;">
+      <div style="background: var(--glass-bg-strong); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); padding: 24px; width: 480px; max-width: 90%; box-shadow: var(--shadow-modal);">
         <h3 style="margin: 0 0 8px 0; font-size: 17px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.3px;">上传技能文件</h3>
         <p style="margin: 0 0 20px 0; font-size: 13px; color: var(--text-secondary); line-height: 1.4;">选择包含 SKILL.md 文件的技能目录</p>
 
@@ -1668,8 +1697,8 @@
     </div>
 
     <!-- GitHub 导入对话框 -->
-    <div id="github-import-dialog" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); z-index: 1000; align-items: center; justify-content: center;">
-      <div style="background: var(--bg-tertiary); border-radius: 16px; padding: 24px; width: 480px; max-width: 90%; box-shadow: var(--shadow-modal);">
+    <div id="github-import-dialog" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--black-80); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); z-index: 1000; align-items: center; justify-content: center;">
+      <div style="background: var(--glass-bg-strong); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); padding: 24px; width: 480px; max-width: 90%; box-shadow: var(--shadow-modal);">
         <h3 style="margin: 0 0 8px 0; font-size: 17px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.3px;">从 GitHub 导入技能</h3>
         <p style="margin: 0 0 20px 0; font-size: 13px; color: var(--text-secondary); line-height: 1.4;">输入 GitHub 仓库 URL，自动扫描并导入技能</p>
 
@@ -1700,8 +1729,8 @@
     </div>
 
     <!-- 技能选择对话框 -->
-    <div id="skill-selection-dialog" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); z-index: 1001; align-items: center; justify-content: center;">
-      <div style="background: var(--bg-tertiary); border-radius: 16px; padding: 24px; width: 520px; max-width: 90%; max-height: 80vh; box-shadow: var(--shadow-modal); display: flex; flex-direction: column;">
+    <div id="skill-selection-dialog" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--black-80); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); z-index: 1001; align-items: center; justify-content: center;">
+      <div style="background: var(--glass-bg-strong); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); padding: 24px; width: 520px; max-width: 90%; max-height: 80vh; box-shadow: var(--shadow-modal); display: flex; flex-direction: column;">
         <h3 style="margin: 0 0 8px 0; font-size: 17px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.3px;">选择要导入的技能</h3>
         <p style="margin: 0 0 16px 0; font-size: 13px; color: var(--text-secondary); line-height: 1.4;">
           找到 <span id="skills-found-count">0</span> 个技能，请勾选要导入的技能
@@ -1723,8 +1752,8 @@
     </div>
 
     <!-- 工具确认对话框 (HITL) -->
-    <div id="tool-approval-dialog" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); z-index: 2000; align-items: center; justify-content: center;">
-      <div style="background: var(--bg-tertiary); border-radius: 16px; padding: 24px; width: 480px; max-width: 90%; max-height: 85vh; display: flex; flex-direction: column; box-shadow: var(--shadow-modal);">
+    <div id="tool-approval-dialog" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--black-80); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); z-index: 2000; align-items: center; justify-content: center;">
+      <div style="background: var(--glass-bg-strong); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); padding: 24px; width: 480px; max-width: 90%; max-height: 85vh; display: flex; flex-direction: column; box-shadow: var(--shadow-modal);">
         <h3 style="margin: 0 0 8px 0; font-size: 17px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.3px; flex-shrink: 0;">工具执行确认</h3>
         <p style="margin: 0 0 20px 0; font-size: 13px; color: var(--text-secondary); line-height: 1.4; flex-shrink: 0;">Agent 即将执行以下操作</p>
 
@@ -1745,8 +1774,8 @@
     </div>
 
     <!-- 模型配置对话框 -->
-    <div id="config-dialog" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); z-index: 3000; align-items: center; justify-content: center;">
-      <div style="background: var(--bg-tertiary); border-radius: 16px; padding: 24px; width: 560px; max-width: 90%; max-height: 85vh; overflow-y: auto; box-shadow: var(--shadow-modal);">
+    <div id="config-dialog" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--black-80); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); z-index: 3000; align-items: center; justify-content: center;">
+      <div style="background: var(--glass-bg-strong); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); padding: 24px; width: 560px; max-width: 90%; max-height: 85vh; overflow-y: auto; box-shadow: var(--shadow-modal);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
           <h3 style="margin: 0; font-size: 17px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.3px;">模型配置</h3>
           <button id="close-config-btn" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary); padding: 4px 8px;">×</button>
@@ -1821,8 +1850,8 @@
     </div>
 
     <!-- 创建工作空间对话框 -->
-    <div id="create-workspace-dialog" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); z-index: 3000; align-items: center; justify-content: center;">
-      <div style="background: var(--bg-tertiary); border-radius: 16px; padding: 24px; width: 480px; max-width: 90%; box-shadow: var(--shadow-modal);">
+    <div id="create-workspace-dialog" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--black-80); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); z-index: 3000; align-items: center; justify-content: center;">
+      <div style="background: var(--glass-bg-strong); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); padding: 24px; width: 480px; max-width: 90%; box-shadow: var(--shadow-modal);">
         <h3 style="margin: 0 0 8px 0; font-size: 17px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.3px;">创建新工作空间</h3>
         <p style="margin: 0 0 20px 0; font-size: 13px; color: var(--text-secondary); line-height: 1.4;">创建一个独立的工作空间，文件操作将限制在该工作空间目录内</p>
 
@@ -1872,8 +1901,8 @@
     </div>
 
     <!-- 工作空间设置对话框 -->
-    <div id="workspace-settings-dialog" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); z-index: 3000; align-items: center; justify-content: center;">
-      <div style="background: var(--bg-tertiary); border-radius: 16px; padding: 24px; width: 520px; max-width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: var(--shadow-modal);">
+    <div id="workspace-settings-dialog" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--black-80); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); z-index: 3000; align-items: center; justify-content: center;">
+      <div style="background: var(--glass-bg-strong); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); padding: 24px; width: 520px; max-width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: var(--shadow-modal);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
           <h3 style="margin: 0; font-size: 17px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.3px;">工作空间设置</h3>
           <button id="close-workspace-settings" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary); padding: 4px 8px;">×</button>
@@ -1957,7 +1986,7 @@
     </div>
 
     <!-- 主题设置对话框 -->
-    <div id="theme-dialog" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--bg-tertiary); border-radius: 16px; box-shadow: var(--shadow-modal); z-index: 2000; min-width: 320px; padding: 20px;">
+    <div id="theme-dialog" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--glass-bg-strong); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-modal); z-index: 2000; min-width: 320px; padding: 20px;">
       <h3 style="margin: 0 0 16px 0; color: var(--text-primary);">主题设置</h3>
 
       <!-- 主题模式选择 -->
@@ -1992,7 +2021,7 @@
     <!-- 右侧聊天区域 -->
     <div id="chat-panel">
       <!-- 顶部工具栏 -->
-      <div id="chat-toolbar" style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--bg-tertiary); border-bottom: 1px solid var(--divider-color); height: 44px;">
+      <div id="chat-toolbar">
         <button id="theme-toggle-btn" title="切换主题">🌓</button>
       </div>
 

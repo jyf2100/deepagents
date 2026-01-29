@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UI 间距优化示意图</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      padding: 40px;
+      background: #f5f5f5;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 40px;
+    }
+    .comparison {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      margin-bottom: 60px;
+    }
+    .panel {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+    }
+    .panel-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .layout {
+      display: flex;
+      gap: 20px;
+      height: 400px;
+    }
+    .sidebar {
+      width: 200px;
+      background: #f8f8f8;
+      border-radius: 8px;
+      padding: 8px;
+    }
+    .sidepanel {
+      flex: 1;
+      background: #f0f0f0;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .menu-item {
+      padding: 12px 16px;
+      margin-bottom: 4px;
+      background: white;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+    .menu-item.compact {
+      padding: 6px 10px;
+    }
+    .workspace-selector {
+      padding: 12px;
+      background: #e8e8e8;
+      border-bottom: 1px solid #ccc;
+    }
+    .history-item {
+      padding: 10px 12px;
+      margin-bottom: 2px;
+      background: white;
+      border-radius: 8px;
+      font-size: 13px;
+    }
+    .history-item.spacious {
+      padding: 16px 18px;
+      margin-bottom: 6px;
+    }
+    .label {
+      font-size: 12px;
+      color: #666;
+      margin-top: 8px;
+    }
+    .arrow {
+      text-align: center;
+      font-size: 24px;
+      color: #007AFF;
+      margin: 20px 0;
+    }
+    .values {
+      background: #f0f7ff;
+      padding: 16px;
+      border-radius: 8px;
+      margin-top: 20px;
+      font-size: 13px;
+    }
+    .values table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .values th, .values td {
+      padding: 8px;
+      text-align: left;
+      border-bottom: 1px solid #d0e7ff;
+    }
+    .before { color: #ff3b30; }
+    .after { color: #34c759; }
+    .highlight {
+      background: #fff3cd;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>UI 间距优化示意图</h1>
+
+    <div class="comparison">
+      <!-- 当前状态 -->
+      <div class="panel">
+        <div class="panel-title">当前状态（有问题）</div>
+        <div class="layout">
+          <div class="sidebar">
+            <div style="font-size:12px;color:#666;margin-bottom:8px;">#sidebar (侧边栏)</div>
+            <div class="menu-item">⚡ 技能管理</div>
+            <div class="menu-item">🌓 主题设置</div>
+            <div class="menu-item">🤖 模型设置</div>
+          </div>
+          <div class="sidepanel">
+            <div class="workspace-selector">📁 默认工作空间 ⚙️ ➕</div>
+            <div class="history-item">💬 新对话 <span style="float:right;color:#999;">2024</span></div>
+            <div class="history-item">💬 旧对话1 <span style="float:right;color:#999;">2024</span></div>
+            <div class="history-item">💬 旧对话2 <span style="float:right;color:#999;">2024</span></div>
+          </div>
+        </div>
+        <div class="values">
+          <strong>问题：</strong>
+          <ul style="margin:8px 0;padding-left:16px;">
+            <li>侧边栏菜单项：<span class="highlight">padding: 12px 16px</span> <span class="before">→ 太宽</span></li>
+            <li>对话列表项：<span class="highlight">padding: 10px 12px, margin: 2px</span> <span class="before">→ 太挤</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 优化后 -->
+      <div class="panel">
+        <div class="panel-title">优化后（舒适）</div>
+        <div class="layout">
+          <div class="sidebar">
+            <div style="font-size:12px;color:#666;margin-bottom:8px;">#sidebar (侧边栏)</div>
+            <div class="menu-item compact">⚡ 技能管理</div>
+            <div class="menu-item compact">🌓 主题设置</div>
+            <div class="menu-item compact">🤖 模型设置</div>
+          </div>
+          <div class="sidepanel">
+            <div class="workspace-selector">📁 默认工作空间 ⚙️ ➕</div>
+            <div class="history-item spacious">💬 新对话 <span style="float:right;color:#999;">2024</span></div>
+            <div class="history-item spacious">💬 旧对话1 <span style="float:right;color:#999;">2024</span></div>
+            <div class="history-item spacious">💬 旧对话2 <span style="float:right;color:#999;">2024</span></div>
+          </div>
+        </div>
+        <div class="values">
+          <strong>优化方案：</strong>
+          <ul style="margin:8px 0;padding-left:16px;">
+            <li>侧边栏菜单项：<span class="highlight">padding: 6px 10px</span> <span class="after">→ 紧凑</span></li>
+            <li>对话列表项：<span class="highlight">padding: 16px 18px, margin: 6px</span> <span class="after">→ 宽松</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">修改对比表</div>
+      <div class="values">
+        <table>
+          <thead>
+            <tr>
+              <th>组件</th>
+              <th>当前值</th>
+              <th>优化值</th>
+              <th>变化</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>侧边栏菜单项</strong></td>
+              <td class="before">padding: 12px 16px 12px 48px</td>
+              <td class="after">padding: 6px 10px 6px 48px</td>
+              <td><span class="before">↓ 约40%</span></td>
+            </tr>
+            <tr>
+              <td><strong>侧边栏一级菜单</strong></td>
+              <td class="before">padding: 12px 16px</td>
+              <td class="after">padding: 6px 10px</td>
+              <td><span class="before">↓ 约40%</span></td>
+            </tr>
+            <tr>
+              <td><strong>对话列表项</strong></td>
+              <td class="before">padding: 10px 12px</td>
+              <td class="after">padding: 16px 18px</td>
+              <td><span class="after">↑ 约60%</span></td>
+            </tr>
+            <tr>
+              <td><strong>对话列表间距</strong></td>
+              <td class="before">margin-bottom: 2px</td>
+              <td class="after">margin-bottom: 6px</td>
+              <td><span class="after">↑ 200%</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">修改位置</div>
+      <div class="values">
+        <table>
+          <thead>
+            <tr>
+              <th>文件</th>
+              <th>位置</th>
+              <th>修改内容</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>sidebar.css</code></td>
+              <td>第 185 行</td>
+              <td><code>.menu-item</code> padding</td>
+            </tr>
+            <tr>
+              <td><code>sidebar.css</code></td>
+              <td>第 195 行</td>
+              <td><code>.menu-item-top-level</code> padding</td>
+            </tr>
+            <tr>
+              <td><code>index.html</code></td>
+              <td>第 235-236 行</td>
+              <td><code>.history-item</code> padding 和 margin-bottom</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

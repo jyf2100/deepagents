@@ -1,0 +1,218 @@
+/* === Glassmorphism UI 变量系统 === */
+/* 基于 /Users/roc/deepagents/docs/plans/2026-01-27-glassmorphism-ui-design.md */
+
+:root {
+  /* === 背景色 === */
+  --bg-gradient: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+
+  /* === 毛玻璃背景 === */
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-bg-strong: rgba(255, 255, 255, 0.95);
+  --glass-border: rgba(148, 163, 184, 0.5);
+
+  /* === 强调色 === */
+  --accent-purple: #667eea;
+  --input-glow: 0 0 0 4px rgba(102, 126, 234, 0.12);
+
+  /* === 渐变色 === */
+  --gradient-primary: linear-gradient(135deg, #667eea, #764ba2);
+  --gradient-accent: linear-gradient(135deg, #f093fb, #f5576c);
+
+  /* === 文字色 === */
+  --text-primary: #1a202c;
+  --text-secondary: #718096;
+
+  /* === 模糊度 === */
+  --blur-sm: blur(10px);
+  --blur-md: blur(20px);
+  --blur-lg: blur(30px);
+
+  /* === 圆角 === */
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+
+  /* === 阴影 === */
+  --shadow-1: 0 4px 12px rgba(0, 0, 0, 0.05);
+  --shadow-2: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --shadow-3: 0 20px 40px rgba(0, 0, 0, 0.12);
+  --shadow-4: 0 30px 60px rgba(0, 0, 0, 0.2);
+
+  /* === 动画缓动 === */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* === 过渡时长 === */
+  --duration-fast: 150ms;
+  --duration-standard: 300ms;
+  --duration-slow: 500ms;
+
+  /* === 半透明黑色（阴影、遮罩） === */
+  --black-5: rgba(0, 0, 0, 0.02);
+  --black-8: rgba(0, 0, 0, 0.03);
+  --black-10: rgba(0, 0, 0, 0.04);
+  --black-15: rgba(0, 0, 0, 0.07);
+  --black-20: rgba(0, 0, 0, 0.08);
+  --black-25: rgba(0, 0, 0, 0.10);
+  --black-30: rgba(0, 0, 0, 0.12);
+  --black-40: rgba(0, 0, 0, 0.15);
+  --black-50: rgba(0, 0, 0, 0.20);
+  --black-60: rgba(0, 0, 0, 0.30);
+  --black-80: rgba(0, 0, 0, 0.40);
+
+  /* === 品牌色 === */
+  --brand-blue: #007AFF;
+  --brand-blue-subtler: rgba(0, 102, 204, 0.05);
+  --brand-blue-subtle: rgba(0, 122, 255, 0.1);
+  --brand-blue-subtle-strong: rgba(0, 122, 255, 0.2);
+  --brand-blue-light: rgba(90, 200, 250, 0.15);
+  --brand-blue-lighter: rgba(90, 200, 250, 0.3);
+  --brand-green: #34C759;
+  --brand-green-subtle: rgba(52, 199, 89, 0.15);
+  --brand-green-subtle-stronger: rgba(52, 199, 89, 0.3);
+  --brand-purple-light: rgba(240, 147, 251, 0.2);
+  --brand-purple-mid: rgba(118, 75, 162, 0.18);
+  --brand-purple-strong: rgba(102, 126, 234, 0.25);
+
+  /* === 半透明白色 === */
+  --white-10: rgba(255, 255, 255, 0.1);
+  --white-20: rgba(255, 255, 255, 0.2);
+  --white-70: rgba(255, 255, 255, 0.7);
+  --white-80: rgba(255, 255, 255, 0.8);
+}
+
+/* === 浮动动画（用于背景光晕效果） === */
+@keyframes float {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  25% {
+    transform: translate(20px, -15px) rotate(3deg);
+  }
+  50% {
+    transform: translate(-10px, 10px) rotate(-2deg);
+  }
+  75% {
+    transform: translate(15px, 5px) rotate(1deg);
+  }
+}
+
+/* === 通用滚动条样式 === */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(102, 126, 234, 0.2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(102, 126, 234, 0.4);
+}
+
+/* === 通用按钮样式 === */
+
+/* 主按钮 - 紫色渐变 */
+.glass-button-primary {
+  background: var(--gradient-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 14px 28px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.25);
+  transition: transform var(--duration-standard) var(--ease-standard),
+              box-shadow var(--duration-standard) var(--ease-standard);
+  will-change: transform;
+}
+
+.glass-button-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(102, 126, 234, 0.35);
+}
+
+.glass-button-primary:active {
+  transform: scale(0.96);
+}
+
+.glass-button-primary:focus {
+  outline: 2px solid rgba(102, 126, 234, 0.5);
+  outline-offset: 2px;
+}
+
+/* 次要按钮 - 毛玻璃效果 */
+.glass-button-secondary {
+  background: var(--glass-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  padding: 14px 28px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: transform var(--duration-standard) var(--ease-standard),
+              background-color var(--duration-standard) var(--ease-standard),
+              box-shadow var(--duration-standard) var(--ease-standard);
+  will-change: transform;
+}
+
+.glass-button-secondary:hover {
+  background: rgba(103, 126, 234, 0.12);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.15);
+}
+
+.glass-button-secondary:active {
+  transform: scale(0.96);
+}
+
+.glass-button-secondary:focus {
+  outline: 2px solid rgba(102, 126, 234, 0.5);
+  outline-offset: 2px;
+}
+
+/* === 聊天工具栏样式 === */
+#chat-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  height: 48px;
+  transition: background var(--duration-fast) var(--ease-standard);
+}
+
+/* 工具栏按钮样式 */
+#chat-toolbar button {
+  width: 38px;
+  height: 38px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all var(--duration-standard) var(--ease-standard);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+#chat-toolbar button:hover {
+  background: rgba(103, 126, 234, 0.15);
+  transform: scale(1.08);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+#chat-toolbar button:active {
+  transform: scale(0.95);
+}

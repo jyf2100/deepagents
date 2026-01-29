@@ -23,14 +23,14 @@ echo ""
 
 # PyInstaller 打包
 echo "[2/3] PyInstaller 打包..."
-"$VENV_PATH/bin/pyinstaller" "$CLI_DIR/deepagents-desktop-agent.spec" --clean -y
+"$VENV_PATH/bin/pyinstaller" "$CLI_DIR/cowork-agent.spec" --clean -y
 echo "✓ 打包完成"
 echo ""
 
 # 复制到 desktop 目录
 echo "[3/3] 复制到 desktop 目录..."
-rm -rf "$DESKTOP_DIR/src/resources/deepagents-desktop-agent"
-cp -R "$PROJECT_ROOT/dist/deepagents-desktop-agent" "$DESKTOP_DIR/src/resources/"
+rm -rf "$DESKTOP_DIR/src/resources/cowork-agent"
+cp -R "$PROJECT_ROOT/dist/cowork-agent" "$DESKTOP_DIR/src/resources/"
 echo "✓ 复制完成"
 echo ""
 
