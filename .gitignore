@@ -236,3 +236,8 @@ desktop/node_modules/
 desktop/src/resources/deepagents-desktop-agent/
 dist/
 plans/.worktrees/
+智侣软著/
+智融大模型通用型超级智能体/
+
+# 忽略所有以 . 开头的文件夹（如 .agents, .opencode, .qwen, .trae 等）
+.*/
